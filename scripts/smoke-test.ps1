@@ -4,6 +4,10 @@ if ($health.status -ne 'ok') { throw 'health check failed' }
 $catalog = Invoke-RestMethod http://localhost:8080/api/functions
 if ($catalog.Count -ne 6) { throw "expected 6 functions, got $($catalog.Count)" }
 $project = Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/projects -ContentType 'application/json' -Body (@{name='Smoke Project'; organizationName='Smoke Org'} | ConvertTo-Json)
+$projects = Invoke-RestMethod http://localhost:8080/api/projects
+$listed = $projects | Where-Object { $_.id -eq $project.id }
+if (-not $listed) { throw 'created project was not returned by project list' }
+if ($listed.organizationName -ne 'Smoke Org') { throw 'project list omitted organization name' }
 $profile = Invoke-RestMethod http://localhost:8080/api/projects/$($project.id)/profile
 if ($profile.Count -ne 106) { throw "expected 106 profile rows, got $($profile.Count)" }
 $first = $profile[0]
