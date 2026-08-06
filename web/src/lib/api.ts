@@ -1,5 +1,5 @@
 import type { FunctionNode, ProfilePatch, ProfileRow, Project, Summary } from "./types";
-const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 async function request<T>(path: string, init?: RequestInit): Promise<T> { const response = await fetch(`${base}${path}`, { headers: { "Content-Type": "application/json", ...(init?.headers || {}) }, ...init }); if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.error?.message || `Request failed (${response.status})`); } if(response.status===204)return undefined as T; return response.json() as Promise<T>; }
 export const api = {
   getFunctions: () => request<FunctionNode[]>("/api/functions"),
