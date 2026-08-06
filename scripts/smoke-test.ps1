@@ -27,4 +27,14 @@ $updated = Invoke-RestMethod -Method Put -Uri http://localhost:8080/api/projects
 if (-not $updated.included -or $updated.currentCoverageLevel -ne 'partial' -or $updated.rationale -ne 'Critical business outcome' -or $updated.targetApproachText -ne 'Formalize governance review') { throw 'complete assessment update failed' }
 $summary = Invoke-RestMethod http://localhost:8080/api/projects/$($project.id)/summary
 if ($summary.includedCount -ne 1 -or [math]::Abs($summary.coveragePct - 33.3333333333333) -gt 0.001) { throw "summary calculation failed: $($summary | ConvertTo-Json -Compress)" }
+$deleted = Invoke-WebRequest -UseBasicParsing -Method Delete -Uri http://localhost:8080/api/projects/$($project.id)
+if ($deleted.StatusCode -ne 204) { throw "expected delete status 204, got $($deleted.StatusCode)" }
+$projectsAfterDelete = Invoke-RestMethod http://localhost:8080/api/projects
+if ($projectsAfterDelete | Where-Object { $_.id -eq $project.id }) { throw 'deleted project remains in project list' }
+try {
+  Invoke-RestMethod http://localhost:8080/api/projects/$($project.id)/profile
+  throw 'deleted project profile remains accessible'
+} catch {
+  if ([int]$_.Exception.Response.StatusCode -ne 404) { throw }
+}
 Write-Output 'smoke test passed'

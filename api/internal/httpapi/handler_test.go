@@ -19,6 +19,7 @@ type fakeStore struct {
 	listErr  error
 	deleteErr error
 	deletedID *string
+	profileErr error
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -31,7 +32,7 @@ func (f fakeStore) CreateProject(context.Context, string, string) (store.Project
 func (f fakeStore) GetProject(context.Context, string) (store.Project, error) {
 	return store.Project{}, nil
 }
-func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, error) { return nil, nil }
+func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, error) { return nil, f.profileErr }
 func (f fakeStore) UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error) {
 	return store.ProfileRow{}, nil
 }
@@ -131,5 +132,16 @@ func TestDeleteProjectRejectsMalformedID(t *testing.T) {
 
 	if w.Code != http.StatusNotFound || deletedID != "" {
 		t.Fatalf("unexpected response: %d %s id=%s", w.Code, w.Body.String(), deletedID)
+	}
+}
+
+func TestDeletedProjectProfileIsNotFound(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/api/projects/11111111-1111-1111-1111-111111111111/profile", nil)
+	w := httptest.NewRecorder()
+
+	(&Handler{Store: fakeStore{profileErr: pgx.ErrNoRows}}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusNotFound || !strings.Contains(w.Body.String(), `"code":"not_found"`) {
+		t.Fatalf("unexpected response: %d %s", w.Code, w.Body.String())
 	}
 }
