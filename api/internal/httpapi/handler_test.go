@@ -11,11 +11,14 @@ import (
 	"testing"
 
 	"compliance/api/internal/store"
+	"github.com/jackc/pgx/v5"
 )
 
 type fakeStore struct {
 	projects []store.Project
 	listErr  error
+	deleteErr error
+	deletedID *string
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -32,6 +35,7 @@ func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, err
 func (f fakeStore) UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error) {
 	return store.ProfileRow{}, nil
 }
+func (f fakeStore) DeleteProject(_ context.Context, id string) error { if f.deletedID != nil { *f.deletedID = id }; return f.deleteErr }
 
 func TestHealthz(t *testing.T) {
 	r := httptest.NewRequest("GET", "/healthz", nil)
@@ -80,5 +84,52 @@ func TestListProjectsHandlesStoreFailure(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError || !strings.Contains(w.Body.String(), `"code":"internal_error"`) {
 		t.Fatalf("unexpected response: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteProject(t *testing.T) {
+	var deletedID string
+	projectID := "11111111-1111-1111-1111-111111111111"
+	r := httptest.NewRequest(http.MethodDelete, "/api/projects/"+projectID, nil)
+	w := httptest.NewRecorder()
+
+	(&Handler{Store: fakeStore{deletedID: &deletedID}}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusNoContent || w.Body.Len() != 0 || deletedID != projectID {
+		t.Fatalf("unexpected response: %d %s id=%s", w.Code, w.Body.String(), deletedID)
+	}
+}
+
+func TestDeleteProjectNotFound(t *testing.T) {
+	r := httptest.NewRequest(http.MethodDelete, "/api/projects/11111111-1111-1111-1111-111111111111", nil)
+	w := httptest.NewRecorder()
+
+	(&Handler{Store: fakeStore{deleteErr: pgx.ErrNoRows}}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusNotFound || !strings.Contains(w.Body.String(), `"code":"not_found"`) {
+		t.Fatalf("unexpected response: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteProjectHandlesStoreFailure(t *testing.T) {
+	r := httptest.NewRequest(http.MethodDelete, "/api/projects/11111111-1111-1111-1111-111111111111", nil)
+	w := httptest.NewRecorder()
+
+	(&Handler{Store: fakeStore{deleteErr: errors.New("database unavailable")}}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusInternalServerError || !strings.Contains(w.Body.String(), `"code":"internal_error"`) {
+		t.Fatalf("unexpected response: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteProjectRejectsMalformedID(t *testing.T) {
+	var deletedID string
+	r := httptest.NewRequest(http.MethodDelete, "/api/projects/not-a-uuid", nil)
+	w := httptest.NewRecorder()
+
+	(&Handler{Store: fakeStore{deletedID: &deletedID}}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusNotFound || deletedID != "" {
+		t.Fatalf("unexpected response: %d %s id=%s", w.Code, w.Body.String(), deletedID)
 	}
 }

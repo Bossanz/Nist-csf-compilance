@@ -9,10 +9,12 @@ import (
 	"strings"
 	"compliance/api/internal/domain"
 	"compliance/api/internal/store"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type dataStore interface {
-	ListFunctions(context.Context) ([]store.Function,error); CreateProject(context.Context,string,string) (store.Project,error); ListProjects(context.Context) ([]store.Project,error); GetProject(context.Context,string) (store.Project,error); ListProfile(context.Context,string) ([]store.ProfileRow,error); UpdateProfile(context.Context,string,string,store.ProfilePatch) (store.ProfileRow,error)
+	ListFunctions(context.Context) ([]store.Function,error); CreateProject(context.Context,string,string) (store.Project,error); ListProjects(context.Context) ([]store.Project,error); DeleteProject(context.Context,string) error; GetProject(context.Context,string) (store.Project,error); ListProfile(context.Context,string) ([]store.ProfileRow,error); UpdateProfile(context.Context,string,string,store.ProfilePatch) (store.ProfileRow,error)
 }
 type Handler struct { Store dataStore }
 type errorBody struct { Error struct { Code string `json:"code"`; Message string `json:"message"` } `json:"error"` }
@@ -28,6 +30,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(parts)==2 && parts[0]=="api" && parts[1]=="projects" && r.Method==http.MethodPost { h.createProject(w,r); return }
 	if len(parts)>=3 && parts[0]=="api" && parts[1]=="projects" {
 		id := parts[2]
+		if len(parts)==3 && r.Method==http.MethodDelete { h.deleteProject(w,r,id); return }
 		if len(parts)==3 && r.Method==http.MethodGet { h.project(w,r,id); return }
 		if len(parts)==4 && parts[3]=="profile" && r.Method==http.MethodGet { h.profile(w,r,id); return }
 		if len(parts)==4 && parts[3]=="summary" && r.Method==http.MethodGet { h.summary(w,r,id); return }
@@ -38,6 +41,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) functions(w http.ResponseWriter,r *http.Request) { data,err:=h.Store.ListFunctions(r.Context()); if err!=nil { writeError(w,500,"internal_error","could not load catalog"); return }; writeJSON(w,200,data) }
 func (h *Handler) projects(w http.ResponseWriter,r *http.Request) { data,err:=h.Store.ListProjects(r.Context()); if err!=nil { writeError(w,500,"internal_error","could not load projects"); return }; writeJSON(w,200,data) }
+func (h *Handler) deleteProject(w http.ResponseWriter,r *http.Request,id string) { if _,err:=uuid.Parse(id); err!=nil { writeError(w,404,"not_found","project not found"); return }; err:=h.Store.DeleteProject(r.Context(),id); if errors.Is(err,pgx.ErrNoRows) { writeError(w,404,"not_found","project not found"); return }; if err!=nil { writeError(w,500,"internal_error","could not delete project"); return }; w.WriteHeader(http.StatusNoContent) }
 func (h *Handler) createProject(w http.ResponseWriter,r *http.Request) { var input struct{Name string `json:"name"`; OrganizationName string `json:"organizationName"`}; if err:=decodeJSON(r,&input); err!=nil { writeError(w,400,"invalid_json",err.Error()); return }; if strings.TrimSpace(input.Name)=="" { writeError(w,400,"validation_error","project name is required"); return }; if strings.TrimSpace(input.OrganizationName)=="" { input.OrganizationName="Unnamed organization" }; p,err:=h.Store.CreateProject(r.Context(),input.Name,input.OrganizationName); if err!=nil { writeError(w,500,"internal_error","could not create project"); return }; writeJSON(w,201,p) }
 func (h *Handler) project(w http.ResponseWriter,r *http.Request,id string) { p,err:=h.Store.GetProject(r.Context(),id); if err!=nil { writeError(w,404,"not_found","project not found"); return }; writeJSON(w,200,p) }
 func (h *Handler) profile(w http.ResponseWriter,r *http.Request,id string) { p,err:=h.Store.ListProfile(r.Context(),id); if err!=nil { writeError(w,500,"internal_error","could not load profile"); return }; writeJSON(w,200,p) }

@@ -29,6 +29,14 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	return out, rows.Err()
 }
 
+func (s *Store) DeleteProject(ctx context.Context, id string) error {
+	tx, err := s.DB.Begin(ctx); if err != nil { return err }; defer tx.Rollback(ctx)
+	var organizationID string
+	if err = tx.QueryRow(ctx, `DELETE FROM projects WHERE id=$1 RETURNING organization_id`, id).Scan(&organizationID); err != nil { return err }
+	if _, err = tx.Exec(ctx, `DELETE FROM organizations o WHERE o.id=$1 AND NOT EXISTS (SELECT 1 FROM projects p WHERE p.organization_id=o.id) AND NOT EXISTS (SELECT 1 FROM users u WHERE u.organization_id=o.id)`, organizationID); err != nil { return err }
+	return tx.Commit(ctx)
+}
+
 func (s *Store) ListProfile(ctx context.Context, projectID string) ([]ProfileRow, error) {
 	rows, err := s.DB.Query(ctx, `SELECT p.id,p.project_id,p.subcategory_id,f.code,c.code,sc.code,sc.description,p.included,p.rationale,p.current_priority,p.current_coverage_level,p.current_status_text,p.current_policies_text,p.current_tier,p.target_priority,p.target_coverage_level,p.target_approach_text,p.target_tier,p.notes,p.considerations,p.review_status FROM project_subcategory_profiles p JOIN subcategories sc ON sc.id=p.subcategory_id JOIN categories c ON c.id=sc.category_id JOIN functions f ON f.id=c.function_id WHERE p.project_id=$1 ORDER BY f.code,c.code,sc.code`, projectID)
 	if err != nil { return nil, err }; defer rows.Close(); out := []ProfileRow{}
