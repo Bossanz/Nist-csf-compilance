@@ -29,6 +29,7 @@ type Handler struct {
 	SecureCookies bool
 	LoginThrottle *LoginThrottle
 	AppOrigin     string
+	Invitations   *authservice.InvitationService
 }
 type errorBody struct {
 	Error struct {
@@ -37,8 +38,8 @@ type errorBody struct {
 	} `json:"error"`
 }
 
-func New(s *store.Store, auth *authservice.Service, secureCookies bool, appOrigin string) http.Handler {
-	return &Handler{Store: s, Auth: auth, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
+func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, secureCookies bool, appOrigin string) http.Handler {
+	return &Handler{Store: s, Auth: auth, Invitations: invitations, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
@@ -69,6 +70,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Path == "/api/auth/me" && r.Method == http.MethodGet {
 		h.me(w, r)
+		return
+	}
+	invitePath := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(invitePath) == 4 && invitePath[0] == "api" && invitePath[1] == "invitations" && invitePath[3] == "accept" && r.Method == http.MethodPost {
+		h.acceptInvitation(w, r, invitePath[2])
 		return
 	}
 	var authenticated bool
@@ -102,6 +108,30 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.createOrganizationProject(w, r, id)
 			return
 		}
+		if len(parts) == 4 && parts[3] == "invitations" && r.Method == http.MethodPost {
+			h.inviteStakeholder(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "users" && r.Method == http.MethodGet {
+			h.organizationUsers(w, r, id)
+			return
+		}
+		if len(parts) == 5 && parts[3] == "users" && r.Method == http.MethodPatch {
+			h.updateOrganizationUser(w, r, id, parts[4])
+			return
+		}
+	}
+	if len(parts) == 2 && parts[0] == "api" && parts[1] == "counselor-invitations" && r.Method == http.MethodPost {
+		h.inviteCounselor(w, r)
+		return
+	}
+	if len(parts) == 2 && parts[0] == "api" && parts[1] == "counselors" && r.Method == http.MethodGet {
+		h.counselors(w, r)
+		return
+	}
+	if len(parts) == 3 && parts[0] == "api" && parts[1] == "counselors" && r.Method == http.MethodPatch {
+		h.updateCounselor(w, r, parts[2])
+		return
 	}
 	if len(parts) == 2 && parts[0] == "api" && parts[1] == "functions" && r.Method == http.MethodGet {
 		h.functions(w, r)

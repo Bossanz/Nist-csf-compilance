@@ -23,6 +23,7 @@ func main() {
 	}
 	defer s.Close()
 	authService := auth.NewService(s, time.Now)
+	invitationService := auth.NewInvitationService(s, time.Now)
 	adminEmail, adminPassword := os.Getenv("BOOTSTRAP_ADMIN_EMAIL"), os.Getenv("BOOTSTRAP_ADMIN_PASSWORD")
 	if adminEmail != "" && adminPassword != "" {
 		if err := authService.Bootstrap(ctx, adminEmail, adminPassword); err != nil {
@@ -33,7 +34,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	server := &http.Server{Addr: ":" + port, Handler: httpapi.New(s, authService, os.Getenv("APP_ENV") == "production", os.Getenv("APP_ORIGIN")), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	server := &http.Server{Addr: ":" + port, Handler: httpapi.New(s, authService, invitationService, os.Getenv("APP_ENV") == "production", os.Getenv("APP_ORIGIN")), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
 	log.Printf("api listening on :%s", port)
 	log.Fatal(server.ListenAndServe())
 }

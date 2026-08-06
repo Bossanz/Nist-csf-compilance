@@ -23,6 +23,9 @@ type fakeStore struct {
 	createdProjectOrganizationID *string
 	createdProjectName           *string
 	auditAction                  *string
+	users                        []store.User
+	updatedUserRole              *string
+	updatedUserStatus            *string
 	listErr                      error
 	deleteErr                    error
 	deletedID                    *string
@@ -82,6 +85,29 @@ func (f fakeStore) WriteAudit(_ context.Context, event store.AuditEvent) error {
 	}
 	return nil
 }
+func (f fakeStore) ListOrganizationUsers(context.Context, string) ([]store.User, error) {
+	return f.users, nil
+}
+func (f fakeStore) ListCounselors(context.Context) ([]store.User, error) { return f.users, nil }
+func (f fakeStore) UpdateOrganizationUser(_ context.Context, _, _, role, status string) (store.User, error) {
+	if f.updatedUserRole != nil {
+		*f.updatedUserRole = role
+	}
+	if f.updatedUserStatus != nil {
+		*f.updatedUserStatus = status
+	}
+	return store.User{Role: role, Status: status}, nil
+}
+func (f fakeStore) UpdateCounselor(_ context.Context, _, role, status string) (store.User, error) {
+	if f.updatedUserRole != nil {
+		*f.updatedUserRole = role
+	}
+	if f.updatedUserStatus != nil {
+		*f.updatedUserStatus = status
+	}
+	return store.User{Role: role, Status: status}, nil
+}
+func (f fakeStore) RevokeUserSessions(context.Context, string) error { return nil }
 
 func TestHealthz(t *testing.T) {
 	r := httptest.NewRequest("GET", "/healthz", nil)
