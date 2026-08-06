@@ -28,6 +28,7 @@ type Handler struct {
 	Auth          *authservice.Service
 	SecureCookies bool
 	LoginThrottle *LoginThrottle
+	AppOrigin     string
 }
 type errorBody struct {
 	Error struct {
@@ -36,19 +37,26 @@ type errorBody struct {
 	} `json:"error"`
 }
 
-func New(s *store.Store, auth *authservice.Service, secureCookies bool) http.Handler {
-	return &Handler{Store: s, Auth: auth, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle()}
+func New(s *store.Store, auth *authservice.Service, secureCookies bool, appOrigin string) http.Handler {
+	return &Handler{Store: s, Auth: auth, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
+		w.Header().Set("Access-Control-Allow-Origin", h.AppOrigin)
+		w.Header().Set("Vary", "Origin")
+	}
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if r.URL.Path == "/healthz" {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		return
+	}
+	if !h.validMutationRequest(r) {
+		writeError(w, http.StatusForbidden, "invalid_origin", "Request origin is not allowed")
 		return
 	}
 	if r.URL.Path == "/api/auth/login" && r.Method == http.MethodPost {
@@ -63,8 +71,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.me(w, r)
 		return
 	}
+	var authenticated bool
+	r, authenticated = h.authenticate(w, r)
+	if !authenticated {
+		return
+	}
 	path := strings.Trim(r.URL.Path, "/")
 	parts := strings.Split(path, "/")
+	if len(parts) == 2 && parts[0] == "api" && parts[1] == "organizations" {
+		if r.Method == http.MethodGet {
+			h.organizations(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			h.createOrganization(w, r)
+			return
+		}
+	}
+	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "organizations" {
+		id := parts[2]
+		if len(parts) == 3 && r.Method == http.MethodDelete {
+			h.deleteOrganization(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "projects" && r.Method == http.MethodGet {
+			h.organizationProjects(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "projects" && r.Method == http.MethodPost {
+			h.createOrganizationProject(w, r, id)
+			return
+		}
+	}
 	if len(parts) == 2 && parts[0] == "api" && parts[1] == "functions" && r.Method == http.MethodGet {
 		h.functions(w, r)
 		return
@@ -74,28 +112,49 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(parts) == 2 && parts[0] == "api" && parts[1] == "projects" && r.Method == http.MethodPost {
+		if h.Auth != nil && !can(currentUser(r), actionCreateProject) {
+			writeError(w, http.StatusForbidden, "forbidden", "Permission denied")
+			return
+		}
 		h.createProject(w, r)
 		return
 	}
 	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "projects" {
 		id := parts[2]
 		if len(parts) == 3 && r.Method == http.MethodDelete {
+			action := actionDeleteProject
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
 			h.deleteProject(w, r, id)
 			return
 		}
 		if len(parts) == 3 && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
 			h.project(w, r, id)
 			return
 		}
 		if len(parts) == 4 && parts[3] == "profile" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
 			h.profile(w, r, id)
 			return
 		}
 		if len(parts) == 4 && parts[3] == "summary" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
 			h.summary(w, r, id)
 			return
 		}
 		if len(parts) == 5 && parts[3] == "profile" && r.Method == http.MethodPut {
+			action := actionUpdateProfile
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
 			h.updateProfile(w, r, id, parts[4])
 			return
 		}
@@ -116,6 +175,15 @@ func (h *Handler) projects(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, 500, "internal_error", "could not load projects")
 		return
+	}
+	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
+		scoped := data[:0]
+		for _, project := range data {
+			if canAccessOrganization(currentUser(r), project.OrganizationID) {
+				scoped = append(scoped, project)
+			}
+		}
+		data = scoped
 	}
 	writeJSON(w, 200, data)
 }
@@ -202,6 +270,8 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, projectI
 		}
 		return
 	}
+	project, _ := h.Store.GetProject(r.Context(), projectID)
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: &project.OrganizationID, ProjectID: &projectID, Action: "profile.updated", EntityType: "profile", EntityID: &subcategoryID})
 	writeJSON(w, 200, p)
 }
 

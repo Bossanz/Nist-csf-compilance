@@ -1,0 +1,97 @@
+package httpapi
+
+import (
+	"context"
+	"net/http"
+	"strings"
+
+	"compliance/api/internal/store"
+)
+
+func (h *Handler) validMutationRequest(r *http.Request) bool {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions || h.AppOrigin == "" {
+		return true
+	}
+	if r.Header.Get("Origin") != h.AppOrigin {
+		return false
+	}
+	return r.ContentLength == 0 || strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json")
+}
+
+type action string
+
+const (
+	actionCreateOrganization action = "create_organization"
+	actionDeleteOrganization action = "delete_organization"
+	actionCreateProject      action = "create_project"
+	actionDeleteProject      action = "delete_project"
+	actionUpdateProfile      action = "update_profile"
+	actionInviteStakeholder  action = "invite_stakeholder"
+	actionManageCounselor    action = "manage_counselor"
+)
+
+func can(user store.User, requested action) bool {
+	switch requested {
+	case actionCreateOrganization, actionDeleteOrganization, actionManageCounselor:
+		return user.Role == "counselor_admin"
+	case actionCreateProject, actionDeleteProject:
+		return user.Role == "counselor_admin" || user.Role == "counselor"
+	case actionUpdateProfile:
+		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "assessor"
+	case actionInviteStakeholder:
+		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "org_admin"
+	default:
+		return false
+	}
+}
+
+type userContextKey struct{}
+
+func withCurrentUser(r *http.Request, user store.User) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), userContextKey{}, user))
+}
+
+func currentUser(r *http.Request) store.User {
+	user, _ := r.Context().Value(userContextKey{}).(store.User)
+	return user
+}
+
+func canAccessOrganization(user store.User, organizationID string) bool {
+	if user.UserType == "counselor" {
+		return true
+	}
+	return user.OrganizationID != nil && *user.OrganizationID == organizationID
+}
+
+func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*http.Request, bool) {
+	if h.Auth == nil {
+		return r, true
+	}
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required")
+		return r, false
+	}
+	user, err := h.Auth.Authenticate(r.Context(), cookie.Value)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required")
+		return r, false
+	}
+	return withCurrentUser(r, user), true
+}
+
+func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, projectID string, requested *action) bool {
+	if h.Auth == nil {
+		return true
+	}
+	project, err := h.Store.GetProject(r.Context(), projectID)
+	if err != nil || !canAccessOrganization(currentUser(r), project.OrganizationID) {
+		writeError(w, http.StatusNotFound, "not_found", "project not found")
+		return false
+	}
+	if requested != nil && !can(currentUser(r), *requested) {
+		writeError(w, http.StatusForbidden, "forbidden", "Permission denied")
+		return false
+	}
+	return true
+}

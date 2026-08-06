@@ -2,6 +2,16 @@ package store
 
 import "time"
 
+type AuditEvent struct {
+	ActorUserID    string
+	OrganizationID *string
+	ProjectID      *string
+	Action         string
+	EntityType     string
+	EntityID       *string
+	Metadata       map[string]any
+}
+
 type Function struct {
 	ID          string     `json:"id"`
 	Code        string     `json:"code"`

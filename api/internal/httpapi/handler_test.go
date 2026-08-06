@@ -15,11 +15,18 @@ import (
 )
 
 type fakeStore struct {
-	projects []store.Project
-	listErr  error
-	deleteErr error
-	deletedID *string
-	profileErr error
+	projects                     []store.Project
+	project                      store.Project
+	organizations                []store.Organization
+	organization                 store.Organization
+	createdOrganizationName      *string
+	createdProjectOrganizationID *string
+	createdProjectName           *string
+	auditAction                  *string
+	listErr                      error
+	deleteErr                    error
+	deletedID                    *string
+	profileErr                   error
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -29,14 +36,52 @@ func (f fakeStore) ListFunctions(context.Context) ([]store.Function, error) { re
 func (f fakeStore) CreateProject(context.Context, string, string) (store.Project, error) {
 	return store.Project{}, nil
 }
-func (f fakeStore) GetProject(context.Context, string) (store.Project, error) {
+func (f fakeStore) CreateScopedProject(_ context.Context, organizationID, name string) (store.Project, error) {
+	if f.createdProjectOrganizationID != nil {
+		*f.createdProjectOrganizationID = organizationID
+	}
+	if f.createdProjectName != nil {
+		*f.createdProjectName = name
+	}
 	return store.Project{}, nil
 }
-func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, error) { return nil, f.profileErr }
+func (f fakeStore) GetProject(context.Context, string) (store.Project, error) {
+	return f.project, nil
+}
+func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, error) {
+	return nil, f.profileErr
+}
 func (f fakeStore) UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error) {
 	return store.ProfileRow{}, nil
 }
-func (f fakeStore) DeleteProject(_ context.Context, id string) error { if f.deletedID != nil { *f.deletedID = id }; return f.deleteErr }
+func (f fakeStore) DeleteProject(_ context.Context, id string) error {
+	if f.deletedID != nil {
+		*f.deletedID = id
+	}
+	return f.deleteErr
+}
+func (f fakeStore) ListOrganizations(context.Context, *string) ([]store.Organization, error) {
+	return f.organizations, nil
+}
+func (f fakeStore) GetOrganization(context.Context, string) (store.Organization, error) {
+	return f.organization, nil
+}
+func (f fakeStore) CreateOrganization(_ context.Context, name string) (store.Organization, error) {
+	if f.createdOrganizationName != nil {
+		*f.createdOrganizationName = name
+	}
+	return store.Organization{Name: name}, nil
+}
+func (f fakeStore) DeleteOrganization(context.Context, string) error { return nil }
+func (f fakeStore) ListProjectsByOrganization(context.Context, string) ([]store.Project, error) {
+	return f.projects, nil
+}
+func (f fakeStore) WriteAudit(_ context.Context, event store.AuditEvent) error {
+	if f.auditAction != nil {
+		*f.auditAction = event.Action
+	}
+	return nil
+}
 
 func TestHealthz(t *testing.T) {
 	r := httptest.NewRequest("GET", "/healthz", nil)

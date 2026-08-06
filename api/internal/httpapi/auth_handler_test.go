@@ -17,6 +17,7 @@ type fakeAuthRepository struct {
 	user             store.User
 	session          store.Session
 	findUserErr      error
+	findSessionErr   error
 	createdTokenHash string
 	revokedTokenHash string
 }
@@ -25,7 +26,7 @@ func (f *fakeAuthRepository) FindUserByEmail(context.Context, string) (store.Use
 	return f.user, f.findUserErr
 }
 func (f *fakeAuthRepository) FindUserBySessionHash(context.Context, string) (store.User, store.Session, error) {
-	return f.user, f.session, nil
+	return f.user, f.session, f.findSessionErr
 }
 func (f *fakeAuthRepository) CreateSession(_ context.Context, _ string, hash string, _ time.Time) error {
 	f.createdTokenHash = hash
