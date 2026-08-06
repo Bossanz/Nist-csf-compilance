@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -10,7 +11,10 @@ import (
 	"compliance/api/internal/store"
 )
 
-type Handler struct { Store *store.Store }
+type dataStore interface {
+	ListFunctions(context.Context) ([]store.Function,error); CreateProject(context.Context,string,string) (store.Project,error); ListProjects(context.Context) ([]store.Project,error); GetProject(context.Context,string) (store.Project,error); ListProfile(context.Context,string) ([]store.ProfileRow,error); UpdateProfile(context.Context,string,string,store.ProfilePatch) (store.ProfileRow,error)
+}
+type Handler struct { Store dataStore }
 type errorBody struct { Error struct { Code string `json:"code"`; Message string `json:"message"` } `json:"error"` }
 
 func New(s *store.Store) http.Handler { return &Handler{Store:s} }
@@ -20,6 +24,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/healthz" { writeJSON(w, http.StatusOK, map[string]string{"status":"ok"}); return }
 	path := strings.Trim(r.URL.Path,"/"); parts := strings.Split(path,"/")
 	if len(parts)==2 && parts[0]=="api" && parts[1]=="functions" && r.Method==http.MethodGet { h.functions(w,r); return }
+	if len(parts)==2 && parts[0]=="api" && parts[1]=="projects" && r.Method==http.MethodGet { h.projects(w,r); return }
 	if len(parts)==2 && parts[0]=="api" && parts[1]=="projects" && r.Method==http.MethodPost { h.createProject(w,r); return }
 	if len(parts)>=3 && parts[0]=="api" && parts[1]=="projects" {
 		id := parts[2]
@@ -32,6 +37,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) functions(w http.ResponseWriter,r *http.Request) { data,err:=h.Store.ListFunctions(r.Context()); if err!=nil { writeError(w,500,"internal_error","could not load catalog"); return }; writeJSON(w,200,data) }
+func (h *Handler) projects(w http.ResponseWriter,r *http.Request) { data,err:=h.Store.ListProjects(r.Context()); if err!=nil { writeError(w,500,"internal_error","could not load projects"); return }; writeJSON(w,200,data) }
 func (h *Handler) createProject(w http.ResponseWriter,r *http.Request) { var input struct{Name string `json:"name"`; OrganizationName string `json:"organizationName"`}; if err:=decodeJSON(r,&input); err!=nil { writeError(w,400,"invalid_json",err.Error()); return }; if strings.TrimSpace(input.Name)=="" { writeError(w,400,"validation_error","project name is required"); return }; if strings.TrimSpace(input.OrganizationName)=="" { input.OrganizationName="Unnamed organization" }; p,err:=h.Store.CreateProject(r.Context(),input.Name,input.OrganizationName); if err!=nil { writeError(w,500,"internal_error","could not create project"); return }; writeJSON(w,201,p) }
 func (h *Handler) project(w http.ResponseWriter,r *http.Request,id string) { p,err:=h.Store.GetProject(r.Context(),id); if err!=nil { writeError(w,404,"not_found","project not found"); return }; writeJSON(w,200,p) }
 func (h *Handler) profile(w http.ResponseWriter,r *http.Request,id string) { p,err:=h.Store.ListProfile(r.Context(),id); if err!=nil { writeError(w,500,"internal_error","could not load profile"); return }; writeJSON(w,200,p) }

@@ -14,12 +14,19 @@ func (s *Store) CreateProject(ctx context.Context, name, organizationName string
 	if err = tx.QueryRow(ctx, `INSERT INTO projects(organization_id,name) VALUES ($1,$2) RETURNING id`, orgID, name).Scan(&projectID); err != nil { return Project{}, err }
 	if _, err = tx.Exec(ctx, `INSERT INTO project_functions(project_id,function_id) SELECT $1,id FROM functions`, projectID); err != nil { return Project{}, err }
 	if _, err = tx.Exec(ctx, `INSERT INTO project_subcategory_profiles(project_id,subcategory_id) SELECT $1,id FROM subcategories`, projectID); err != nil { return Project{}, err }
-	var p Project; err = tx.QueryRow(ctx, `SELECT id,organization_id,name,status,created_at::text FROM projects WHERE id=$1`, projectID).Scan(&p.ID,&p.OrganizationID,&p.Name,&p.Status,&p.CreatedAt)
+	var p Project; err = tx.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, projectID).Scan(&p.ID,&p.OrganizationID,&p.OrganizationName,&p.Name,&p.Status,&p.CreatedAt)
 	if err != nil { return Project{}, err }; if err = tx.Commit(ctx); err != nil { return Project{}, err }; return p, nil
 }
 
 func (s *Store) GetProject(ctx context.Context, id string) (Project, error) {
-	var p Project; err := s.DB.QueryRow(ctx, `SELECT id,organization_id,name,status,created_at::text FROM projects WHERE id=$1`, id).Scan(&p.ID,&p.OrganizationID,&p.Name,&p.Status,&p.CreatedAt); return p, err
+	var p Project; err := s.DB.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, id).Scan(&p.ID,&p.OrganizationID,&p.OrganizationName,&p.Name,&p.Status,&p.CreatedAt); return p, err
+}
+
+func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
+	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id ORDER BY p.created_at DESC,p.id DESC`)
+	if err != nil { return nil, err }; defer rows.Close(); out := []Project{}
+	for rows.Next() { var p Project; if err := rows.Scan(&p.ID,&p.OrganizationID,&p.OrganizationName,&p.Name,&p.Status,&p.CreatedAt); err != nil { return nil, err }; out = append(out,p) }
+	return out, rows.Err()
 }
 
 func (s *Store) ListProfile(ctx context.Context, projectID string) ([]ProfileRow, error) {

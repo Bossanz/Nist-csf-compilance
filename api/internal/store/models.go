@@ -3,7 +3,7 @@ package store
 type Function struct { ID string `json:"id"`; Code string `json:"code"`; Name string `json:"name"`; Description string `json:"description"`; Categories []Category `json:"categories,omitempty"` }
 type Category struct { ID string `json:"id"`; FunctionID string `json:"functionId"`; Code string `json:"code"`; Name string `json:"name"`; Description string `json:"description"`; Subcategories []Subcategory `json:"subcategories,omitempty"` }
 type Subcategory struct { ID string `json:"id"`; CategoryID string `json:"categoryId"`; Code string `json:"code"`; Description string `json:"description"` }
-type Project struct { ID string `json:"id"`; OrganizationID string `json:"organizationID"`; Name string `json:"name"`; Status string `json:"status"`; CreatedAt string `json:"createdAt"` }
+type Project struct { ID string `json:"id"`; OrganizationID string `json:"organizationID"`; OrganizationName string `json:"organizationName"`; Name string `json:"name"`; Status string `json:"status"`; CreatedAt string `json:"createdAt"` }
 type ProjectFunction struct { ID string `json:"id"`; FunctionID string `json:"functionId"`; Code string `json:"code"`; Applicable bool `json:"applicable"`; Reason string `json:"reason"` }
 type ProfileRow struct {
 	ID string `json:"id"`; ProjectID string `json:"projectID"`; SubcategoryID string `json:"subcategoryID"`; FunctionCode string `json:"functionCode"`; CategoryCode string `json:"categoryCode"`; SubcategoryCode string `json:"subcategoryCode"`; Description string `json:"description"`
