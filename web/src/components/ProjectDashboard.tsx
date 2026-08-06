@@ -11,9 +11,10 @@ type Props = {
   error: string;
   onOpen: (project: Project) => void;
   onCreate: (input: NewProject) => void;
+  onDelete: (project: Project) => void;
 };
 
-export function ProjectDashboard({ projects, loading, openingID, error, onOpen, onCreate }: Props) {
+export function ProjectDashboard({ projects, loading, openingID, error, onOpen, onCreate, onDelete }: Props) {
   const [name, setName] = useState("");
   const [organizationName, setOrganizationName] = useState("");
 
@@ -36,7 +37,7 @@ export function ProjectDashboard({ projects, loading, openingID, error, onOpen, 
         <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id}>
           <div className="project-card-top"><span className="status-chip">{project.status.replaceAll("_", " ")}</span><time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time></div>
           <div><h3>{project.name}</h3><p className="muted">{project.organizationName}</p></div>
-          <button className="secondary" disabled={Boolean(openingID)} onClick={() => onOpen(project)} aria-label={`Open ${project.name}`}>{openingID === project.id ? "Opening…" : "Open project"}</button>
+          <div className="project-actions"><button className="secondary" disabled={Boolean(openingID)} onClick={() => onOpen(project)} aria-label={`Open ${project.name}`}>{openingID === project.id ? "Working…" : "Open project"}</button><button className="danger" disabled={Boolean(openingID)} onClick={() => {if(window.confirm(`Delete ${project.name}? Its assessment data will be permanently deleted.`))onDelete(project)}} aria-label={`Delete ${project.name}`}>Delete</button></div>
         </article>)}</div>}
     </section>
 

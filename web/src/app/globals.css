@@ -48,6 +48,8 @@ button.primary { border: 0; border-radius: var(--radius-sm); padding: 11px 16px;
 button.primary:hover { background: #09594f; }
 button.secondary { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--accent-dark); background: white; font-weight: 700; cursor: pointer; }
 button.secondary:hover { border-color: var(--accent); background: var(--accent-soft); }
+button.danger { border: 0; padding: 10px 8px; color: var(--error); background: transparent; font-weight: 700; cursor: pointer; }
+button.danger:hover { text-decoration: underline; }
 button:disabled { opacity: .58; cursor: not-allowed; }
 .dashboard { max-width: 1240px; }
 .dashboard-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 42px; }
@@ -62,7 +64,7 @@ button:disabled { opacity: .58; cursor: not-allowed; }
 .project-card p { margin: 0; }
 .project-card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .status-chip { padding: 5px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.project-card .secondary { align-self: flex-start; }
+.project-actions { display: flex; align-items: center; gap: 8px; }
 .create-project { margin-top: 32px; display: grid; grid-template-columns: minmax(240px,.8fr) 1.2fr; gap: 32px; align-items: end; }
 .create-project h2 { margin: 6px 0; }
 .create-project .form { justify-content: flex-end; align-items: end; }
