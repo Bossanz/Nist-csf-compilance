@@ -50,7 +50,7 @@ Add `sessions`:
 
 Add `invitations`:
 
-- `id`, `organization_id`, `email`, `role`, `token_hash`, `invited_by`, `expires_at`, `accepted_at`, `created_at`.
+- `id`, nullable `organization_id`, `email`, `user_type`, `role`, `token_hash`, `invited_by`, `expires_at`, `accepted_at`, `created_at`.
 
 Add `audit_logs`:
 
@@ -80,9 +80,10 @@ V1 keeps one organization per stakeholder and does not add an organization-membe
 
 1. A counselor creates an organization and its first `org_admin` invitation.
 2. An `org_admin` can invite additional stakeholders with `org_admin`, `assessor`, `reviewer`, or `viewer` roles.
-3. The API returns a one-time invitation URL. V1 provides a Copy button; it does not send email.
-4. The recipient opens the URL, sets a password, and activates the account.
-5. Invitation tokens are single-use, expire server-side, and are stored only as hashes.
+3. A `counselor_admin` can invite counselor users with `counselor_admin` or `counselor` roles; these invitations have no organization.
+4. The API returns a one-time invitation URL. V1 provides a Copy button; it does not send email.
+5. The recipient opens the URL, sets a password, and activates the account.
+6. Invitation tokens are single-use, expire server-side, and are stored only as hashes.
 
 ## API authorization
 
@@ -99,7 +100,11 @@ V1 endpoints include:
 - `GET /api/organizations/:id/projects`
 - `POST /api/organizations/:id/projects`
 - `GET /api/organizations/:id/users`
+- `PATCH /api/organizations/:id/users/:userID`
 - `POST /api/organizations/:id/invitations`
+- `GET /api/counselors`
+- `PATCH /api/counselors/:userID`
+- `POST /api/counselor-invitations`
 - `POST /api/invitations/:token/accept`
 
 Existing project, profile, summary, and deletion endpoints become protected and enforce organization and role checks. UI visibility mirrors permissions for usability, but the Go API remains the security boundary.
