@@ -1,64 +1,22 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import Home from "./page";
-import { api } from "../lib/api";
-import type { FunctionNode, ProfileRow, Project, Summary } from "../lib/types";
+import { APIError, api } from "../lib/api";
+import type { FunctionNode, Organization, ProfileRow, Project, Summary, User } from "../lib/types";
 
-vi.mock("../lib/api", () => ({
-  api: {
-    getFunctions: vi.fn(),
-    getProjects: vi.fn(),
-    getProfile: vi.fn(),
-    getSummary: vi.fn(),
-    createProject: vi.fn(),
-    deleteProject: vi.fn(),
-    updateProfile: vi.fn(),
-  },
-}));
+vi.mock("../lib/api",()=>({APIError:class APIError extends Error{constructor(message:string,public status:number){super(message)}},api:{login:vi.fn(),logout:vi.fn(),me:vi.fn(),getOrganizations:vi.fn(),createOrganization:vi.fn(),getOrganizationProjects:vi.fn(),createOrganizationProject:vi.fn(),getOrganizationUsers:vi.fn(),createInvitation:vi.fn(),getFunctions:vi.fn(),getProfile:vi.fn(),getSummary:vi.fn(),deleteProject:vi.fn(),updateProfile:vi.fn()}}));
 
-const project: Project = { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness Review", status: "setup", createdAt: "2026-08-06T03:00:00Z" };
-const otherProject: Project = { id: "project-2", organizationID: "org-2", organizationName: "Beta", name: "Second Review", status: "setup", createdAt: "2026-08-05T03:00:00Z" };
-const functions: FunctionNode[] = [{ id: "function-1", code: "GV", name: "Govern", description: "Governance", categories: [] }];
-const profile: ProfileRow[] = [{ id: "profile-1", projectID: "project-1", subcategoryID: "subcategory-1", functionCode: "GV", categoryCode: "GV.OC", subcategoryCode: "GV.OC-01", description: "The organizational mission is understood", included: false, rationale: "", currentPriority: "", currentCoverageLevel: "none", currentStatusText: "", currentPoliciesText: "", currentTier: "", targetPriority: "", targetCoverageLevel: "none", targetApproachText: "", targetTier: "", notes: "", considerations: "", reviewStatus: "draft" }];
-const summary: Summary = { coveragePct: 0, includedCount: 0, pendingCount: 0, rejectedCount: 0, functions: [] };
+const user:User={id:"user-1",organizationID:null,name:"Consultant",email:"c@example.com",userType:"counselor",role:"counselor",status:"active"};
+const organization:Organization={id:"org-1",name:"Acme",type:"client"};
+const project:Project={id:"project-1",organizationID:"org-1",organizationName:"Acme",name:"Readiness",status:"setup",createdAt:"2026-08-06T03:00:00Z"};
+const functions:FunctionNode[]=[{id:"function-1",code:"GV",name:"Govern",description:"Governance",categories:[]}];
+const profile:ProfileRow[]=[];
+const summary:Summary={coveragePct:0,includedCount:0,pendingCount:0,rejectedCount:0,functions:[]};
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  vi.mocked(api.getFunctions).mockResolvedValue(functions);
-  vi.mocked(api.getProjects).mockResolvedValue([project]);
-  vi.mocked(api.getProfile).mockImplementation(async id => {
-    if (id !== project.id) throw new Error("wrong project requested");
-    return profile;
-  });
-  vi.mocked(api.getSummary).mockImplementation(async id => {
-    if (id !== project.id) throw new Error("wrong project requested");
-    return summary;
-  });
-  vi.mocked(api.deleteProject).mockImplementation(async id => {
-    if (id !== project.id) throw new Error("wrong project deleted");
-  });
-});
+beforeEach(()=>{vi.clearAllMocks();vi.mocked(api.me).mockResolvedValue(user);vi.mocked(api.getOrganizations).mockResolvedValue([organization]);vi.mocked(api.getOrganizationProjects).mockResolvedValue([project]);vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);vi.mocked(api.getFunctions).mockResolvedValue(functions);vi.mocked(api.getProfile).mockResolvedValue(profile);vi.mocked(api.getSummary).mockResolvedValue(summary)});
 
-afterEach(() => vi.restoreAllMocks());
+test("shows login when session restoration returns 401",async()=>{vi.mocked(api.me).mockRejectedValue(new APIError("Authentication required",401));render(<Home/>);expect(await screen.findByRole("heading",{name:/sign in/i})).toBeTruthy()});
 
-test("opens a persisted project and returns to the dashboard", async () => {
-  render(<Home />);
+test("navigates organizations then projects",async()=>{render(<Home/>);fireEvent.click(await screen.findByRole("button",{name:/open acme/i}));expect(await screen.findByRole("heading",{name:"Acme"})).toBeTruthy();fireEvent.click(screen.getByRole("button",{name:/open readiness/i}));expect(await screen.findByRole("heading",{name:"Readiness"})).toBeTruthy();fireEvent.click(screen.getByRole("button",{name:/back to organization/i}));expect(screen.getByRole("heading",{name:"Acme"})).toBeTruthy()});
 
-  fireEvent.click(await screen.findByRole("button", { name: /open readiness review/i }));
-  expect(await screen.findByRole("heading", { name: "Readiness Review" })).toBeTruthy();
-  expect(screen.getByText("The organizational mission is understood")).toBeTruthy();
-
-  fireEvent.click(screen.getByRole("button", { name: /back to projects/i }));
-  expect(screen.getByText("Acme")).toBeTruthy();
-});
-
-test("removes only the project deleted successfully", async () => {
-  vi.mocked(api.getProjects).mockResolvedValue([project, otherProject]);
-  vi.spyOn(window, "confirm").mockReturnValue(true);
-  render(<Home />);
-
-  fireEvent.click(await screen.findByRole("button", { name: /delete readiness review/i }));
-
-  await waitFor(() => expect(screen.queryByText("Readiness Review")).toBeNull());
-  expect(screen.getByText("Second Review")).toBeTruthy();
-});
+test("creates a project inside the selected organization",async()=>{vi.mocked(api.getOrganizationProjects).mockResolvedValue([]);vi.mocked(api.createOrganizationProject).mockResolvedValue(project);render(<Home/>);fireEvent.click(await screen.findByRole("button",{name:/open acme/i}));fireEvent.change(await screen.findByLabelText(/project name/i),{target:{value:"Gap Review"}});fireEvent.click(screen.getByRole("button",{name:/create project/i}));await waitFor(()=>expect(api.createOrganizationProject).toHaveBeenCalledWith("org-1",{name:"Gap Review"}))});

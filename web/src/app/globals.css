@@ -141,3 +141,21 @@ button:disabled { opacity: .58; cursor: not-allowed; }
   .create-project .form { display: grid; }
   .create-project .form input, .create-project .form button { width: 100%; }
 }
+.assessment-body {
+  margin: 0;
+  min-width: 0;
+}
+
+.assessment-body:disabled {
+  opacity: 1;
+}
+
+.button-link {
+  display: inline-flex;
+  width: fit-content;
+  text-decoration: none;
+}
+
+.success-panel {
+  align-content: center;
+}

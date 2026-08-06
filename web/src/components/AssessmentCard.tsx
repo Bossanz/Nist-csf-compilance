@@ -43,9 +43,11 @@ function createDraft(row: ProfileRow): Draft {
 export function AssessmentCard({
   row,
   onSave,
+  readOnly = false,
 }: {
   row: ProfileRow;
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
+  readOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
@@ -91,7 +93,7 @@ export function AssessmentCard({
       </button>
 
       {expanded ? (
-        <div className="assessment-body">
+        <fieldset className="assessment-body" disabled={readOnly}>
           <div className="scope-band">
             <label className="check-field">
               <input
@@ -178,13 +180,12 @@ export function AssessmentCard({
             <span className={`save-state ${state}`} role="status">
               {state === "saved" ? "Saved" : state === "error" ? error : "Changes are saved per outcome"}
             </span>
-            <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
+            {!readOnly && <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
               {state === "saving" ? "Saving…" : "Save assessment"}
-            </button>
+            </button>}
           </div>
-        </div>
+        </fieldset>
       ) : null}
     </article>
   );
 }
-

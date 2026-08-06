@@ -28,6 +28,15 @@ const row: ProfileRow = {
 };
 
 describe("ProfileEditor", () => {
+  test("keeps assessments viewable but not editable in read-only mode", () => {
+    render(<ProfileEditor rows={[row]} onSave={vi.fn()} readOnly />);
+
+    fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+    expect((screen.getByRole("checkbox", { name: /include in profile/i }).closest("fieldset") as HTMLFieldSetElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+  });
+
   test("saves the complete editable assessment instead of mutating the source row", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<ProfileEditor rows={[row]} onSave={onSave} />);
