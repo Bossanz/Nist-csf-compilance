@@ -1,5 +1,7 @@
 package store
 
+import "time"
+
 type Function struct {
 	ID          string     `json:"id"`
 	Code        string     `json:"code"`
@@ -45,24 +47,24 @@ type User struct {
 	PasswordHash   string  `json:"-"`
 }
 type Session struct {
-	ID         string `json:"id"`
-	UserID     string `json:"userID"`
-	TokenHash  string `json:"-"`
-	ExpiresAt  string `json:"expiresAt"`
-	LastSeenAt string `json:"lastSeenAt"`
-	CreatedAt  string `json:"createdAt"`
+	ID         string    `json:"id"`
+	UserID     string    `json:"userID"`
+	TokenHash  string    `json:"-"`
+	ExpiresAt  time.Time `json:"expiresAt"`
+	LastSeenAt time.Time `json:"lastSeenAt"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 type Invitation struct {
-	ID             string  `json:"id"`
-	OrganizationID *string `json:"organizationID"`
-	Email          string  `json:"email"`
-	UserType       string  `json:"userType"`
-	Role           string  `json:"role"`
-	TokenHash      string  `json:"-"`
-	InvitedBy      string  `json:"invitedBy"`
-	ExpiresAt      string  `json:"expiresAt"`
-	AcceptedAt     *string `json:"acceptedAt"`
-	CreatedAt      string  `json:"createdAt"`
+	ID             string     `json:"id"`
+	OrganizationID *string    `json:"organizationID"`
+	Email          string     `json:"email"`
+	UserType       string     `json:"userType"`
+	Role           string     `json:"role"`
+	TokenHash      string     `json:"-"`
+	InvitedBy      string     `json:"invitedBy"`
+	ExpiresAt      time.Time  `json:"expiresAt"`
+	AcceptedAt     *time.Time `json:"acceptedAt"`
+	CreatedAt      time.Time  `json:"createdAt"`
 }
 type ProjectFunction struct {
 	ID         string `json:"id"`
