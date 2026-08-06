@@ -1,0 +1,52 @@
+"use client";
+
+import { useState } from "react";
+import type { Project } from "../lib/types";
+
+type NewProject = { name: string; organizationName: string };
+type Props = {
+  projects: Project[];
+  loading: boolean;
+  openingID: string;
+  error: string;
+  onOpen: (project: Project) => void;
+  onCreate: (input: NewProject) => void;
+};
+
+export function ProjectDashboard({ projects, loading, openingID, error, onOpen, onCreate }: Props) {
+  const [name, setName] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    onCreate({ name: name.trim(), organizationName: organizationName.trim() });
+  }
+
+  return <main className="main dashboard">
+    <header className="dashboard-header">
+      <div><div className="eyebrow">NIST CSF 2.0</div><h1>Compliance projects</h1><p className="muted">Continue an assessment or start a new organizational profile.</p></div>
+      <div className="project-total"><strong>{projects.length}</strong><span>projects</span></div>
+    </header>
+
+    {error && <div className="error" role="alert">{error}</div>}
+    <section aria-labelledby="existing-projects">
+      <div className="section-heading"><span className="section-index">WORKSPACE</span><h2 id="existing-projects">Existing projects</h2></div>
+      {loading ? <div className="panel muted">Loading projects…</div> : projects.length === 0 ?
+        <div className="empty-state">No projects yet. Create one to begin an assessment.</div> :
+        <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id}>
+          <div className="project-card-top"><span className="status-chip">{project.status.replaceAll("_", " ")}</span><time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time></div>
+          <div><h3>{project.name}</h3><p className="muted">{project.organizationName}</p></div>
+          <button className="secondary" disabled={Boolean(openingID)} onClick={() => onOpen(project)} aria-label={`Open ${project.name}`}>{openingID === project.id ? "Opening…" : "Open project"}</button>
+        </article>)}</div>}
+    </section>
+
+    <section className="panel create-project" aria-labelledby="create-project">
+      <div><span className="section-index">NEW</span><h2 id="create-project">Create project</h2><p className="muted">A complete 106-outcome assessment workspace is prepared automatically.</p></div>
+      <form className="form" onSubmit={submit}>
+        <label className="field"><span>Project name</span><input required value={name} onChange={event => setName(event.target.value)} /></label>
+        <label className="field"><span>Organization name</span><input value={organizationName} onChange={event => setOrganizationName(event.target.value)} /></label>
+        <button className="primary" disabled={Boolean(openingID)}>Create project</button>
+      </form>
+    </section>
+  </main>;
+}
