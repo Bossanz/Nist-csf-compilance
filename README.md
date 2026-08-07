@@ -36,6 +36,8 @@ Then sign in at http://localhost:3000 using `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTR
 
 Roles: `counselor_admin`, `counselor`, `org_admin`, `assessor`, `reviewer`, and `viewer`.
 
+Permanent organization deletion is restricted to Counselor Admin and removes all organization-owned projects, assessments, stakeholders, and invitations after exact-name confirmation.
+
 ## Verify
 
 ```bash

@@ -94,6 +94,19 @@ export default function Home() {
     }
   }
 
+  async function deleteOrganization(item: Organization) {
+    setLoading(true);
+    setError("");
+    try {
+      await api.deleteOrganization(item.id);
+      setOrganizations((rows) => rows.filter((row) => row.id !== item.id));
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function openOrganization(nextOrganization: Organization) {
     setLoading(true);
     setError("");
@@ -226,6 +239,7 @@ export default function Home() {
       error={error}
       onSelect={openOrganization}
       onCreate={createOrganization}
+      onDelete={deleteOrganization}
       onLogout={logout}
     />
   );
