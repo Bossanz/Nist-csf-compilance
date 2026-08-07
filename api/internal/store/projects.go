@@ -73,6 +73,23 @@ func (s *Store) DeleteProject(ctx context.Context, id string) error {
 	return nil
 }
 
+func (s *Store) ListProjectEvidenceKeys(ctx context.Context, projectID string) ([]string, error) {
+	rows, err := s.DB.Query(ctx, `SELECT d.storage_key FROM response_documents d JOIN stakeholder_responses r ON r.id=d.response_id WHERE r.project_id=$1`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	keys := []string{}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
+}
+
 func (s *Store) ListProfile(ctx context.Context, projectID string) ([]ProfileRow, error) {
 	if _, err := s.GetProject(ctx, projectID); err != nil {
 		return nil, err

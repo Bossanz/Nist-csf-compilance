@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -23,8 +24,31 @@ type dataStore interface {
 	ListProfile(context.Context, string) ([]store.ProfileRow, error)
 	UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error)
 }
+type responseStore interface {
+	ListResponses(context.Context, string) ([]store.StakeholderResponse, error)
+	SaveResponseDraft(context.Context, string, string, string, string) (store.StakeholderResponse, error)
+	SubmitResponse(context.Context, string, string, string) (store.StakeholderResponse, error)
+	ReviewResponse(context.Context, string, string, string, string, string) (store.StakeholderResponse, error)
+}
+type documentStore interface {
+	CreateResponseDocument(context.Context, string, string, string, string, string, string, int64) (store.ResponseDocument, error)
+	GetResponseDocument(context.Context, string, string, string) (store.ResponseDocument, error)
+	DeleteResponseDocument(context.Context, string, string, string) (store.ResponseDocument, error)
+}
+type evidenceStorage interface {
+	Save(io.Reader) (string, int64, error)
+	Open(string) (io.ReadCloser, error)
+	Remove(string) error
+}
+type evidenceKeyStore interface {
+	ListProjectEvidenceKeys(context.Context, string) ([]string, error)
+	ListOrganizationEvidenceKeys(context.Context, string) ([]string, error)
+}
 type Handler struct {
 	Store         dataStore
+	Responses     responseStore
+	Documents     documentStore
+	Evidence      evidenceStorage
 	Auth          *authservice.Service
 	SecureCookies bool
 	LoginThrottle *LoginThrottle
@@ -39,7 +63,7 @@ type errorBody struct {
 }
 
 func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, secureCookies bool, appOrigin string) http.Handler {
-	return &Handler{Store: s, Auth: auth, Invitations: invitations, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
+	return &Handler{Store: s, Responses: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
@@ -180,6 +204,60 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.summary(w, r, id)
 			return
 		}
+		if len(parts) == 4 && parts[3] == "responses" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.responses(w, r, id)
+			return
+		}
+		if len(parts) == 5 && parts[3] == "responses" && r.Method == http.MethodPut {
+			action := actionSaveResponse
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.saveResponse(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "responses" && parts[5] == "submit" && r.Method == http.MethodPost {
+			action := actionSubmitResponse
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.submitResponse(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "responses" && parts[5] == "review" && r.Method == http.MethodPost {
+			action := actionReviewResponse
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.reviewResponse(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "responses" && parts[5] == "documents" && r.Method == http.MethodPost {
+			action := actionSaveResponse
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.uploadResponseDocument(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 7 && parts[3] == "responses" && parts[5] == "documents" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.downloadResponseDocument(w, r, id, parts[4], parts[6])
+			return
+		}
+		if len(parts) == 7 && parts[3] == "responses" && parts[5] == "documents" && r.Method == http.MethodDelete {
+			action := actionSaveResponse
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.deleteResponseDocument(w, r, id, parts[4], parts[6])
+			return
+		}
 		if len(parts) == 5 && parts[3] == "profile" && r.Method == http.MethodPut {
 			action := actionUpdateProfile
 			if !h.authorizeProject(w, r, id, &action) {
@@ -222,7 +300,12 @@ func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request, id strin
 		writeError(w, 404, "not_found", "project not found")
 		return
 	}
-	err := h.Store.DeleteProject(r.Context(), id)
+	storageKeys, err := h.projectEvidenceKeys(r.Context(), id)
+	if err != nil {
+		writeError(w, 500, "internal_error", "could not prepare project deletion")
+		return
+	}
+	err = h.Store.DeleteProject(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, 404, "not_found", "project not found")
 		return
@@ -231,7 +314,32 @@ func (h *Handler) deleteProject(w http.ResponseWriter, r *http.Request, id strin
 		writeError(w, 500, "internal_error", "could not delete project")
 		return
 	}
+	h.removeEvidenceFiles(storageKeys)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) projectEvidenceKeys(ctx context.Context, projectID string) ([]string, error) {
+	keyStore, ok := h.Store.(evidenceKeyStore)
+	if !ok || h.Evidence == nil {
+		return nil, nil
+	}
+	return keyStore.ListProjectEvidenceKeys(ctx, projectID)
+}
+
+func (h *Handler) organizationEvidenceKeys(ctx context.Context, organizationID string) ([]string, error) {
+	keyStore, ok := h.Store.(evidenceKeyStore)
+	if !ok || h.Evidence == nil {
+		return nil, nil
+	}
+	return keyStore.ListOrganizationEvidenceKeys(ctx, organizationID)
+}
+
+func (h *Handler) removeEvidenceFiles(storageKeys []string) {
+	for _, storageKey := range storageKeys {
+		if err := h.Evidence.Remove(storageKey); err != nil {
+			logStorageCleanupFailure(storageKey, err)
+		}
+	}
 }
 func (h *Handler) createProject(w http.ResponseWriter, r *http.Request) {
 	var input struct {

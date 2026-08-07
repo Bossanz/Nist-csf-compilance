@@ -144,6 +144,11 @@ func (h *Handler) deleteOrganization(w http.ResponseWriter, r *http.Request, id 
 	if !ok {
 		return
 	}
+	storageKeys, err := h.organizationEvidenceKeys(r.Context(), id)
+	if err != nil {
+		writeError(w, 500, "internal_error", "could not prepare organization deletion")
+		return
+	}
 	if err := data.DeleteOrganization(r.Context(), id); errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, 409, "organization_in_use", "Organization still has projects or users")
 		return
@@ -151,5 +156,6 @@ func (h *Handler) deleteOrganization(w http.ResponseWriter, r *http.Request, id 
 		writeError(w, 500, "internal_error", "Could not delete organization")
 		return
 	}
+	h.removeEvidenceFiles(storageKeys)
 	w.WriteHeader(http.StatusNoContent)
 }

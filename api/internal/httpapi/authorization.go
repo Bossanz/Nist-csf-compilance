@@ -15,7 +15,8 @@ func (h *Handler) validMutationRequest(r *http.Request) bool {
 	if r.Header.Get("Origin") != h.AppOrigin {
 		return false
 	}
-	return r.ContentLength == 0 || strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json")
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	return r.ContentLength == 0 || strings.HasPrefix(contentType, "application/json") || strings.HasPrefix(contentType, "multipart/form-data")
 }
 
 type action string
@@ -26,6 +27,9 @@ const (
 	actionCreateProject      action = "create_project"
 	actionDeleteProject      action = "delete_project"
 	actionUpdateProfile      action = "update_profile"
+	actionSaveResponse       action = "save_response"
+	actionSubmitResponse     action = "submit_response"
+	actionReviewResponse     action = "review_response"
 	actionInviteStakeholder  action = "invite_stakeholder"
 	actionManageCounselor    action = "manage_counselor"
 )
@@ -37,7 +41,11 @@ func can(user store.User, requested action) bool {
 	case actionCreateProject, actionDeleteProject:
 		return user.Role == "counselor_admin" || user.Role == "counselor"
 	case actionUpdateProfile:
-		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "assessor"
+		return user.Role == "counselor_admin" || user.Role == "counselor"
+	case actionSaveResponse, actionSubmitResponse:
+		return user.Role == "org_admin" || user.Role == "assessor"
+	case actionReviewResponse:
+		return user.Role == "reviewer"
 	case actionInviteStakeholder:
 		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "org_admin"
 	default:

@@ -1,14 +1,30 @@
-import type { ProfilePatch, ProfileRow } from "../lib/types";
+import type { ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse } from "../lib/types";
 import { AssessmentCard } from "./AssessmentCard";
 
 export function ProfileEditor({
   rows,
   onSave,
   readOnly = false,
+  role,
+  responses = [],
+  onSaveResponse,
+  onSubmitResponse,
+  onReviewResponse,
+  onUploadEvidence,
+  onDeleteEvidence,
+  onDownloadEvidence,
 }: {
   rows: ProfileRow[];
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
   readOnly?: boolean;
+  role?: Role;
+  responses?: StakeholderResponse[];
+  onSaveResponse?: (id: string, responseText: string) => Promise<void>;
+  onSubmitResponse?: (id: string) => Promise<void>;
+  onReviewResponse?: (id: string, status: "reviewed" | "needs_more_info", comment: string) => Promise<void>;
+  onUploadEvidence?: (id: string, file: File) => Promise<void>;
+  onDeleteEvidence?: (id: string, documentID: string) => Promise<void>;
+  onDownloadEvidence?: (id: string, document: ResponseDocument) => Promise<void>;
 }) {
   if (rows.length === 0) {
     return <div className="empty-state">No outcomes found for this Function.</div>;
@@ -16,7 +32,24 @@ export function ProfileEditor({
 
   return (
     <div className="assessment-list">
-      {rows.map((row) => <AssessmentCard key={row.id} row={row} onSave={onSave} readOnly={readOnly} />)}
+      {rows.map((row) => <AssessmentCard
+        key={row.id}
+        row={row}
+        onSave={onSave}
+        readOnly={readOnly}
+        role={role}
+        response={responses.find((item) => item.subcategoryID === row.subcategoryID) ?? emptyResponse(row)}
+        onSaveResponse={onSaveResponse}
+        onSubmitResponse={onSubmitResponse}
+        onReviewResponse={onReviewResponse}
+        onUploadEvidence={onUploadEvidence}
+        onDeleteEvidence={onDeleteEvidence}
+        onDownloadEvidence={onDownloadEvidence}
+      />)}
     </div>
   );
+}
+
+function emptyResponse(row: ProfileRow): StakeholderResponse {
+  return { id: "", projectID: row.projectID, subcategoryID: row.subcategoryID, responseText: "", status: "draft", respondedBy: null, submittedAt: null, reviewComment: "", reviewedBy: null, reviewedAt: null, createdAt: "", updatedAt: "", documents: [] };
 }

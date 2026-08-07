@@ -80,6 +80,27 @@ func (s *Store) DeleteOrganization(ctx context.Context, id string) error {
 	})
 }
 
+func (s *Store) ListOrganizationEvidenceKeys(ctx context.Context, organizationID string) ([]string, error) {
+	rows, err := s.DB.Query(ctx, `SELECT d.storage_key
+		FROM response_documents d
+		JOIN stakeholder_responses r ON r.id=d.response_id
+		JOIN projects p ON p.id=r.project_id
+		WHERE p.organization_id=$1`, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	keys := []string{}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, rows.Err()
+}
+
 func (s *Store) ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error) {
 	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text
 		FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.organization_id=$1

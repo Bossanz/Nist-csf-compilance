@@ -142,6 +142,9 @@ button:disabled { opacity: .58; cursor: not-allowed; }
   .full-width { grid-column: auto; }
   .assessment-actions { align-items: stretch; flex-direction: column; }
   .assessment-actions button { width: 100%; }
+  .response-actions, .response-heading { align-items: stretch; flex-direction: column; }
+  .response-buttons, .review-panel .primary { justify-self: stretch; width: 100%; }
+  .response-buttons button { flex: 1; }
   .dashboard-header { align-items: flex-start; margin-bottom: 30px; }
   .project-grid { grid-template-columns: 1fr; }
   .create-project .form { display: grid; }
@@ -155,6 +158,27 @@ button:disabled { opacity: .58; cursor: not-allowed; }
 .assessment-body:disabled {
   opacity: 1;
 }
+
+.response-panel { margin: 0; padding: 22px; border-top: 1px solid var(--line); background: #f7faf8; display: grid; gap: 16px; }
+.response-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.response-heading h3 { margin: 6px 0 0; font-size: 17px; }
+.response-status { padding: 6px 9px; border-radius: 999px; background: var(--canvas); color: var(--muted); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.status-submitted { background: #eef4fb; color: var(--current-ink); }
+.status-reviewed { background: var(--accent-soft); color: var(--success); }
+.status-needs_more_info { background: #fff4df; color: var(--target-ink); }
+.response-actions { display: flex; justify-content: space-between; align-items: end; gap: 18px; }
+.upload-control { display: grid; gap: 6px; min-width: 0; }
+.upload-control > span, .field-label { color: #4f5d59; font-size: 12px; font-weight: 700; }
+.upload-control input { width: min(100%, 310px); padding: 7px; font-size: 12px; }
+.upload-control small, .evidence-list small { color: var(--muted); font-size: 11px; }
+.response-buttons { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.review-panel { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: white; }
+.review-panel .primary { justify-self: end; }
+.evidence-list { display: grid; gap: 8px; padding-top: 2px; }
+.evidence-list ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.evidence-list li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.evidence-list li .button-link { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evidence-list li .danger { margin-left: auto; padding: 2px 4px; }
 
 .button-link {
   display: inline-flex;

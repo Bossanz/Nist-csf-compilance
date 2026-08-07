@@ -1,0 +1,137 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { ResponseDocument, ResponseStatus, Role, StakeholderResponse } from "../lib/types";
+
+const statusLabels: Record<ResponseStatus, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  reviewed: "Reviewed",
+  needs_more_info: "Needs more information",
+};
+
+type Props = {
+  role: Role;
+  response: StakeholderResponse;
+  onSave: (responseText: string) => Promise<void>;
+  onSubmit: () => Promise<void>;
+  onReview: (status: "reviewed" | "needs_more_info", comment: string) => Promise<void>;
+  onUpload: (file: File) => Promise<void>;
+  onDelete: (documentID: string) => Promise<void>;
+  onDownload: (document: ResponseDocument) => Promise<void>;
+};
+
+export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onReview, onUpload, onDelete, onDownload }: Props) {
+  const [responseText, setResponseText] = useState(response.responseText);
+  const [reviewStatus, setReviewStatus] = useState<"reviewed" | "needs_more_info">(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
+  const [reviewComment, setReviewComment] = useState(response.reviewComment);
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [error, setError] = useState("");
+  const canRespond = role === "org_admin" || role === "assessor";
+  const canEditResponse = canRespond && (response.status === "draft" || response.status === "needs_more_info");
+  const canReview = role === "reviewer" && response.status === "submitted";
+
+  useEffect(() => {
+    setResponseText(response.responseText);
+    setReviewStatus(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
+    setReviewComment(response.reviewComment);
+  }, [response.responseText, response.status, response.reviewComment]);
+
+  async function run(action: () => Promise<void>) {
+    setState("saving");
+    setError("");
+    try {
+      await action();
+      setState("saved");
+    } catch (cause) {
+      setState("error");
+      setError(cause instanceof Error ? cause.message : "Could not save response");
+    }
+  }
+
+  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await run(() => onUpload(file));
+    event.target.value = "";
+  }
+
+  return (
+    <section className="response-panel" aria-labelledby={`response-${response.subcategoryID}`}>
+      <div className="response-heading">
+        <div>
+          <span className="section-index">CLIENT INPUT</span>
+          <h3 id={`response-${response.subcategoryID}`}>Stakeholder response</h3>
+        </div>
+        <span className={`response-status status-${response.status}`}>{statusLabels[response.status]}</span>
+      </div>
+
+      <label className="field">
+        <span>Client response</span>
+        <textarea
+          rows={4}
+          value={responseText}
+          disabled={!canEditResponse}
+          onChange={(event) => { setResponseText(event.target.value); setState("idle"); }}
+          placeholder="Describe how this outcome is handled in your organization"
+        />
+      </label>
+
+      {canEditResponse && (
+        <div className="response-actions">
+          <label className="upload-control">
+            <span>Upload evidence</span>
+            <input type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg" onChange={upload} disabled={state === "saving"} />
+            <small>PDF, DOCX, XLSX, PNG, or JPEG · max 20 MB</small>
+          </label>
+          <div className="response-buttons">
+            <button className="secondary" type="button" disabled={state === "saving"} onClick={() => void run(() => onSave(responseText))}>Save response</button>
+            <button className="primary" type="button" disabled={state === "saving" || !response.id} onClick={() => void run(onSubmit)}>Submit response</button>
+          </div>
+        </div>
+      )}
+
+      {canReview && (
+        <div className="review-panel">
+          <div className="field-grid">
+            <label className="field">
+              <span>Review status</span>
+              <select aria-label="Review status" value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value as "reviewed" | "needs_more_info")}>
+                <option value="reviewed">Reviewed</option>
+                <option value="needs_more_info">Needs more information</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Review comment</span>
+              <textarea aria-label="Review comment" rows={2} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} placeholder="What should be accepted or clarified?" />
+            </label>
+          </div>
+          <button className="primary" type="button" disabled={state === "saving"} onClick={() => void run(() => onReview(reviewStatus, reviewComment))}>Save review</button>
+        </div>
+      )}
+
+      {response.documents.length > 0 && (
+        <div className="evidence-list">
+          <span className="field-label">Supporting evidence</span>
+          <ul>
+            {response.documents.map((document) => <li key={document.id}>
+              <button className="button-link" type="button" onClick={() => void onDownload(document)}>{document.originalName}</button>
+              <small>{formatBytes(document.sizeBytes)}</small>
+              {canEditResponse && <button className="danger" type="button" onClick={() => void run(() => onDelete(document.id))}>Delete</button>}
+            </li>)}
+          </ul>
+        </div>
+      )}
+
+      <span className={`save-state ${state}`} role="status">
+        {state === "saved" ? "Response saved" : state === "error" ? error : response.status === "draft" ? "Not submitted yet" : response.reviewComment}
+      </span>
+    </section>
+  );
+}
+
+function formatBytes(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { CoverageLevel, ProfilePatch, ProfileRow } from "../lib/types";
+import type { CoverageLevel, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse } from "../lib/types";
+import { StakeholderResponsePanel } from "./StakeholderResponsePanel";
 
 const coverageLevels: Array<{ value: CoverageLevel; label: string }> = [
   { value: "none", label: "None" },
@@ -44,10 +45,26 @@ export function AssessmentCard({
   row,
   onSave,
   readOnly = false,
+  role,
+  response,
+  onSaveResponse,
+  onSubmitResponse,
+  onReviewResponse,
+  onUploadEvidence,
+  onDeleteEvidence,
+  onDownloadEvidence,
 }: {
   row: ProfileRow;
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
   readOnly?: boolean;
+  role?: Role;
+  response?: StakeholderResponse;
+  onSaveResponse?: (id: string, responseText: string) => Promise<void>;
+  onSubmitResponse?: (id: string) => Promise<void>;
+  onReviewResponse?: (id: string, status: "reviewed" | "needs_more_info", comment: string) => Promise<void>;
+  onUploadEvidence?: (id: string, file: File) => Promise<void>;
+  onDeleteEvidence?: (id: string, documentID: string) => Promise<void>;
+  onDownloadEvidence?: (id: string, document: ResponseDocument) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
@@ -93,6 +110,7 @@ export function AssessmentCard({
       </button>
 
       {expanded ? (
+        <>
         <fieldset className="assessment-body" disabled={readOnly}>
           <div className="scope-band">
             <label className="check-field">
@@ -185,6 +203,19 @@ export function AssessmentCard({
             </button>}
           </div>
         </fieldset>
+        {role && response && onSaveResponse && onSubmitResponse && onReviewResponse && onUploadEvidence && onDeleteEvidence && onDownloadEvidence && (
+          <StakeholderResponsePanel
+            role={role}
+            response={response}
+            onSave={(responseText) => onSaveResponse(row.subcategoryID, responseText)}
+            onSubmit={() => onSubmitResponse(row.subcategoryID)}
+            onReview={(status, comment) => onReviewResponse(row.subcategoryID, status, comment)}
+            onUpload={(file) => onUploadEvidence(row.subcategoryID, file)}
+            onDelete={(documentID) => onDeleteEvidence(row.subcategoryID, documentID)}
+            onDownload={(document) => onDownloadEvidence(row.subcategoryID, document)}
+          />
+        )}
+        </>
       ) : null}
     </article>
   );

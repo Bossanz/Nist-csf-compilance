@@ -25,8 +25,11 @@ services:
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      EVIDENCE_DIR: /data/evidence
     ports:
       - "8080:8080"
+    volumes:
+      - evidence_data:/data/evidence
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,3 +54,4 @@ services:
 
 volumes:
   pgdata:
+  evidence_data:

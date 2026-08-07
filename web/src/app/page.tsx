@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { APIError, api } from "../lib/api";
-import type { FunctionNode, Organization, ProfilePatch, ProfileRow, Project, Role, Summary, User } from "../lib/types";
+import type { FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, Role, StakeholderResponse, Summary, User } from "../lib/types";
 import { LoginForm } from "../components/LoginForm";
 import { OrganizationDashboard } from "../components/OrganizationDashboard";
 import { OrganizationWorkspace } from "../components/OrganizationWorkspace";
@@ -22,6 +22,7 @@ export default function Home() {
   const [project, setProject] = useState<Project | null>(null);
   const [functions, setFunctions] = useState<FunctionNode[]>([]);
   const [profile, setProfile] = useState<ProfileRow[]>([]);
+  const [responses, setResponses] = useState<StakeholderResponse[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [selected, setSelected] = useState("");
   const [invitationURL, setInvitationURL] = useState("");
@@ -77,6 +78,7 @@ export default function Home() {
     setUser(null);
     setOrganization(null);
     setProject(null);
+    setResponses([]);
     setOrganizations([]);
     setError("");
   }
@@ -144,12 +146,14 @@ export default function Home() {
     setLoading(true);
     setError("");
     try {
-      const [nextProfile, nextSummary] = await Promise.all([
+      const [nextProfile, nextSummary, nextResponses] = await Promise.all([
         api.getProfile(nextProject.id),
         api.getSummary(nextProject.id),
+        api.getResponses(nextProject.id),
       ]);
       setProfile(nextProfile);
       setSummary(nextSummary);
+      setResponses(nextResponses);
       setProject(nextProject);
     } catch (cause) {
       setError(messageOf(cause));
@@ -174,6 +178,56 @@ export default function Home() {
     const updated = await api.updateProfile(project.id, subcategoryID, patch);
     setProfile((rows) => rows.map((row) => row.subcategoryID === subcategoryID ? updated : row));
     setSummary(await api.getSummary(project.id));
+  }
+
+  function replaceResponse(next: StakeholderResponse) {
+    setResponses((rows) => {
+      const found = rows.some((row) => row.subcategoryID === next.subcategoryID);
+      return found ? rows.map((row) => row.subcategoryID === next.subcategoryID ? next : row) : [...rows, next];
+    });
+  }
+
+  async function saveResponse(subcategoryID: string, responseText: string) {
+    if (!project) return;
+    replaceResponse(await api.saveResponse(project.id, subcategoryID, responseText));
+  }
+
+  async function submitResponse(subcategoryID: string) {
+    if (!project) return;
+    replaceResponse(await api.submitResponse(project.id, subcategoryID));
+  }
+
+  async function reviewResponse(subcategoryID: string, status: "reviewed" | "needs_more_info", comment: string) {
+    if (!project) return;
+    replaceResponse(await api.reviewResponse(project.id, subcategoryID, { status, comment }));
+  }
+
+  async function uploadEvidence(subcategoryID: string, file: File) {
+    if (!project) return;
+    let current = responses.find((row) => row.subcategoryID === subcategoryID);
+    if (!current?.id) {
+      current = await api.saveResponse(project.id, subcategoryID, "");
+      replaceResponse(current);
+    }
+    const document = await api.uploadResponseDocument(project.id, subcategoryID, file);
+    replaceResponse({ ...current, documents: [...current.documents, document] });
+  }
+
+  async function deleteEvidence(subcategoryID: string, documentID: string) {
+    if (!project) return;
+    await api.deleteResponseDocument(project.id, subcategoryID, documentID);
+    setResponses((rows) => rows.map((row) => row.subcategoryID === subcategoryID ? { ...row, documents: row.documents.filter((document) => document.id !== documentID) } : row));
+  }
+
+  async function downloadEvidence(subcategoryID: string, evidenceDocument: ResponseDocument) {
+    if (!project) return;
+    const blob = await api.downloadResponseDocument(project.id, subcategoryID, evidenceDocument.id);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = evidenceDocument.originalName;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   const visibleProfile = useMemo(
@@ -205,7 +259,15 @@ export default function Home() {
           <ProfileEditor
             rows={visibleProfile}
             onSave={saveProfile}
-            readOnly={!['counselor_admin', 'counselor', 'assessor'].includes(user.role)}
+            readOnly={!['counselor_admin', 'counselor'].includes(user.role)}
+            role={user.role}
+            responses={responses}
+            onSaveResponse={saveResponse}
+            onSubmitResponse={submitResponse}
+            onReviewResponse={reviewResponse}
+            onUploadEvidence={uploadEvidence}
+            onDeleteEvidence={deleteEvidence}
+            onDownloadEvidence={downloadEvidence}
           />
         </main>
       </div>

@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /out/server ./cmd/server
 
 FROM alpine:3.21
-RUN adduser -D app
+RUN adduser -D app && mkdir -p /data/evidence && chown -R app:app /data
 COPY --from=build /out/server /server
 USER app
 EXPOSE 8080

@@ -1,5 +1,9 @@
 package domain
 
+import "errors"
+
+var ErrInvalidResponseTransition = errors.New("invalid response transition")
+
 type ResponseStatus string
 
 const (

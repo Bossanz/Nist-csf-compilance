@@ -22,7 +22,10 @@ func TestAuthorizationMatrix(t *testing.T) {
 		{"counselor", actionCreateProject, true},
 		{"org_admin", actionCreateProject, false},
 		{"org_admin", actionUpdateProfile, false},
-		{"assessor", actionUpdateProfile, true},
+		{"assessor", actionUpdateProfile, false},
+		{"assessor", actionSaveResponse, true},
+		{"assessor", actionSubmitResponse, true},
+		{"reviewer", actionReviewResponse, true},
 		{"reviewer", actionUpdateProfile, false},
 		{"viewer", actionUpdateProfile, false},
 	}
@@ -70,7 +73,7 @@ func TestStakeholderCannotAccessAnotherOrganizationProject(t *testing.T) {
 func TestProfileUpdateWritesAuditEvent(t *testing.T) {
 	organizationID := "org-1"
 	now := time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)
-	repo := &fakeAuthRepository{user: store.User{ID: "user-1", OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, session: store.Session{ExpiresAt: now.Add(time.Hour)}}
+	repo := &fakeAuthRepository{user: store.User{ID: "user-1", UserType: "counselor", Role: "counselor", Status: "active"}, session: store.Session{ExpiresAt: now.Add(time.Hour)}}
 	var action string
 	handler := newAuthHandler(repo, now)
 	handler.Store = fakeStore{project: store.Project{ID: "11111111-1111-1111-1111-111111111111", OrganizationID: organizationID}, auditAction: &action}

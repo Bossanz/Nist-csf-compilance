@@ -4,7 +4,7 @@ import Home from "./page";
 import { APIError, api } from "../lib/api";
 import type { FunctionNode, Organization, ProfileRow, Project, Summary, User } from "../lib/types";
 
-vi.mock("../lib/api",()=>({APIError:class APIError extends Error{constructor(message:string,public status:number){super(message)}},api:{login:vi.fn(),logout:vi.fn(),me:vi.fn(),getOrganizations:vi.fn(),createOrganization:vi.fn(),deleteOrganization:vi.fn(),getOrganizationProjects:vi.fn(),createOrganizationProject:vi.fn(),getOrganizationUsers:vi.fn(),createInvitation:vi.fn(),getFunctions:vi.fn(),getProfile:vi.fn(),getSummary:vi.fn(),deleteProject:vi.fn(),updateProfile:vi.fn()}}));
+vi.mock("../lib/api",()=>({APIError:class APIError extends Error{constructor(message:string,public status:number){super(message)}},api:{login:vi.fn(),logout:vi.fn(),me:vi.fn(),getOrganizations:vi.fn(),createOrganization:vi.fn(),deleteOrganization:vi.fn(),getOrganizationProjects:vi.fn(),createOrganizationProject:vi.fn(),getOrganizationUsers:vi.fn(),createInvitation:vi.fn(),getFunctions:vi.fn(),getProfile:vi.fn(),getResponses:vi.fn(),getSummary:vi.fn(),deleteProject:vi.fn(),updateProfile:vi.fn(),saveResponse:vi.fn(),submitResponse:vi.fn(),reviewResponse:vi.fn(),uploadResponseDocument:vi.fn(),downloadResponseDocument:vi.fn(),deleteResponseDocument:vi.fn()}}));
 
 const user:User={id:"user-1",organizationID:null,name:"Consultant",email:"c@example.com",userType:"counselor",role:"counselor",status:"active"};
 const admin:User={...user,name:"Admin",email:"admin@example.com",role:"counselor_admin"};
@@ -14,7 +14,7 @@ const functions:FunctionNode[]=[{id:"function-1",code:"GV",name:"Govern",descrip
 const profile:ProfileRow[]=[];
 const summary:Summary={coveragePct:0,includedCount:0,pendingCount:0,rejectedCount:0,functions:[]};
 
-beforeEach(()=>{vi.clearAllMocks();vi.mocked(api.me).mockResolvedValue(user);vi.mocked(api.getOrganizations).mockResolvedValue([organization]);vi.mocked(api.getOrganizationProjects).mockResolvedValue([project]);vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);vi.mocked(api.getFunctions).mockResolvedValue(functions);vi.mocked(api.getProfile).mockResolvedValue(profile);vi.mocked(api.getSummary).mockResolvedValue(summary)});
+beforeEach(()=>{vi.clearAllMocks();vi.mocked(api.me).mockResolvedValue(user);vi.mocked(api.getOrganizations).mockResolvedValue([organization]);vi.mocked(api.getOrganizationProjects).mockResolvedValue([project]);vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);vi.mocked(api.getFunctions).mockResolvedValue(functions);vi.mocked(api.getProfile).mockResolvedValue(profile);vi.mocked(api.getResponses).mockResolvedValue([]);vi.mocked(api.getSummary).mockResolvedValue(summary)});
 
 test("shows login when session restoration returns 401",async()=>{vi.mocked(api.me).mockRejectedValue(new APIError("Authentication required",401));render(<Home/>);expect(await screen.findByRole("heading",{name:/sign in/i})).toBeTruthy()});
 
