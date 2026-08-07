@@ -47,6 +47,30 @@ func TestCounselorCannotCreateOrganization(t *testing.T) {
 	}
 }
 
+func TestCounselorAdminDeletesOrganization(t *testing.T) {
+	var deletedID string
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor_admin", Status: "active"}, fakeStore{deletedID: &deletedID})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodDelete, "/api/organizations/org-1", ""))
+
+	if response.Code != http.StatusNoContent || deletedID != "org-1" {
+		t.Fatalf("unexpected response: %d %s id=%s", response.Code, response.Body.String(), deletedID)
+	}
+}
+
+func TestCounselorCannotDeleteOrganization(t *testing.T) {
+	var deletedID string
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{deletedID: &deletedID})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodDelete, "/api/organizations/org-1", ""))
+
+	if response.Code != http.StatusForbidden || deletedID != "" {
+		t.Fatalf("unexpected response: %d %s id=%s", response.Code, response.Body.String(), deletedID)
+	}
+}
+
 func TestStakeholderListsOnlyOwnOrganization(t *testing.T) {
 	organizationID := "org-1"
 	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{organizations: []store.Organization{{ID: "org-1", Name: "Acme"}}})

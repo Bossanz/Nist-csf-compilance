@@ -75,7 +75,12 @@ func (f fakeStore) CreateOrganization(_ context.Context, name string) (store.Org
 	}
 	return store.Organization{Name: name}, nil
 }
-func (f fakeStore) DeleteOrganization(context.Context, string) error { return nil }
+func (f fakeStore) DeleteOrganization(_ context.Context, id string) error {
+	if f.deletedID != nil {
+		*f.deletedID = id
+	}
+	return f.deleteErr
+}
 func (f fakeStore) ListProjectsByOrganization(context.Context, string) ([]store.Project, error) {
 	return f.projects, nil
 }

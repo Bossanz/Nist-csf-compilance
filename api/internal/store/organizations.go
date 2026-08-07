@@ -55,16 +55,29 @@ func (s *Store) CreateOrganization(ctx context.Context, name string) (Organizati
 }
 
 func (s *Store) DeleteOrganization(ctx context.Context, id string) error {
-	command, err := s.DB.Exec(ctx, `DELETE FROM organizations o WHERE o.id=$1
-		AND NOT EXISTS (SELECT 1 FROM projects p WHERE p.organization_id=o.id)
-		AND NOT EXISTS (SELECT 1 FROM users u WHERE u.organization_id=o.id)`, id)
-	if err != nil {
-		return err
-	}
-	if command.RowsAffected() == 0 {
-		return pgx.ErrNoRows
-	}
-	return nil
+	return pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		var lockedID string
+		if err := tx.QueryRow(ctx, `SELECT id FROM organizations WHERE id=$1 FOR UPDATE`, id).Scan(&lockedID); err != nil {
+			return err
+		}
+
+		statements := []string{
+			`DELETE FROM audit_logs WHERE organization_id=$1 OR project_id IN (SELECT id FROM projects WHERE organization_id=$1)`,
+			`DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE organization_id=$1)`,
+			`DELETE FROM invitations WHERE organization_id=$1`,
+			`DELETE FROM project_subcategory_profiles WHERE project_id IN (SELECT id FROM projects WHERE organization_id=$1)`,
+			`DELETE FROM project_functions WHERE project_id IN (SELECT id FROM projects WHERE organization_id=$1)`,
+			`DELETE FROM projects WHERE organization_id=$1`,
+			`DELETE FROM users WHERE organization_id=$1`,
+			`DELETE FROM organizations WHERE id=$1`,
+		}
+		for _, statement := range statements {
+			if _, err := tx.Exec(ctx, statement, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *Store) ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error) {
