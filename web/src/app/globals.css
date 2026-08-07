@@ -50,7 +50,12 @@ button.secondary { border: 1px solid var(--line-strong); border-radius: var(--ra
 button.secondary:hover { border-color: var(--accent); background: var(--accent-soft); }
 button.danger { border: 0; padding: 10px 8px; color: var(--error); background: transparent; font-weight: 700; cursor: pointer; }
 button.danger:hover { text-decoration: underline; }
+button.danger:disabled:hover { text-decoration: none; }
 button:disabled { opacity: .58; cursor: not-allowed; }
+.organization-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.delete-confirmation { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(240px, .7fr) auto; align-items: end; gap: 20px; margin: 24px 0; padding: 22px; border: 1px solid #e7b5ae; border-left: 4px solid var(--error); border-radius: var(--radius-md); background: #fff8f7; box-shadow: var(--shadow); animation: reveal .18s ease-out; }
+.delete-confirmation h2 { margin: 6px 0; }
+.delete-confirmation p { margin-bottom: 0; color: var(--muted); line-height: 1.5; }
 .dashboard { max-width: 1240px; }
 .dashboard-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 42px; }
 .project-total { min-width: 92px; padding-left: 16px; border-left: 3px solid var(--accent); display: grid; }
@@ -123,6 +128,7 @@ button:disabled { opacity: .58; cursor: not-allowed; }
   .profile-columns { grid-template-columns: 1fr; }
   .project-grid { grid-template-columns: 1fr 1fr; }
   .create-project { grid-template-columns: 1fr; gap: 12px; }
+  .delete-confirmation { grid-template-columns: 1fr; align-items: stretch; }
 }
 @media (max-width: 640px) {
   .main { padding: 24px 14px 48px; }
