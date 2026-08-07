@@ -63,14 +63,19 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 }
 
 func (s *Store) DeleteProject(ctx context.Context, id string) error {
-	command, err := s.DB.Exec(ctx, `DELETE FROM projects WHERE id=$1`, id)
-	if err != nil {
-		return err
-	}
-	if command.RowsAffected() == 0 {
-		return pgx.ErrNoRows
-	}
-	return nil
+	return pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM audit_logs WHERE project_id=$1`, id); err != nil {
+			return err
+		}
+		command, err := tx.Exec(ctx, `DELETE FROM projects WHERE id=$1`, id)
+		if err != nil {
+			return err
+		}
+		if command.RowsAffected() == 0 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	})
 }
 
 func (s *Store) ListProjectEvidenceKeys(ctx context.Context, projectID string) ([]string, error) {
