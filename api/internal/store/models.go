@@ -76,6 +76,31 @@ type Invitation struct {
 	AcceptedAt     *time.Time `json:"acceptedAt"`
 	CreatedAt      time.Time  `json:"createdAt"`
 }
+type StakeholderResponse struct {
+	ID            string             `json:"id"`
+	ProjectID     string             `json:"projectID"`
+	SubcategoryID string             `json:"subcategoryID"`
+	ResponseText  string             `json:"responseText"`
+	Status        string             `json:"status"`
+	RespondedBy   *string            `json:"respondedBy"`
+	SubmittedAt   *time.Time         `json:"submittedAt"`
+	ReviewComment string             `json:"reviewComment"`
+	ReviewedBy    *string            `json:"reviewedBy"`
+	ReviewedAt    *time.Time         `json:"reviewedAt"`
+	CreatedAt     time.Time          `json:"createdAt"`
+	UpdatedAt     time.Time          `json:"updatedAt"`
+	Documents     []ResponseDocument `json:"documents"`
+}
+type ResponseDocument struct {
+	ID           string    `json:"id"`
+	ResponseID   string    `json:"responseID"`
+	OriginalName string    `json:"originalName"`
+	StorageKey   string    `json:"-"`
+	MIMEType     string    `json:"mimeType"`
+	SizeBytes    int64     `json:"sizeBytes"`
+	UploadedBy   string    `json:"uploadedBy"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
 type ProjectFunction struct {
 	ID         string `json:"id"`
 	FunctionID string `json:"functionId"`
