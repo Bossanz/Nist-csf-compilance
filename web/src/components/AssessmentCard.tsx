@@ -70,6 +70,7 @@ export function AssessmentCard({
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState("");
+  const detailID = `assessment-body-${row.id}`;
 
   function update<K extends keyof Draft>(field: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -94,6 +95,7 @@ export function AssessmentCard({
         className="assessment-summary"
         type="button"
         aria-expanded={expanded}
+        aria-controls={detailID}
         onClick={() => setExpanded((value) => !value)}
       >
         <span className="outcome-code">{row.subcategoryCode}</span>
@@ -111,7 +113,7 @@ export function AssessmentCard({
 
       {expanded ? (
         <>
-        <fieldset className="assessment-body" disabled={readOnly}>
+        <fieldset id={detailID} className="assessment-body" disabled={readOnly}>
           <div className="scope-band">
             <label className="check-field">
               <input

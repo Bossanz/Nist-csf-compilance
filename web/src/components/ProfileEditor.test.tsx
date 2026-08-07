@@ -31,7 +31,10 @@ describe("ProfileEditor", () => {
   test("keeps assessments viewable but not editable in read-only mode", () => {
     render(<ProfileEditor rows={[row]} onSave={vi.fn()} readOnly />);
 
-    fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+    const summary = screen.getByRole("button", { name: /GV\.OC-01/i });
+    expect(summary.getAttribute("aria-expanded")).toBe("false");
+    expect(summary.getAttribute("aria-controls")).toBe("assessment-body-profile-1");
+    fireEvent.click(summary);
 
     expect((screen.getByRole("checkbox", { name: /include in profile/i }).closest("fieldset") as HTMLFieldSetElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();

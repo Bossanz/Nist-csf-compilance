@@ -19,6 +19,7 @@ describe("ProjectDashboard", () => {
     const onOpen = vi.fn();
     render(<ProjectDashboard projects={[project]} loading={false} openingID="" error="" onOpen={onOpen} onCreate={vi.fn()} onDelete={vi.fn()} />);
 
+    expect(screen.getByRole("heading", { name: /existing projects/i })).toBeTruthy();
     expect(screen.getByText("Readiness Review")).toBeTruthy();
     expect(screen.getByText("Acme")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /open readiness review/i }));
@@ -29,6 +30,7 @@ describe("ProjectDashboard", () => {
   test("renders a readable empty state", () => {
     render(<ProjectDashboard projects={[]} loading={false} openingID="" error="" onOpen={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn()} />);
 
+    expect(screen.getByRole("heading", { name: /create project/i })).toBeTruthy();
     expect(screen.getByText(/no projects yet/i)).toBeTruthy();
   });
 
