@@ -117,7 +117,7 @@ func (s *Store) ListProfile(ctx context.Context, projectID string) ([]ProfileRow
 	out := []ProfileRow{}
 	for rows.Next() {
 		var p ProfileRow
-		if err := rows.Scan(&p.ID, &p.ProjectID, &p.SubcategoryID, &p.FunctionCode, &p.CategoryCode, &p.SubcategoryCode, &p.Description, &p.Included, &p.Rationale, &p.CurrentPriority, &p.CurrentCoverageLevel, &p.CurrentStatusText, &p.CurrentPoliciesText, &p.CurrentTier, &p.TargetPriority, &p.TargetCoverageLevel, &p.TargetApproachText, &p.TargetTier, &p.Notes, &p.Considerations, &p.ReviewStatus); err != nil {
+		if err := rows.Scan(&p.ID, &p.ProjectID, &p.SubcategoryID, &p.FunctionCode, &p.CategoryCode, &p.SubcategoryCode, &p.Description, &p.Included, &p.Rationale, &p.CurrentPriority, &p.CurrentCoverageLevel, &p.CurrentStatusText, &p.CurrentPoliciesText, &p.CurrentTier, &p.TargetPriority, &p.TargetCoverageLevel, &p.TargetApproachText, &p.TargetTier, &p.Notes, &p.Considerations, &p.ReviewStatus, &p.AssignedUserID, &p.AssignedUserName, &p.AssignedUserEmail); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

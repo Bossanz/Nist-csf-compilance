@@ -39,8 +39,8 @@ func TestProfileAssignmentLifecycle(t *testing.T) {
 		[]any{organizationID, "assignment-disabled-" + suffix + "@example.com"}, &disabledAssessorID)
 	mustScan("INSERT INTO users(organization_id,name,email,user_type,role,status) VALUES ($1,'Assignment Reviewer',$2,'stakeholder','reviewer','active') RETURNING id",
 		[]any{organizationID, "assignment-reviewer-" + suffix + "@example.com"}, &reviewerID)
-	mustScan("INSERT INTO projects(organization_id,counselor_id,name) VALUES ($1,$2,$3) RETURNING id",
-		[]any{organizationID, counselorID, "Assignment Test Project"}, &projectID)
+	mustScan("INSERT INTO projects(organization_id,counselor_id,name,slug) VALUES ($1,$2,$3,$4) RETURNING id",
+		[]any{organizationID, counselorID, "Assignment Test Project", "assignment-test-" + suffix}, &projectID)
 	mustScan("SELECT id FROM subcategories ORDER BY code LIMIT 1", nil, &subcategoryID)
 	if _, err := data.DB.Exec(ctx,
 		"INSERT INTO project_subcategory_profiles(project_id,subcategory_id) VALUES ($1,$2)",

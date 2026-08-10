@@ -33,7 +33,7 @@ func TestResponseLifecycleAndDocuments(t *testing.T) {
 	mustScan(`INSERT INTO organizations(name,type) VALUES ($1,'client') RETURNING id`, []any{"Response Test " + suffix}, &organizationID)
 	mustScan(`INSERT INTO users(organization_id,name,email,user_type,role,status) VALUES ($1,'Response Assessor',$2,'stakeholder','assessor','active') RETURNING id`, []any{organizationID, "response-assessor-" + suffix + "@example.com"}, &assessorID)
 	mustScan(`INSERT INTO users(organization_id,name,email,user_type,role,status) VALUES ($1,'Response Reviewer',$2,'stakeholder','reviewer','active') RETURNING id`, []any{organizationID, "response-reviewer-" + suffix + "@example.com"}, &reviewerID)
-	mustScan(`INSERT INTO projects(organization_id,counselor_id,name) VALUES ($1,$2,$3) RETURNING id`, []any{organizationID, counselorID, "Response Test"}, &projectID)
+	mustScan(`INSERT INTO projects(organization_id,counselor_id,name,slug) VALUES ($1,$2,$3,$4) RETURNING id`, []any{organizationID, counselorID, "Response Test", "response-test-" + suffix}, &projectID)
 	mustScan(`SELECT id FROM subcategories ORDER BY code LIMIT 1`, nil, &subcategoryID)
 	t.Cleanup(func() {
 		_, _ = data.DB.Exec(ctx, `DELETE FROM projects WHERE id=$1`, projectID)
