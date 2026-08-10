@@ -81,24 +81,23 @@ Example:
 ## Version 1 workflow
 
 1. A Counselor Admin signs in and creates a client organization.
-2. A Counselor opens the organization and creates assessment projects.
-3. A Counselor or Organization Admin invites stakeholders and assigns roles.
-4. Stakeholders activate their accounts from the invitation link.
-5. Stakeholders answer assigned outcomes and attach supporting evidence.
-6. Reviewers review submitted responses and either approve them or request more information.
-7. Viewers can read the project without changing assessment data.
-8. Counselors can view all client projects and manage assessment/profile decisions, including Priority and Coverage.
+2. A Counselor opens the organization and creates an assessment project.
+3. The Counselor selects which outcomes are included in the project, records the rationale, and assigns each included outcome to one active stakeholder.
+4. Stakeholders activate their accounts from the invitation link. The assigned stakeholder fills Current Profile, Target Profile, Priority, Coverage, the response, and supporting evidence.
+5. A Reviewer checks submitted responses. `Reviewed` completes the outcome; `Needs more information` returns it to the assigned stakeholder.
+6. Viewers can read the included outcomes and their review status without changing assessment data.
+7. Counselors can read all project progress and results, while managing project scope, rationale, and outcome assignments.
 
 Roles:
 
 - `counselor_admin`: manages organizations and counselors.
-- `counselor`: manages assigned client projects and assessment/profile decisions.
+- `counselor`: creates and manages client projects, scope, rationale, and stakeholder assignments.
 - `org_admin`: manages users inside one organization.
-- `assessor`: answers assigned outcomes and uploads evidence.
-- `reviewer`: reviews submitted stakeholder responses.
-- `viewer`: read-only project access.
+- `assessor`: fills assigned outcomes and uploads evidence.
+- `reviewer`: reads all included outcomes and is the only final review gate.
+- `viewer`: read-only access to included outcomes.
 
-The stakeholder view only shows outcomes included in the project. Counselor-only profile controls remain unavailable to stakeholder roles.
+Assigned `org_admin` and `assessor` users only see and edit their assigned included outcomes. Reviewers and viewers can see all included outcomes. Counselor-only scope controls remain unavailable to stakeholder roles.
 
 ## Database and migrations
 
@@ -117,6 +116,13 @@ If it existed before stakeholder responses were added, apply this migration once
 
 ```powershell
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/004_stakeholder_responses.sql
+docker compose restart api
+```
+
+If it existed before outcome assignments were added, apply this migration once as well:
+
+```powershell
+docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/006_outcome_assignments.sql
 docker compose restart api
 ```
 
