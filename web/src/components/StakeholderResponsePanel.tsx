@@ -93,6 +93,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
 
       {canReview && (
         <div className="review-panel">
+          <h4>Reviewer final decision</h4>
           <div className="field-grid">
             <label className="field">
               <span>Review status</span>

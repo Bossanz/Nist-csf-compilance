@@ -49,6 +49,18 @@ test("reviewer can mark a submitted response as needing more information", async
   await waitFor(() => expect(onReview).toHaveBeenCalledWith("needs_more_info", "Please add the access review record."));
 });
 
+test("Reviewer final decision can complete a submitted outcome", async () => {
+  const onReview = vi.fn().mockResolvedValue(undefined);
+  render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={onReview} onUpload={noop} onDelete={noop} onDownload={noop} />);
+
+  expect(screen.getByRole("heading", { name: /reviewer final decision/i })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText(/review status/i), { target: { value: "reviewed" } });
+  fireEvent.change(screen.getByLabelText(/review comment/i), { target: { value: "Evidence is sufficient." } });
+  fireEvent.click(screen.getByRole("button", { name: /save review/i }));
+
+  await waitFor(() => expect(onReview).toHaveBeenCalledWith("reviewed", "Evidence is sufficient."));
+});
+
 test("viewer sees the response but no mutation controls", () => {
   render(<StakeholderResponsePanel role="viewer" response={response} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
 
