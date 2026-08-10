@@ -1,6 +1,11 @@
 package store
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var ErrInvalidProfileAssignment = errors.New("invalid profile assignment")
 
 type AuditEvent struct {
 	ActorUserID    string
@@ -111,29 +116,33 @@ type ProjectFunction struct {
 	Reason     string `json:"reason"`
 }
 type ProfileRow struct {
-	ID                   string `json:"id"`
-	ProjectID            string `json:"projectID"`
-	SubcategoryID        string `json:"subcategoryID"`
-	FunctionCode         string `json:"functionCode"`
-	CategoryCode         string `json:"categoryCode"`
-	SubcategoryCode      string `json:"subcategoryCode"`
-	Description          string `json:"description"`
-	Included             bool   `json:"included"`
-	Rationale            string `json:"rationale"`
-	CurrentPriority      string `json:"currentPriority"`
-	CurrentCoverageLevel string `json:"currentCoverageLevel"`
-	CurrentStatusText    string `json:"currentStatusText"`
-	CurrentPoliciesText  string `json:"currentPoliciesText"`
-	CurrentTier          string `json:"currentTier"`
-	TargetPriority       string `json:"targetPriority"`
-	TargetCoverageLevel  string `json:"targetCoverageLevel"`
-	TargetApproachText   string `json:"targetApproachText"`
-	TargetTier           string `json:"targetTier"`
-	Notes                string `json:"notes"`
-	Considerations       string `json:"considerations"`
-	ReviewStatus         string `json:"reviewStatus"`
+	AssignedUserID       *string `json:"assignedUserID"`
+	AssignedUserName     string  `json:"assignedUserName"`
+	AssignedUserEmail    string  `json:"assignedUserEmail"`
+	ID                   string  `json:"id"`
+	ProjectID            string  `json:"projectID"`
+	SubcategoryID        string  `json:"subcategoryID"`
+	FunctionCode         string  `json:"functionCode"`
+	CategoryCode         string  `json:"categoryCode"`
+	SubcategoryCode      string  `json:"subcategoryCode"`
+	Description          string  `json:"description"`
+	Included             bool    `json:"included"`
+	Rationale            string  `json:"rationale"`
+	CurrentPriority      string  `json:"currentPriority"`
+	CurrentCoverageLevel string  `json:"currentCoverageLevel"`
+	CurrentStatusText    string  `json:"currentStatusText"`
+	CurrentPoliciesText  string  `json:"currentPoliciesText"`
+	CurrentTier          string  `json:"currentTier"`
+	TargetPriority       string  `json:"targetPriority"`
+	TargetCoverageLevel  string  `json:"targetCoverageLevel"`
+	TargetApproachText   string  `json:"targetApproachText"`
+	TargetTier           string  `json:"targetTier"`
+	Notes                string  `json:"notes"`
+	Considerations       string  `json:"considerations"`
+	ReviewStatus         string  `json:"reviewStatus"`
 }
 type ProfilePatch struct {
+	AssignedUserID       *string `json:"assignedUserID,omitempty"`
 	Included             *bool   `json:"included,omitempty"`
 	Rationale            *string `json:"rationale,omitempty"`
 	CurrentPriority      *string `json:"currentPriority,omitempty"`

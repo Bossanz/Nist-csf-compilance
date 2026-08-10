@@ -109,7 +109,7 @@ func (s *Store) ListProfile(ctx context.Context, projectID string) ([]ProfileRow
 	if _, err := s.GetProject(ctx, projectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.Query(ctx, `SELECT p.id,p.project_id,p.subcategory_id,f.code,c.code,sc.code,sc.description,p.included,p.rationale,p.current_priority,p.current_coverage_level,p.current_status_text,p.current_policies_text,p.current_tier,p.target_priority,p.target_coverage_level,p.target_approach_text,p.target_tier,p.notes,p.considerations,p.review_status FROM project_subcategory_profiles p JOIN subcategories sc ON sc.id=p.subcategory_id JOIN categories c ON c.id=sc.category_id JOIN functions f ON f.id=c.function_id WHERE p.project_id=$1 ORDER BY f.code,c.code,sc.code`, projectID)
+	rows, err := s.DB.Query(ctx, `SELECT p.id,p.project_id,p.subcategory_id,f.code,c.code,sc.code,sc.description,p.included,p.rationale,p.current_priority,p.current_coverage_level,p.current_status_text,p.current_policies_text,p.current_tier,p.target_priority,p.target_coverage_level,p.target_approach_text,p.target_tier,p.notes,p.considerations,p.review_status,p.assigned_user_id,COALESCE(assigned_user.name,''),COALESCE(assigned_user.email,'') FROM project_subcategory_profiles p JOIN subcategories sc ON sc.id=p.subcategory_id JOIN categories c ON c.id=sc.category_id JOIN functions f ON f.id=c.function_id LEFT JOIN users assigned_user ON assigned_user.id=p.assigned_user_id WHERE p.project_id=$1 ORDER BY f.code,c.code,sc.code`, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +132,42 @@ func (s *Store) UpdateProfile(ctx context.Context, projectID, subcategoryID stri
 	if _, err := uuid.Parse(subcategoryID); err != nil {
 		return ProfileRow{}, fmt.Errorf("invalid subcategory id")
 	}
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return ProfileRow{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var organizationID string
+	var currentIncluded bool
+	var currentAssignedUserID *string
+	if err := tx.QueryRow(ctx, `SELECT p.included,p.assigned_user_id,pr.organization_id FROM project_subcategory_profiles p JOIN projects pr ON pr.id=p.project_id WHERE p.project_id=$1 AND p.subcategory_id=$2 FOR UPDATE`, projectID, subcategoryID).Scan(&currentIncluded, &currentAssignedUserID, &organizationID); err != nil {
+		return ProfileRow{}, err
+	}
+	finalIncluded := currentIncluded
+	if patch.Included != nil {
+		finalIncluded = *patch.Included
+	}
+	finalAssignedUserID := currentAssignedUserID
+	if patch.AssignedUserID != nil {
+		finalAssignedUserID = patch.AssignedUserID
+	}
+	if !finalIncluded {
+		finalAssignedUserID = nil
+	}
+	if finalIncluded && finalAssignedUserID == nil {
+		return ProfileRow{}, ErrInvalidProfileAssignment
+	}
+	if finalAssignedUserID != nil {
+		var valid bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND organization_id=$2 AND user_type='stakeholder' AND role IN ('org_admin','assessor') AND status='active')`, *finalAssignedUserID, organizationID).Scan(&valid); err != nil {
+			return ProfileRow{}, err
+		}
+		if !valid {
+			return ProfileRow{}, ErrInvalidProfileAssignment
+		}
+	}
+
 	sets, args := []string{}, []any{}
 	add := func(column string, value any) {
 		args = append(args, value)
@@ -170,12 +206,16 @@ func (s *Store) UpdateProfile(ctx context.Context, projectID, subcategoryID stri
 	if patch.Considerations != nil {
 		add("considerations", *patch.Considerations)
 	}
-	if len(sets) == 0 {
+	if len(sets) == 0 && patch.AssignedUserID == nil {
 		return ProfileRow{}, fmt.Errorf("no fields to update")
 	}
+	add("assigned_user_id", finalAssignedUserID)
 	args = append(args, projectID, subcategoryID)
-	_, err := s.DB.Exec(ctx, `UPDATE project_subcategory_profiles SET `+strings.Join(sets, ",")+` WHERE project_id=$`+fmt.Sprint(len(args)-1)+` AND subcategory_id=$`+fmt.Sprint(len(args)), args...)
+	_, err = tx.Exec(ctx, `UPDATE project_subcategory_profiles SET `+strings.Join(sets, ",")+` WHERE project_id=$`+fmt.Sprint(len(args)-1)+` AND subcategory_id=$`+fmt.Sprint(len(args)), args...)
 	if err != nil {
+		return ProfileRow{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return ProfileRow{}, err
 	}
 	rows, err := s.ListProfile(ctx, projectID)
