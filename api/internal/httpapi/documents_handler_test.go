@@ -60,7 +60,12 @@ func (f *fakeEvidenceStorage) Remove(storageKey string) error {
 }
 
 func documentHandler(user store.User, documents *fakeDocumentStore, evidence *fakeEvidenceStorage) *Handler {
-	return documentHandlerWithProfiles(user, documents, evidence, []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true}})
+	row := store.ProfileRow{SubcategoryID: "subcategory-1", Included: true}
+	if user.Role == "org_admin" || user.Role == "assessor" {
+		assignedUserID := user.ID
+		row.AssignedUserID = &assignedUserID
+	}
+	return documentHandlerWithProfiles(user, documents, evidence, []store.ProfileRow{row})
 }
 
 func documentHandlerWithProfiles(user store.User, documents *fakeDocumentStore, evidence *fakeEvidenceStorage, profiles []store.ProfileRow) *Handler {
@@ -118,6 +123,23 @@ func TestStakeholderCannotUploadEvidenceForExcludedOutcome(t *testing.T) {
 	}
 }
 
+func TestUnassignedAssessorCannotUploadEvidence(t *testing.T) {
+	documents := &fakeDocumentStore{}
+	evidence := &fakeEvidenceStorage{storageKey: "opaque-key"}
+	assessorID := "assessor-1"
+	otherAssessorID := "assessor-2"
+	handler := documentHandlerWithProfiles(store.User{ID: assessorID, OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, documents, evidence, []store.ProfileRow{
+		{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &otherAssessorID},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, multipartRequest(t, "/api/projects/project-1/responses/subcategory-1/documents", "evidence.pdf", "application/pdf", []byte("%PDF-1.7")))
+
+	if response.Code != http.StatusForbidden || documents.createdActor != "" || evidence.removedKey != "" {
+		t.Fatalf("expected unassigned upload denial, got %d actor=%s removed=%s body=%s", response.Code, documents.createdActor, evidence.removedKey, response.Body.String())
+	}
+}
+
 func TestViewerCannotUploadEvidence(t *testing.T) {
 	documents := &fakeDocumentStore{}
 	evidence := &fakeEvidenceStorage{storageKey: "opaque-key"}
@@ -171,5 +193,24 @@ func TestAssessorCanDeleteEvidence(t *testing.T) {
 
 	if response.Code != http.StatusNoContent || documents.deletedID != "doc-1" || evidence.removedKey != "opaque-key" {
 		t.Fatalf("unexpected response: %d %s deleted=%s removed=%s", response.Code, response.Body.String(), documents.deletedID, evidence.removedKey)
+	}
+}
+
+func TestUnassignedAssessorCannotDeleteEvidence(t *testing.T) {
+	documents := &fakeDocumentStore{document: store.ResponseDocument{ID: "doc-1", StorageKey: "opaque-key", CreatedAt: time.Now()}}
+	evidence := &fakeEvidenceStorage{}
+	assessorID := "assessor-1"
+	otherAssessorID := "assessor-2"
+	handler := documentHandlerWithProfiles(store.User{ID: assessorID, OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, documents, evidence, []store.ProfileRow{
+		{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &otherAssessorID},
+	})
+	response := httptest.NewRecorder()
+
+	request := httptest.NewRequest(http.MethodDelete, "/api/projects/project-1/responses/subcategory-1/documents/doc-1", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "raw-token"})
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusForbidden || documents.deletedID != "" {
+		t.Fatalf("expected unassigned delete denial, got %d deleted=%s body=%s", response.Code, documents.deletedID, response.Body.String())
 	}
 }

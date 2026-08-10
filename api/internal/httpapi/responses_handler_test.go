@@ -49,7 +49,12 @@ func (f *fakeResponseStore) ReviewResponse(_ context.Context, _, _, actor, statu
 }
 
 func responseHandler(user store.User, responses *fakeResponseStore) *Handler {
-	return responseHandlerWithProfiles(user, responses, []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true}})
+	row := store.ProfileRow{SubcategoryID: "subcategory-1", Included: true}
+	if user.Role == "org_admin" || user.Role == "assessor" {
+		assignedUserID := user.ID
+		row.AssignedUserID = &assignedUserID
+	}
+	return responseHandlerWithProfiles(user, responses, []store.ProfileRow{row})
 }
 
 func responseHandlerWithProfiles(user store.User, responses *fakeResponseStore, profiles []store.ProfileRow) *Handler {
@@ -90,18 +95,39 @@ func TestStakeholderCannotSaveResponseForExcludedOutcome(t *testing.T) {
 	}
 }
 
-func TestStakeholderResponseListOmitsExcludedOutcomes(t *testing.T) {
+func TestStakeholderResponseListOmitsUnassignedOutcomes(t *testing.T) {
 	responses := &fakeResponseStore{responses: []store.StakeholderResponse{
 		{ID: "response-included", SubcategoryID: "subcategory-included"},
-		{ID: "response-excluded", SubcategoryID: "subcategory-excluded"},
+		{ID: "response-unassigned", SubcategoryID: "subcategory-unassigned"},
 	}}
-	handler := responseHandlerWithProfiles(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses, []store.ProfileRow{{SubcategoryID: "subcategory-included", Included: true}, {SubcategoryID: "subcategory-excluded", Included: false}})
+	assessorID := "assessor-1"
+	otherAssessorID := "assessor-2"
+	handler := responseHandlerWithProfiles(store.User{ID: assessorID, OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses, []store.ProfileRow{
+		{SubcategoryID: "subcategory-included", Included: true, AssignedUserID: &assessorID},
+		{SubcategoryID: "subcategory-unassigned", Included: true, AssignedUserID: &otherAssessorID},
+	})
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/projects/project-1/responses", ""))
 
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "response-included") || strings.Contains(response.Body.String(), "response-excluded") {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "response-included") || strings.Contains(response.Body.String(), "response-unassigned") {
 		t.Fatalf("unexpected response: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestUnassignedAssessorCannotSaveResponse(t *testing.T) {
+	responses := &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", Status: string(domain.ResponseDraft)}}
+	assessorID := "assessor-1"
+	otherAssessorID := "assessor-2"
+	handler := responseHandlerWithProfiles(store.User{ID: assessorID, OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses, []store.ProfileRow{
+		{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &otherAssessorID},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, responseRequest(http.MethodPut, "/api/projects/project-1/responses/subcategory-1", `{"responseText":"Should not save"}`))
+
+	if response.Code != http.StatusForbidden || responses.savedActor != "" {
+		t.Fatalf("expected unassigned response denial, got %d actor=%s body=%s", response.Code, responses.savedActor, response.Body.String())
 	}
 }
 

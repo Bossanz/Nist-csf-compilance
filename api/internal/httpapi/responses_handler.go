@@ -25,14 +25,20 @@ func (h *Handler) responses(w http.ResponseWriter, r *http.Request, projectID st
 		return
 	}
 	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
-		included, err := h.includedOutcomeIDs(r.Context(), projectID)
+		profiles, err := h.Store.ListProfile(r.Context(), projectID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "internal_error", "could not check outcome access")
 			return
 		}
+		visible := make(map[string]struct{}, len(profiles))
+		for _, row := range profiles {
+			if stakeholderCanReadProfile(currentUser(r), row) {
+				visible[row.SubcategoryID] = struct{}{}
+			}
+		}
 		scoped := make([]store.StakeholderResponse, 0, len(data))
 		for _, response := range data {
-			if _, ok := included[response.SubcategoryID]; ok {
+			if _, ok := visible[response.SubcategoryID]; ok {
 				scoped = append(scoped, response)
 			}
 		}

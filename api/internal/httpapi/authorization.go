@@ -143,18 +143,21 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 	return true
 }
 
-func (h *Handler) includedOutcomeIDs(ctx context.Context, projectID string) (map[string]struct{}, error) {
+func (h *Handler) profileOutcome(ctx context.Context, projectID, subcategoryID string) (store.ProfileRow, bool, error) {
 	rows, err := h.Store.ListProfile(ctx, projectID)
 	if err != nil {
-		return nil, err
+		return store.ProfileRow{}, false, err
 	}
-	included := make(map[string]struct{}, len(rows))
 	for _, row := range rows {
-		if row.Included {
-			included[row.SubcategoryID] = struct{}{}
+		if row.SubcategoryID == subcategoryID {
+			return row, true, nil
 		}
 	}
-	return included, nil
+	return store.ProfileRow{}, false, nil
+}
+
+func outcomeMutation(requested *action) bool {
+	return requested != nil && (*requested == actionSaveResponse || *requested == actionSubmitResponse)
 }
 
 func (h *Handler) authorizeProjectOutcome(w http.ResponseWriter, r *http.Request, projectID, subcategoryID string, requested *action) bool {
@@ -164,12 +167,25 @@ func (h *Handler) authorizeProjectOutcome(w http.ResponseWriter, r *http.Request
 	if h.Auth == nil || currentUser(r).UserType != "stakeholder" {
 		return true
 	}
-	included, err := h.includedOutcomeIDs(r.Context(), projectID)
+	row, found, err := h.profileOutcome(r.Context(), projectID, subcategoryID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal_error", "could not check outcome access")
 		return false
 	}
-	if _, ok := included[subcategoryID]; !ok {
+	if !found || !row.Included {
+		writeError(w, http.StatusNotFound, "not_found", "outcome not found")
+		return false
+	}
+	user := currentUser(r)
+	if (user.Role == "org_admin" || user.Role == "assessor") && !stakeholderCanEditProfile(user, row) {
+		if outcomeMutation(requested) {
+			writeError(w, http.StatusForbidden, "forbidden", "Outcome is not assigned to this user")
+		} else {
+			writeError(w, http.StatusNotFound, "not_found", "outcome not found")
+		}
+		return false
+	}
+	if !stakeholderCanReadProfile(user, row) {
 		writeError(w, http.StatusNotFound, "not_found", "outcome not found")
 		return false
 	}
