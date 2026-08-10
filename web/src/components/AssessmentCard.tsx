@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CoverageLevel, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse } from "../lib/types";
+import type { CoverageLevel, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
 import { StakeholderResponsePanel } from "./StakeholderResponsePanel";
 
 const coverageLevels: Array<{ value: CoverageLevel; label: string }> = [
@@ -14,6 +14,7 @@ const coverageLevels: Array<{ value: CoverageLevel; label: string }> = [
 type Draft = {
   included: boolean;
   rationale: string;
+  assignedUserID: string | null;
   currentPriority: string;
   currentCoverageLevel: CoverageLevel;
   currentStatusText: string;
@@ -29,6 +30,7 @@ function createDraft(row: ProfileRow): Draft {
   return {
     included: row.included,
     rationale: row.rationale,
+    assignedUserID: row.assignedUserID,
     currentPriority: row.currentPriority,
     currentCoverageLevel: row.currentCoverageLevel,
     currentStatusText: row.currentStatusText,
@@ -44,7 +46,9 @@ function createDraft(row: ProfileRow): Draft {
 export function AssessmentCard({
   row,
   onSave,
-  readOnly = false,
+  canEditScope,
+  canEditProfile,
+  assigneeOptions,
   role,
   response,
   onSaveResponse,
@@ -56,7 +60,9 @@ export function AssessmentCard({
 }: {
   row: ProfileRow;
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
-  readOnly?: boolean;
+  canEditScope: boolean;
+  canEditProfile: boolean;
+  assigneeOptions: User[];
   role?: Role;
   response?: StakeholderResponse;
   onSaveResponse?: (id: string, responseText: string) => Promise<void>;
@@ -70,6 +76,7 @@ export function AssessmentCard({
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState("");
+  const eligibleAssignees = assigneeOptions.filter((user) => user.status === "active" && (user.role === "org_admin" || user.role === "assessor"));
   const detailID = `assessment-body-${row.id}`;
 
   function update<K extends keyof Draft>(field: K, value: Draft[K]) {
@@ -81,12 +88,29 @@ export function AssessmentCard({
     setError("");
     setState("saving");
     try {
-      await onSave(row.subcategoryID, draft);
+      await onSave(row.subcategoryID, buildPatch());
       setState("saved");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Save failed");
       setState("error");
     }
+  }
+
+  function buildPatch(): ProfilePatch {
+    if (canEditScope) {
+      return { included: draft.included, rationale: draft.rationale, assignedUserID: draft.assignedUserID };
+    }
+    return {
+      currentPriority: draft.currentPriority,
+      currentCoverageLevel: draft.currentCoverageLevel,
+      currentStatusText: draft.currentStatusText,
+      currentPoliciesText: draft.currentPoliciesText,
+      targetPriority: draft.targetPriority,
+      targetCoverageLevel: draft.targetCoverageLevel,
+      targetApproachText: draft.targetApproachText,
+      notes: draft.notes,
+      considerations: draft.considerations,
+    };
   }
 
   return (
@@ -113,8 +137,9 @@ export function AssessmentCard({
 
       {expanded ? (
         <>
-        <fieldset id={detailID} className="assessment-body" disabled={readOnly}>
-          <div className="scope-band">
+        <div id={detailID} className="assessment-body">
+          <fieldset className="scope-fields" disabled={!canEditScope}>
+            <div className="scope-band">
             <label className="check-field">
               <input
                 type="checkbox"
@@ -131,9 +156,22 @@ export function AssessmentCard({
                 placeholder="Why this outcome is in or out of scope"
               />
             </label>
-          </div>
+            <label className="field grow">
+              <span>Responsible stakeholder</span>
+              <select
+                aria-label="Responsible stakeholder"
+                value={draft.assignedUserID ?? ""}
+                onChange={(event) => update("assignedUserID", event.target.value || null)}
+              >
+                <option value="">Select stakeholder</option>
+                {eligibleAssignees.map((user) => <option key={user.id} value={user.id}>{user.name} — {user.email}</option>)}
+              </select>
+            </label>
+            </div>
+          </fieldset>
 
-          <div className="profile-columns">
+          <fieldset className="profile-fields" disabled={!canEditProfile}>
+            <div className="profile-columns">
             <section className="profile-column current-column" aria-labelledby={`current-${row.id}`}>
               <div className="column-heading">
                 <span>01</span>
@@ -183,9 +221,9 @@ export function AssessmentCard({
                 </label>
               </div>
             </section>
-          </div>
+            </div>
 
-          <div className="supporting-grid">
+            <div className="supporting-grid">
             <label className="field">
               <span>Notes</span>
               <textarea rows={2} value={draft.notes} onChange={(event) => update("notes", event.target.value)} />
@@ -194,17 +232,18 @@ export function AssessmentCard({
               <span>Considerations</span>
               <textarea rows={2} value={draft.considerations} onChange={(event) => update("considerations", event.target.value)} />
             </label>
-          </div>
+            </div>
+          </fieldset>
 
           <div className="assessment-actions">
             <span className={`save-state ${state}`} role="status">
               {state === "saved" ? "Saved" : state === "error" ? error : "Changes are saved per outcome"}
             </span>
-            {!readOnly && <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
+            {(canEditScope || canEditProfile) && <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
               {state === "saving" ? "Saving…" : "Save assessment"}
             </button>}
           </div>
-        </fieldset>
+        </div>
         {role && response && onSaveResponse && onSubmitResponse && onReviewResponse && onUploadEvidence && onDeleteEvidence && onDownloadEvidence && (
           <StakeholderResponsePanel
             role={role}

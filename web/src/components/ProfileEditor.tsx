@@ -1,10 +1,12 @@
-import type { ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse } from "../lib/types";
+import type { ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
 import { AssessmentCard } from "./AssessmentCard";
 
 export function ProfileEditor({
   rows,
   onSave,
-  readOnly = false,
+  canEditScope,
+  canEditProfile,
+  assigneeOptions,
   role,
   responses = [],
   onSaveResponse,
@@ -16,7 +18,9 @@ export function ProfileEditor({
 }: {
   rows: ProfileRow[];
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
-  readOnly?: boolean;
+  canEditScope: boolean;
+  canEditProfile: boolean;
+  assigneeOptions: User[];
   role?: Role;
   responses?: StakeholderResponse[];
   onSaveResponse?: (id: string, responseText: string) => Promise<void>;
@@ -36,7 +40,9 @@ export function ProfileEditor({
         key={row.id}
         row={row}
         onSave={onSave}
-        readOnly={readOnly}
+        canEditScope={canEditScope}
+        canEditProfile={canEditProfile}
+        assigneeOptions={assigneeOptions}
         role={role}
         response={responses.find((item) => item.subcategoryID === row.subcategoryID) ?? emptyResponse(row)}
         onSaveResponse={onSaveResponse}

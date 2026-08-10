@@ -49,9 +49,18 @@ export function ProjectAssessmentWorkspace({
   onDeleteEvidence,
   onDownloadEvidence,
 }: Props) {
+  const isCounselor = user.userType === "counselor";
+  const canEditScope = isCounselor;
+  const canEditProfile = user.role === "org_admin" || user.role === "assessor";
   const visibleProfile = useMemo(
-    () => profile.filter((row) => row.functionCode === selectedCode && (user.userType !== "stakeholder" || row.included)),
-    [profile, selectedCode, user.userType],
+    () => profile.filter((row) => {
+      if (row.functionCode !== selectedCode) return false;
+      if (isCounselor) return true;
+      if (!row.included) return false;
+      if (user.role === "reviewer" || user.role === "viewer") return true;
+      return canEditProfile && row.assignedUserID === user.id;
+    }),
+    [canEditProfile, isCounselor, profile, selectedCode, user.id, user.role],
   );
 
   return (
@@ -83,7 +92,9 @@ export function ProjectAssessmentWorkspace({
               <ProfileEditor
                 rows={visibleProfile}
                 onSave={onSaveProfile}
-                readOnly={!['counselor_admin', 'counselor'].includes(user.role)}
+                canEditScope={canEditScope}
+                canEditProfile={canEditProfile}
+                assigneeOptions={organizationUsers}
                 role={user.role}
                 responses={responses}
                 onSaveResponse={onSaveResponse}

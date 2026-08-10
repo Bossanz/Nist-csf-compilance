@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { ProfileEditor } from "./ProfileEditor";
-import type { ProfileRow } from "../lib/types";
+import type { ProfileRow, User } from "../lib/types";
 
 const row: ProfileRow = {
   id: "profile-1",
@@ -27,10 +27,35 @@ const row: ProfileRow = {
   reviewStatus: "draft",
   assignedUserID: null,
 };
+const assessor: User = { id: "assessor-1", organizationID: "org-1", name: "Assessment Owner", email: "owner@example.com", userType: "stakeholder", role: "assessor", status: "active" };
+const assignedRow: ProfileRow = { ...row, included: true, assignedUserID: assessor.id };
 
 describe("ProfileEditor", () => {
+  test("Counselor edits scope and assignee but cannot edit Current or Target", () => {
+    render(<ProfileEditor rows={[row]} onSave={vi.fn()} role="counselor" canEditScope canEditProfile={false} assigneeOptions={[assessor]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+    expect((screen.getByRole("checkbox", { name: /include in profile/i }) as HTMLInputElement).disabled).toBe(false);
+    expect((screen.getByLabelText(/responsible stakeholder/i) as HTMLSelectElement).disabled).toBe(false);
+    expect((screen.getByLabelText(/current priority/i).closest("fieldset") as HTMLFieldSetElement).disabled).toBe(true);
+  });
+
+  test("assigned Assessor edits Current and Target without sending scope fields", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<ProfileEditor rows={[assignedRow]} onSave={onSave} role="assessor" canEditScope={false} canEditProfile assigneeOptions={[]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+    fireEvent.change(screen.getByLabelText(/current priority/i), { target: { value: "High" } });
+    fireEvent.click(screen.getByRole("button", { name: /save assessment/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith("subcategory-1", expect.objectContaining({ currentPriority: "High" })));
+    expect(onSave.mock.calls[0][1]).not.toHaveProperty("included");
+    expect(onSave.mock.calls[0][1]).not.toHaveProperty("assignedUserID");
+  });
+
   test("keeps assessments viewable but not editable in read-only mode", () => {
-    render(<ProfileEditor rows={[row]} onSave={vi.fn()} readOnly />);
+    render(<ProfileEditor rows={[row]} onSave={vi.fn()} role="viewer" canEditScope={false} canEditProfile={false} assigneeOptions={[]} />);
 
     const summary = screen.getByRole("button", { name: /GV\.OC-01/i });
     expect(summary.getAttribute("aria-expanded")).toBe("false");
@@ -41,13 +66,11 @@ describe("ProfileEditor", () => {
     expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
   });
 
-  test("saves the complete editable assessment instead of mutating the source row", async () => {
+  test("saves the editable profile fields instead of mutating the source row", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    render(<ProfileEditor rows={[row]} onSave={onSave} />);
+    render(<ProfileEditor rows={[assignedRow]} onSave={onSave} role="assessor" canEditScope={false} canEditProfile assigneeOptions={[]} />);
 
     fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /include in profile/i }));
-    fireEvent.change(screen.getByLabelText(/rationale/i), { target: { value: "Critical business outcome" } });
     fireEvent.change(screen.getByLabelText(/current priority/i), { target: { value: "High" } });
     fireEvent.change(screen.getByLabelText(/current activities/i), { target: { value: "Quarterly review" } });
     fireEvent.change(screen.getByLabelText(/policies and procedures/i), { target: { value: "Risk policy" } });
@@ -60,8 +83,6 @@ describe("ProfileEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /save assessment/i }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledWith("subcategory-1", {
-      included: true,
-      rationale: "Critical business outcome",
       currentPriority: "High",
       currentCoverageLevel: "partial",
       currentStatusText: "Quarterly review",
@@ -73,7 +94,7 @@ describe("ProfileEditor", () => {
       considerations: "Align with ERM",
     }));
 
-    expect(row.included).toBe(false);
-    expect(row.currentCoverageLevel).toBe("none");
+    expect(assignedRow.included).toBe(true);
+    expect(assignedRow.currentCoverageLevel).toBe("none");
   });
 });
