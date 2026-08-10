@@ -14,7 +14,7 @@ vi.mock("../../../../../lib/api", () => ({
     me: vi.fn(), getOrganizationBySlug: vi.fn(), getOrganizationProjectBySlug: vi.fn(), getFunctions: vi.fn(),
     getProfile: vi.fn(), getSummary: vi.fn(), getResponses: vi.fn(), updateProfile: vi.fn(), saveResponse: vi.fn(),
     submitResponse: vi.fn(), reviewResponse: vi.fn(), uploadResponseDocument: vi.fn(), deleteResponseDocument: vi.fn(),
-    downloadResponseDocument: vi.fn(),
+    downloadResponseDocument: vi.fn(), getOrganizationUsers: vi.fn(),
   },
 }));
 
@@ -34,6 +34,7 @@ beforeEach(() => {
   vi.mocked(api.getProfile).mockResolvedValue(profile);
   vi.mocked(api.getSummary).mockResolvedValue(summary);
   vi.mocked(api.getResponses).mockResolvedValue([]);
+  vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);
 });
 
 test("loads assessment data after resolving the project slug", async () => {
@@ -42,6 +43,13 @@ test("loads assessment data after resolving the project slug", async () => {
   expect(api.getOrganizationProjectBySlug).toHaveBeenCalledWith("org-1", "readiness");
   expect(api.getProfile).toHaveBeenCalledWith("project-1");
   expect(screen.queryByRole("complementary", { name: /assessment context/i })).toBeNull();
+});
+
+test("loads organization users for Counselor assignment controls", async () => {
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+
+  expect(api.getOrganizationUsers).toHaveBeenCalledWith("org-1");
 });
 
 test("back navigation returns to the organization slug route", async () => {

@@ -11,6 +11,7 @@ type Props = {
   organization: Organization;
   project: Project;
   functions: FunctionNode[];
+  organizationUsers: User[];
   profile: ProfileRow[];
   responses: StakeholderResponse[];
   summary: Summary;
@@ -32,6 +33,7 @@ export function ProjectAssessmentWorkspace({
   organization,
   project,
   functions,
+  organizationUsers,
   profile,
   responses,
   summary,

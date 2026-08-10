@@ -25,6 +25,7 @@ const row: ProfileRow = {
   notes: "",
   considerations: "",
   reviewStatus: "draft",
+  assignedUserID: null,
 };
 
 describe("ProfileEditor", () => {

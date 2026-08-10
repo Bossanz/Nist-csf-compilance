@@ -18,6 +18,7 @@ export default function ProjectPage() {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [functions, setFunctions] = useState<FunctionNode[]>([]);
+  const [organizationUsers, setOrganizationUsers] = useState<User[]>([]);
   const [profile, setProfile] = useState<ProfileRow[]>([]);
   const [responses, setResponses] = useState<StakeholderResponse[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
@@ -41,17 +42,20 @@ export default function ProjectPage() {
       const currentUser = await api.me();
       const nextOrganization = await api.getOrganizationBySlug(organizationSlug);
       const nextProject = await api.getOrganizationProjectBySlug(nextOrganization.id, projectSlug);
+      const usersPromise = currentUser.userType === "counselor" ? api.getOrganizationUsers(nextOrganization.id) : Promise.resolve<User[]>([]);
       const [functionRows, nextProfile, nextSummary, nextResponses] = await Promise.all([
         api.getFunctions(),
         api.getProfile(nextProject.id),
         api.getSummary(nextProject.id),
         api.getResponses(nextProject.id),
       ]);
+      const nextOrganizationUsers = await usersPromise;
       if (!active) return;
       setUser(currentUser);
       setOrganization(nextOrganization);
       setProject(nextProject);
       setFunctions(functionRows);
+      setOrganizationUsers(nextOrganizationUsers);
       setSelectedCode(functionRows[0]?.code ?? "");
       setProfile(nextProfile);
       setSummary(nextSummary);
@@ -147,6 +151,7 @@ export default function ProjectPage() {
       organization={organization}
       project={project}
       functions={functions}
+      organizationUsers={organizationUsers}
       profile={profile}
       responses={responses}
       summary={summary}
