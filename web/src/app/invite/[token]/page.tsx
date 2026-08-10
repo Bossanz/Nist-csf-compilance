@@ -17,6 +17,7 @@ export default function InvitationPage() {
     setError("");
     try {
       await api.acceptInvitation(params.token, input);
+      await api.logout();
       setAccepted(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not activate account");
@@ -37,7 +38,7 @@ export default function InvitationPage() {
           <div className="context-line"><span>Invitation</span><span aria-hidden="true">/</span><span>Account ready</span></div>
           <h1>Access activated</h1>
           <p className="muted">Your account is ready. Sign in with the password you just created.</p>
-          <Link className="anchor-primary" href="/">Continue to sign in</Link>
+          <Link className="anchor-primary" href="/login">Continue to sign in</Link>
         </section>
       ) : <AcceptInvitationForm loading={loading} error={error} onAccept={accept} />}
     </main>
