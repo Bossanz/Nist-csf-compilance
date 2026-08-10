@@ -36,3 +36,21 @@ test("creates a project inside an existing organization", async () => {
 
   expect(fetchMock).toHaveBeenCalledWith("/api/organizations/org-1/projects", expect.objectContaining({ method: "POST", body: JSON.stringify({ name: "Readiness" }) }));
 });
+
+test("resolves an organization by slug", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "org-1", slug: "acme-corporation" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.getOrganizationBySlug("acme-corporation");
+
+  expect(fetchMock).toHaveBeenCalledWith("/api/organizations/by-slug/acme-corporation", expect.any(Object));
+});
+
+test("resolves a project by organization and project slugs", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "project-1", slug: "readiness" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.getOrganizationProjectBySlug("org-1", "readiness");
+
+  expect(fetchMock).toHaveBeenCalledWith("/api/organizations/org-1/projects/by-slug/readiness", expect.any(Object));
+});

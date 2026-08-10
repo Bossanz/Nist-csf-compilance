@@ -95,6 +95,36 @@ func TestCounselorCreatesProjectInsideSelectedOrganization(t *testing.T) {
 	}
 }
 
+func TestCounselorResolvesOrganizationAndProjectSlugs(t *testing.T) {
+	organization := store.Organization{ID: "org-1", Name: "Acme Corporation", Slug: "acme-corporation", Type: "client"}
+	project := store.Project{ID: "project-1", OrganizationID: "org-1", OrganizationName: organization.Name, Name: "Readiness", Slug: "readiness", Status: "setup"}
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{organizationBySlug: organization, projectBySlug: project})
+
+	organizationResponse := httptest.NewRecorder()
+	handler.ServeHTTP(organizationResponse, authenticatedRequest(http.MethodGet, "/api/organizations/by-slug/acme-corporation", ""))
+	if organizationResponse.Code != http.StatusOK || !strings.Contains(organizationResponse.Body.String(), `"slug":"acme-corporation"`) {
+		t.Fatalf("unexpected organization response: %d %s", organizationResponse.Code, organizationResponse.Body.String())
+	}
+
+	projectResponse := httptest.NewRecorder()
+	handler.ServeHTTP(projectResponse, authenticatedRequest(http.MethodGet, "/api/organizations/org-1/projects/by-slug/readiness", ""))
+	if projectResponse.Code != http.StatusOK || !strings.Contains(projectResponse.Body.String(), `"slug":"readiness"`) {
+		t.Fatalf("unexpected project response: %d %s", projectResponse.Code, projectResponse.Body.String())
+	}
+}
+
+func TestStakeholderCannotResolveForeignOrganizationSlug(t *testing.T) {
+	organizationID := "org-2"
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{organizationBySlug: store.Organization{ID: "org-1", Name: "Acme", Slug: "acme", Type: "client"}})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/organizations/by-slug/acme", ""))
+
+	if response.Code != http.StatusNotFound || strings.Contains(response.Body.String(), "Acme") {
+		t.Fatalf("expected hidden foreign organization, got %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestStateChangingRequestRejectsForeignOrigin(t *testing.T) {
 	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor_admin", Status: "active"}, fakeStore{})
 	handler.AppOrigin = "http://localhost:3000"

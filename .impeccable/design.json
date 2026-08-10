@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-10T00:00:00+07:00",
+  "title": "Design System: CSF Compliance",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Casefile Teal", "canonical": "#0d7567", "tonalRamp": ["#073b35", "#075448", "#09695d", "#0d7567", "#5ba99d", "#9bcec4", "#d0e8e2", "#f2f8f6"] },
+      "neutral-bg": { "role": "neutral", "displayName": "Cool Desk", "canonical": "#eef3f1", "tonalRamp": ["#283732", "#56645f", "#7f8d87", "#aab8b2", "#c4d0cb", "#d8e2de", "#e6eeeb", "#f7faf9"] },
+      "surface": { "role": "neutral", "displayName": "Paper White", "canonical": "#ffffff", "tonalRamp": ["#1b2925", "#42534d", "#61716b", "#8a9993", "#b4c7c0", "#dbe5e1", "#eef3f1", "#ffffff"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "System UI Display", "purpose": "High-emphasis project, organization, and authentication headings." },
+      "body": { "displayName": "System UI Body", "purpose": "Long reading and form content." }
+    },
+    "shadows": [
+      { "name": "ambient-panel", "value": "0 10px 26px rgba(22, 49, 42, 0.07)", "purpose": "Quiet lift for forms, deletion confirmation, and auth panels." },
+      { "name": "focus-ring", "value": "0 0 0 4px rgba(13, 117, 103, 0.16)", "purpose": "Visible keyboard and input focus." }
+    ],
+    "motion": [
+      { "name": "state-transition", "value": "0.16s ease", "purpose": "Button, border, and field state transitions." },
+      { "name": "assessment-reveal", "value": "0.18s ease-out", "purpose": "Expanded assessment content entering the reading flow." }
+    ],
+    "breakpoints": [
+      { "name": "rail-stack", "value": "1100px" },
+      { "name": "single-column", "value": "760px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one clear action in a form or workflow section.",
+      "html": "<button class=\"primary\" type=\"button\">Create project</button>",
+      "css": "button.primary { min-height: 42px; padding: 10px 16px; color: #fff; background: #0d7567; border: 1px solid #0d7567; border-radius: 8px; font: 750 0.88rem system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease; } button.primary:hover { background: #0b4d44; border-color: #0b4d44; } button.primary:focus-visible { outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A quiet navigation or supporting action.",
+      "html": "<button class=\"secondary\" type=\"button\">Open workspace</button>",
+      "css": "button.secondary { min-height: 42px; padding: 10px 16px; color: #0b4d44; background: #fff; border: 1px solid #b4c7c0; border-radius: 8px; font: 750 0.88rem system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease; } button.secondary:hover { background: #f2f8f6; border-color: #0d7567; } button.secondary:focus-visible { outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A readable white field with an explicit label.",
+      "html": "<label class=\"field\"><span>Email</span><input type=\"email\" /></label>",
+      "css": ".field { display: grid; min-width: 0; gap: 7px; } .field > span { color: #42534d; font: 750 0.78rem/1.3 system-ui, sans-serif; } .field input { width: 100%; padding: 11px 12px; color: #17231f; background: #fff; border: 1px solid #b4c7c0; border-radius: 8px; font: 400 15px/1.65 system-ui, sans-serif; } .field input:focus-visible { border-color: #0d7567; outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: 3px; }"
+    },
+    {
+      "name": "Function Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "A labeled index that keeps the reader oriented within the CSF Functions.",
+      "html": "<nav class=\"sidebar\" aria-label=\"CSF functions\"><button class=\"nav-item active\" type=\"button\" aria-current=\"page\">GV <span class=\"muted\">Govern</span></button></nav>",
+      "css": ".sidebar { display: flex; min-width: 0; height: 100vh; flex-direction: column; padding: 28px 14px 20px; background: #fff; border-right: 1px solid #dbe5e1; } .nav-item { width: 100%; min-height: 44px; padding: 10px 12px; color: #61716b; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; font: 400 15px/1.65 system-ui, sans-serif; cursor: pointer; } .nav-item.active { color: #0b4d44; background: #e7f3ef; border-color: #b8d8ce; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Text-labeled status for project, role, or response state.",
+      "html": "<span class=\"status-chip\">In progress</span>",
+      "css": ".status-chip { display: inline-flex; width: fit-content; align-items: center; padding: 5px 9px; color: #0b4d44; background: #e7f3ef; border-radius: 999px; font: 800 0.68rem/1.2 system-ui, sans-serif; letter-spacing: 0.05em; line-height: 1.2; text-transform: uppercase; }"
+    },
+    {
+      "name": "Assessment Context Rail",
+      "kind": "custom",
+      "refersTo": "assessment-rail",
+      "description": "A read-only role-aware brief that frames the central assessment reading column.",
+      "html": "<aside class=\"assessment-rail\" aria-label=\"Assessment context\"><h2>Read and review the assessment</h2><p class=\"rail-description\">Use the outcome list to scan coverage and follow up on gaps.</p></aside>",
+      "css": ".assessment-rail { display: grid; gap: 18px; padding: 22px; color: #17231f; background: #fff; border: 1px solid #dbe5e1; border-top: 2px solid #0d7567; border-radius: 12px; } .assessment-rail h2 { margin: 0; font: 700 1.2rem/1.18 system-ui, sans-serif; letter-spacing: -0.03em; } .rail-description { margin: 0; color: #42534d; font: 400 0.86rem/1.65 system-ui, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Clean Editorial Casefile",
+    "overview": "The interface treats every assessment as a calm working case file. White reading surfaces hold the content; cool neutral structure separates pages, rails, and states; restrained teal marks the active Function, the next action, and the few statuses that need attention. The system is built for long sessions rather than quick dashboard glances.",
+    "keyCharacteristics": ["White-first work surfaces", "Teal as orientation and action", "Editorial reading measure", "Explicit current/target comparison", "Role-aware context"],
+    "rules": [
+      { "name": "The Teal Rarity Rule", "body": "Teal should explain where the reader is or what action is available; it should not fill whole sections without a functional reason.", "section": "colors" },
+      { "name": "The Flat Workpaper Rule", "body": "If a border and surface change can establish hierarchy, do not add a shadow.", "section": "elevation" }
+    ],
+    "dos": ["Do keep compliance copy on white surfaces with a readable measure.", "Do make current and target profiles visually distinct and textually labeled.", "Do keep Counselor interpretation separate from Stakeholder response/evidence input."],
+    "donts": ["Don't reintroduce gradients, glass effects, decorative illustrations, or dense dashboard chrome.", "Don't use color alone to communicate response, coverage, or permission state.", "Don't use a monospace or novelty display face as a technical costume."]
+  }
+}

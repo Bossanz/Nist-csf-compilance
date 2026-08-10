@@ -17,7 +17,6 @@ export function AcceptInvitationForm({
   return (
     <section className="auth-panel" aria-labelledby="activate-title">
       <div>
-        <span className="section-index">INVITED ACCESS</span>
         <h1 id="activate-title">Activate account</h1>
         <p className="muted">Set your display name and password to join the workspace.</p>
       </div>

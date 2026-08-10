@@ -19,6 +19,8 @@ type fakeStore struct {
 	project                      store.Project
 	organizations                []store.Organization
 	organization                 store.Organization
+	organizationBySlug           store.Organization
+	projectBySlug                store.Project
 	createdOrganizationName      *string
 	createdProjectOrganizationID *string
 	createdProjectName           *string
@@ -30,6 +32,7 @@ type fakeStore struct {
 	deleteErr                    error
 	deletedID                    *string
 	profileErr                   error
+	profiles                     []store.ProfileRow
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -52,7 +55,7 @@ func (f fakeStore) GetProject(context.Context, string) (store.Project, error) {
 	return f.project, nil
 }
 func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, error) {
-	return nil, f.profileErr
+	return f.profiles, f.profileErr
 }
 func (f fakeStore) UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error) {
 	return store.ProfileRow{}, nil
@@ -69,6 +72,9 @@ func (f fakeStore) ListOrganizations(context.Context, *string) ([]store.Organiza
 func (f fakeStore) GetOrganization(context.Context, string) (store.Organization, error) {
 	return f.organization, nil
 }
+func (f fakeStore) GetOrganizationBySlug(context.Context, string) (store.Organization, error) {
+	return f.organizationBySlug, nil
+}
 func (f fakeStore) CreateOrganization(_ context.Context, name string) (store.Organization, error) {
 	if f.createdOrganizationName != nil {
 		*f.createdOrganizationName = name
@@ -83,6 +89,9 @@ func (f fakeStore) DeleteOrganization(_ context.Context, id string) error {
 }
 func (f fakeStore) ListProjectsByOrganization(context.Context, string) ([]store.Project, error) {
 	return f.projects, nil
+}
+func (f fakeStore) GetProjectBySlug(context.Context, string, string) (store.Project, error) {
+	return f.projectBySlug, nil
 }
 func (f fakeStore) WriteAudit(_ context.Context, event store.AuditEvent) error {
 	if f.auditAction != nil {
@@ -219,5 +228,30 @@ func TestDeletedProjectProfileIsNotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound || !strings.Contains(w.Body.String(), `"code":"not_found"`) {
 		t.Fatalf("unexpected response: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestStakeholderProfileOnlyReturnsIncludedOutcomes(t *testing.T) {
+	organizationID := "org-1"
+	rows := []store.ProfileRow{
+		{SubcategoryCode: "GV.OC-01", Included: true},
+		{SubcategoryCode: "GV.OC-02", Included: false},
+	}
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project:  store.Project{ID: "project-1", OrganizationID: organizationID},
+		profiles: rows,
+	})
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/projects/project-1/profile", ""))
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+	var got []store.ProfileRow
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].SubcategoryCode != "GV.OC-01" {
+		t.Fatalf("expected only included outcome, got %#v", got)
 	}
 }

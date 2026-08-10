@@ -38,12 +38,14 @@ type Project struct {
 	OrganizationID   string `json:"organizationID"`
 	OrganizationName string `json:"organizationName"`
 	Name             string `json:"name"`
+	Slug             string `json:"slug"`
 	Status           string `json:"status"`
 	CreatedAt        string `json:"createdAt"`
 }
 type Organization struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	Slug string `json:"slug"`
 	Type string `json:"type"`
 }
 type User struct {

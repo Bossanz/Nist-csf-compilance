@@ -16,6 +16,7 @@ func stringPtr(value string) *string { return &value }
 
 type fakeResponseStore struct {
 	response      store.StakeholderResponse
+	responses     []store.StakeholderResponse
 	listErr       error
 	saveErr       error
 	submitErr     error
@@ -28,6 +29,9 @@ type fakeResponseStore struct {
 func (f *fakeResponseStore) ListResponses(context.Context, string) ([]store.StakeholderResponse, error) {
 	if f.listErr != nil {
 		return nil, f.listErr
+	}
+	if f.responses != nil {
+		return f.responses, nil
 	}
 	return []store.StakeholderResponse{f.response}, nil
 }
@@ -45,8 +49,12 @@ func (f *fakeResponseStore) ReviewResponse(_ context.Context, _, _, actor, statu
 }
 
 func responseHandler(user store.User, responses *fakeResponseStore) *Handler {
+	return responseHandlerWithProfiles(user, responses, []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true}})
+}
+
+func responseHandlerWithProfiles(user store.User, responses *fakeResponseStore, profiles []store.ProfileRow) *Handler {
 	organizationID := "org-1"
-	data := fakeStore{project: store.Project{ID: "project-1", OrganizationID: organizationID}}
+	data := fakeStore{project: store.Project{ID: "project-1", OrganizationID: organizationID}, profiles: profiles}
 	handler := authenticatedHandler(user, data)
 	handler.Responses = responses
 	return handler
@@ -67,6 +75,33 @@ func TestAssessorCanSaveResponse(t *testing.T) {
 
 	if response.Code != http.StatusOK || responses.savedActor != "assessor-1" {
 		t.Fatalf("unexpected response: %d %s actor=%s", response.Code, response.Body.String(), responses.savedActor)
+	}
+}
+
+func TestStakeholderCannotSaveResponseForExcludedOutcome(t *testing.T) {
+	responses := &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", Status: string(domain.ResponseDraft)}}
+	handler := responseHandlerWithProfiles(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses, []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: false}})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, responseRequest(http.MethodPut, "/api/projects/project-1/responses/subcategory-1", `{"responseText":"Should not save"}`))
+
+	if response.Code != http.StatusNotFound || responses.savedActor != "" {
+		t.Fatalf("unexpected response: %d %s actor=%s", response.Code, response.Body.String(), responses.savedActor)
+	}
+}
+
+func TestStakeholderResponseListOmitsExcludedOutcomes(t *testing.T) {
+	responses := &fakeResponseStore{responses: []store.StakeholderResponse{
+		{ID: "response-included", SubcategoryID: "subcategory-included"},
+		{ID: "response-excluded", SubcategoryID: "subcategory-excluded"},
+	}}
+	handler := responseHandlerWithProfiles(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses, []store.ProfileRow{{SubcategoryID: "subcategory-included", Included: true}, {SubcategoryID: "subcategory-excluded", Included: false}})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/projects/project-1/responses", ""))
+
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "response-included") || strings.Contains(response.Body.String(), "response-excluded") {
+		t.Fatalf("unexpected response: %d %s", response.Code, response.Body.String())
 	}
 }
 

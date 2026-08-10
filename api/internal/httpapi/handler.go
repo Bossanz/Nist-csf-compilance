@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -108,6 +109,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	path := strings.Trim(r.URL.Path, "/")
 	parts := strings.Split(path, "/")
+	if len(parts) == 4 && parts[0] == "api" && parts[1] == "organizations" && parts[2] == "by-slug" && r.Method == http.MethodGet {
+		slug, err := url.PathUnescape(parts[3])
+		if err != nil {
+			writeError(w, http.StatusNotFound, "not_found", "organization not found")
+			return
+		}
+		h.organizationBySlug(w, r, slug)
+		return
+	}
 	if len(parts) == 2 && parts[0] == "api" && parts[1] == "organizations" {
 		if r.Method == http.MethodGet {
 			h.organizations(w, r)
@@ -120,6 +130,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "organizations" {
 		id := parts[2]
+		if len(parts) == 6 && parts[3] == "projects" && parts[4] == "by-slug" && r.Method == http.MethodGet {
+			slug, err := url.PathUnescape(parts[5])
+			if err != nil {
+				writeError(w, http.StatusNotFound, "not_found", "project not found")
+				return
+			}
+			h.organizationProjectBySlug(w, r, id, slug)
+			return
+		}
 		if len(parts) == 3 && r.Method == http.MethodDelete {
 			h.deleteOrganization(w, r, id)
 			return
@@ -213,7 +232,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(parts) == 5 && parts[3] == "responses" && r.Method == http.MethodPut {
 			action := actionSaveResponse
-			if !h.authorizeProject(w, r, id, &action) {
+			if !h.authorizeProjectOutcome(w, r, id, parts[4], &action) {
 				return
 			}
 			h.saveResponse(w, r, id, parts[4])
@@ -221,7 +240,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(parts) == 6 && parts[3] == "responses" && parts[5] == "submit" && r.Method == http.MethodPost {
 			action := actionSubmitResponse
-			if !h.authorizeProject(w, r, id, &action) {
+			if !h.authorizeProjectOutcome(w, r, id, parts[4], &action) {
 				return
 			}
 			h.submitResponse(w, r, id, parts[4])
@@ -229,7 +248,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(parts) == 6 && parts[3] == "responses" && parts[5] == "review" && r.Method == http.MethodPost {
 			action := actionReviewResponse
-			if !h.authorizeProject(w, r, id, &action) {
+			if !h.authorizeProjectOutcome(w, r, id, parts[4], &action) {
 				return
 			}
 			h.reviewResponse(w, r, id, parts[4])
@@ -237,14 +256,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(parts) == 6 && parts[3] == "responses" && parts[5] == "documents" && r.Method == http.MethodPost {
 			action := actionSaveResponse
-			if !h.authorizeProject(w, r, id, &action) {
+			if !h.authorizeProjectOutcome(w, r, id, parts[4], &action) {
 				return
 			}
 			h.uploadResponseDocument(w, r, id, parts[4])
 			return
 		}
 		if len(parts) == 7 && parts[3] == "responses" && parts[5] == "documents" && r.Method == http.MethodGet {
-			if !h.authorizeProject(w, r, id, nil) {
+			if !h.authorizeProjectOutcome(w, r, id, parts[4], nil) {
 				return
 			}
 			h.downloadResponseDocument(w, r, id, parts[4], parts[6])
@@ -252,7 +271,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(parts) == 7 && parts[3] == "responses" && parts[5] == "documents" && r.Method == http.MethodDelete {
 			action := actionSaveResponse
-			if !h.authorizeProject(w, r, id, &action) {
+			if !h.authorizeProjectOutcome(w, r, id, parts[4], &action) {
 				return
 			}
 			h.deleteResponseDocument(w, r, id, parts[4], parts[6])
@@ -381,6 +400,15 @@ func (h *Handler) profile(w http.ResponseWriter, r *http.Request, id string) {
 	if err != nil {
 		writeError(w, 500, "internal_error", "could not load profile")
 		return
+	}
+	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
+		scoped := make([]store.ProfileRow, 0, len(p))
+		for _, row := range p {
+			if row.Included {
+				scoped = append(scoped, row)
+			}
+		}
+		p = scoped
 	}
 	writeJSON(w, 200, p)
 }

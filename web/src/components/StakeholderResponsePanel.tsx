@@ -60,8 +60,8 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
     <section className="response-panel" aria-labelledby={`response-${response.subcategoryID}`}>
       <div className="response-heading">
         <div>
-          <span className="section-index">CLIENT INPUT</span>
           <h3 id={`response-${response.subcategoryID}`}>Stakeholder response</h3>
+          <p className="response-note">Response and evidence for this outcome.</p>
         </div>
         <span className={`response-status status-${response.status}`}>{statusLabels[response.status]}</span>
       </div>

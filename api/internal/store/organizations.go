@@ -11,7 +11,7 @@ import (
 var ErrOrganizationExists = errors.New("organization already exists")
 
 func (s *Store) ListOrganizations(ctx context.Context, organizationID *string) ([]Organization, error) {
-	query := `SELECT id,name,type FROM organizations`
+	query := `SELECT id,name,slug,type FROM organizations`
 	args := []any{}
 	if organizationID != nil {
 		query += ` WHERE id=$1`
@@ -26,7 +26,7 @@ func (s *Store) ListOrganizations(ctx context.Context, organizationID *string) (
 	organizations := []Organization{}
 	for rows.Next() {
 		var organization Organization
-		if err := rows.Scan(&organization.ID, &organization.Name, &organization.Type); err != nil {
+		if err := rows.Scan(&organization.ID, &organization.Name, &organization.Slug, &organization.Type); err != nil {
 			return nil, err
 		}
 		organizations = append(organizations, organization)
@@ -36,21 +36,33 @@ func (s *Store) ListOrganizations(ctx context.Context, organizationID *string) (
 
 func (s *Store) GetOrganization(ctx context.Context, id string) (Organization, error) {
 	var organization Organization
-	err := s.DB.QueryRow(ctx, `SELECT id,name,type FROM organizations WHERE id=$1`, id).Scan(&organization.ID, &organization.Name, &organization.Type)
+	err := s.DB.QueryRow(ctx, `SELECT id,name,slug,type FROM organizations WHERE id=$1`, id).Scan(&organization.ID, &organization.Name, &organization.Slug, &organization.Type)
+	return organization, err
+}
+
+func (s *Store) GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error) {
+	var organization Organization
+	err := s.DB.QueryRow(ctx, `SELECT id,name,slug,type FROM organizations WHERE lower(slug)=lower($1)`, slug).Scan(&organization.ID, &organization.Name, &organization.Slug, &organization.Type)
 	return organization, err
 }
 
 func (s *Store) CreateOrganization(ctx context.Context, name string) (Organization, error) {
 	name = strings.TrimSpace(name)
-	var exists bool
-	if err := s.DB.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM organizations WHERE lower(btrim(name))=lower($1))`, name).Scan(&exists); err != nil {
-		return Organization{}, err
-	}
-	if exists {
-		return Organization{}, ErrOrganizationExists
-	}
 	var organization Organization
-	err := s.DB.QueryRow(ctx, `INSERT INTO organizations(name,type) VALUES ($1,'client') RETURNING id,name,type`, name).Scan(&organization.ID, &organization.Name, &organization.Type)
+	err := pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM organizations WHERE lower(btrim(name))=lower($1))`, name).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			return ErrOrganizationExists
+		}
+		slug, err := nextOrganizationSlug(ctx, tx, Slugify(name))
+		if err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `INSERT INTO organizations(name,slug,type) VALUES ($1,$2,'client') RETURNING id,name,slug,type`, name, slug).Scan(&organization.ID, &organization.Name, &organization.Slug, &organization.Type)
+	})
 	return organization, err
 }
 
@@ -102,7 +114,7 @@ func (s *Store) ListOrganizationEvidenceKeys(ctx context.Context, organizationID
 }
 
 func (s *Store) ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error) {
-	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text
+	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text
 		FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.organization_id=$1
 		ORDER BY p.created_at DESC,p.id DESC`, organizationID)
 	if err != nil {
@@ -112,7 +124,7 @@ func (s *Store) ListProjectsByOrganization(ctx context.Context, organizationID s
 	projects := []Project{}
 	for rows.Next() {
 		var project Project
-		if err := rows.Scan(&project.ID, &project.OrganizationID, &project.OrganizationName, &project.Name, &project.Status, &project.CreatedAt); err != nil {
+		if err := rows.Scan(&project.ID, &project.OrganizationID, &project.OrganizationName, &project.Name, &project.Slug, &project.Status, &project.CreatedAt); err != nil {
 			return nil, err
 		}
 		projects = append(projects, project)

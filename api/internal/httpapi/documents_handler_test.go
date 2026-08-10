@@ -60,7 +60,11 @@ func (f *fakeEvidenceStorage) Remove(storageKey string) error {
 }
 
 func documentHandler(user store.User, documents *fakeDocumentStore, evidence *fakeEvidenceStorage) *Handler {
-	handler := responseHandler(user, &fakeResponseStore{})
+	return documentHandlerWithProfiles(user, documents, evidence, []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true}})
+}
+
+func documentHandlerWithProfiles(user store.User, documents *fakeDocumentStore, evidence *fakeEvidenceStorage, profiles []store.ProfileRow) *Handler {
+	handler := responseHandlerWithProfiles(user, &fakeResponseStore{}, profiles)
 	handler.Documents = documents
 	handler.Evidence = evidence
 	return handler
@@ -98,6 +102,19 @@ func TestAssessorCanUploadEvidence(t *testing.T) {
 
 	if response.Code != http.StatusCreated || documents.createdActor != "assessor-1" || documents.createdStorage != "opaque-key" {
 		t.Fatalf("unexpected response: %d %s actor=%s key=%s", response.Code, response.Body.String(), documents.createdActor, documents.createdStorage)
+	}
+}
+
+func TestStakeholderCannotUploadEvidenceForExcludedOutcome(t *testing.T) {
+	documents := &fakeDocumentStore{}
+	evidence := &fakeEvidenceStorage{storageKey: "opaque-key"}
+	handler := documentHandlerWithProfiles(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, documents, evidence, []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: false}})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, multipartRequest(t, "/api/projects/project-1/responses/subcategory-1/documents", "evidence.pdf", "application/pdf", []byte("%PDF-1.7")))
+
+	if response.Code != http.StatusNotFound || documents.createdActor != "" || evidence.removedKey != "" {
+		t.Fatalf("unexpected response: %d %s actor=%s removed=%s", response.Code, response.Body.String(), documents.createdActor, evidence.removedKey)
 	}
 }
 

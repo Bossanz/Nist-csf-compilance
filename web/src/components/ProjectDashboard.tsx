@@ -25,13 +25,13 @@ export function ProjectDashboard({ projects, loading, openingID, error, onOpen, 
 
   return <main className="main dashboard">
     <header className="dashboard-header">
-      <div><div className="eyebrow">NIST CSF 2.0</div><h1>Compliance projects</h1><p className="muted">Continue an assessment or start a new organizational profile.</p></div>
+      <div><div className="context-line"><span>NIST CSF 2.0</span><span aria-hidden="true">/</span><span>Workspace</span></div><h1>Compliance projects</h1><p className="muted">Continue an assessment or start a new organizational profile.</p></div>
       <div className="project-total"><strong>{projects.length}</strong><span>projects</span></div>
     </header>
 
     {error && <div className="error" role="alert">{error}</div>}
     <section aria-labelledby="existing-projects">
-      <div className="section-heading"><span className="section-index">WORKSPACE</span><h2 id="existing-projects">Existing projects</h2></div>
+      <div className="section-heading"><h2 id="existing-projects">Existing projects</h2><p className="muted">Your active assessment workspaces.</p></div>
       {loading ? <div className="panel muted">Loading projects…</div> : projects.length === 0 ?
         <div className="empty-state">No projects yet. Create one to begin an assessment.</div> :
         <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id}>
@@ -42,7 +42,7 @@ export function ProjectDashboard({ projects, loading, openingID, error, onOpen, 
     </section>
 
     <section className="panel create-project" aria-labelledby="create-project">
-      <div><span className="section-index">NEW</span><h2 id="create-project">Create project</h2><p className="muted">A complete 106-outcome assessment workspace is prepared automatically.</p></div>
+      <div><h2 id="create-project">Create project</h2><p className="muted">A complete 106-outcome assessment workspace is prepared automatically.</p></div>
       <form className="form" onSubmit={submit}>
         <label className="field"><span>Project name</span><input required value={name} onChange={event => setName(event.target.value)} /></label>
         <label className="field"><span>Organization name</span><input value={organizationName} onChange={event => setOrganizationName(event.target.value)} /></label>

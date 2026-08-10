@@ -28,16 +28,16 @@ export default function InvitationPage() {
   return (
     <main className="auth-layout invitation-layout">
       <section className="auth-intro">
-        <span className="section-index">NIST CSF 2.0 / INVITATION</span>
+        <div className="context-line"><span>NIST CSF 2.0</span><span aria-hidden="true">/</span><span>Invitation</span></div>
         <h2>Join the assessment workspace.</h2>
         <p>Your access and permissions were selected by the organization administrator.</p>
       </section>
       {accepted ? (
         <section className="auth-panel success-panel">
-          <span className="section-index">ACCOUNT READY</span>
+          <div className="context-line"><span>Invitation</span><span aria-hidden="true">/</span><span>Account ready</span></div>
           <h1>Access activated</h1>
           <p className="muted">Your account is ready. Sign in with the password you just created.</p>
-          <Link className="primary button-link" href="/">Continue to sign in</Link>
+          <Link className="anchor-primary" href="/">Continue to sign in</Link>
         </section>
       ) : <AcceptInvitationForm loading={loading} error={error} onAccept={accept} />}
     </main>

@@ -8,6 +8,7 @@ const project: Project = {
   organizationID: "org-1",
   organizationName: "Acme",
   name: "Readiness Review",
+  slug: "readiness-review",
   status: "setup",
   createdAt: "2026-08-06T03:00:00Z",
 };

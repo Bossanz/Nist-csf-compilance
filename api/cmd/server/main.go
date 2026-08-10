@@ -22,6 +22,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer s.Close()
+	if err := s.EnsureSlugs(ctx); err != nil {
+		log.Fatal(err)
+	}
 	authService := auth.NewService(s, time.Now)
 	invitationService := auth.NewInvitationService(s, time.Now)
 	adminEmail, adminPassword := os.Getenv("BOOTSTRAP_ADMIN_EMAIL"), os.Getenv("BOOTSTRAP_ADMIN_PASSWORD")

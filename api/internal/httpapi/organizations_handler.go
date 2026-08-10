@@ -13,9 +13,11 @@ import (
 type organizationDataStore interface {
 	ListOrganizations(context.Context, *string) ([]store.Organization, error)
 	GetOrganization(context.Context, string) (store.Organization, error)
+	GetOrganizationBySlug(context.Context, string) (store.Organization, error)
 	CreateOrganization(context.Context, string) (store.Organization, error)
 	DeleteOrganization(context.Context, string) error
 	ListProjectsByOrganization(context.Context, string) ([]store.Project, error)
+	GetProjectBySlug(context.Context, string, string) (store.Project, error)
 	CreateScopedProject(context.Context, string, string) (store.Project, error)
 }
 
@@ -92,6 +94,20 @@ func (h *Handler) authorizeOrganization(w http.ResponseWriter, r *http.Request, 
 	return data, true
 }
 
+func (h *Handler) organizationBySlug(w http.ResponseWriter, r *http.Request, slug string) {
+	data, ok := h.organizationStore()
+	if !ok {
+		writeError(w, 500, "internal_error", "organization store unavailable")
+		return
+	}
+	organization, err := data.GetOrganizationBySlug(r.Context(), slug)
+	if err != nil || organization.ID == "" || (h.Auth != nil && !canAccessOrganization(currentUser(r), organization.ID)) {
+		writeError(w, 404, "not_found", "organization not found")
+		return
+	}
+	writeJSON(w, 200, organization)
+}
+
 func (h *Handler) organizationProjects(w http.ResponseWriter, r *http.Request, id string) {
 	data, ok := h.authorizeOrganization(w, r, id)
 	if !ok {
@@ -103,6 +119,19 @@ func (h *Handler) organizationProjects(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	writeJSON(w, 200, projects)
+}
+
+func (h *Handler) organizationProjectBySlug(w http.ResponseWriter, r *http.Request, organizationID, slug string) {
+	data, ok := h.authorizeOrganization(w, r, organizationID)
+	if !ok {
+		return
+	}
+	project, err := data.GetProjectBySlug(r.Context(), organizationID, slug)
+	if err != nil || project.ID == "" {
+		writeError(w, 404, "not_found", "project not found")
+		return
+	}
+	writeJSON(w, 200, project)
 }
 
 func (h *Handler) createOrganizationProject(w http.ResponseWriter, r *http.Request, id string) {

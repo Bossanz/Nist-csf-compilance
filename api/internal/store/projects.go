@@ -19,7 +19,11 @@ func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name st
 	}
 	defer tx.Rollback(ctx)
 	var projectID string
-	if err = tx.QueryRow(ctx, `INSERT INTO projects(organization_id,name) VALUES ($1,$2) RETURNING id`, organizationID, name).Scan(&projectID); err != nil {
+	slug, err := nextProjectSlug(ctx, tx, organizationID, Slugify(name))
+	if err != nil {
+		return Project{}, err
+	}
+	if err = tx.QueryRow(ctx, `INSERT INTO projects(organization_id,name,slug) VALUES ($1,$2,$3) RETURNING id`, organizationID, name, slug).Scan(&projectID); err != nil {
 		return Project{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO project_functions(project_id,function_id) SELECT $1,id FROM functions`, projectID); err != nil {
@@ -29,7 +33,7 @@ func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name st
 		return Project{}, err
 	}
 	var p Project
-	err = tx.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, projectID).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Status, &p.CreatedAt)
+	err = tx.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, projectID).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt)
 	if err != nil {
 		return Project{}, err
 	}
@@ -41,12 +45,18 @@ func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name st
 
 func (s *Store) GetProject(ctx context.Context, id string) (Project, error) {
 	var p Project
-	err := s.DB.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, id).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Status, &p.CreatedAt)
+	err := s.DB.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, id).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt)
+	return p, err
+}
+
+func (s *Store) GetProjectBySlug(ctx context.Context, organizationID, slug string) (Project, error) {
+	var p Project
+	err := s.DB.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.organization_id=$1 AND lower(p.slug)=lower($2)`, organizationID, slug).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt)
 	return p, err
 }
 
 func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
-	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id ORDER BY p.created_at DESC,p.id DESC`)
+	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id ORDER BY p.created_at DESC,p.id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +64,7 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	out := []Project{}
 	for rows.Next() {
 		var p Project
-		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Status, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

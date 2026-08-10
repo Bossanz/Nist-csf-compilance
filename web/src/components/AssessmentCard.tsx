@@ -105,10 +105,10 @@ export function AssessmentCard({
         </span>
         <span className="coverage-route" aria-label={`Coverage ${draft.currentCoverageLevel} to ${draft.targetCoverageLevel}`}>
           <span>{draft.currentCoverageLevel}</span>
-          <span aria-hidden="true">→</span>
+          <svg className="coverage-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" /></svg>
           <span>{draft.targetCoverageLevel}</span>
         </span>
-        <span className="expand-mark" aria-hidden="true">{expanded ? "−" : "+"}</span>
+        <span className="expand-mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path d={expanded ? "M4 8h8" : "M8 4v8M4 8h8"} /></svg></span>
       </button>
 
       {expanded ? (

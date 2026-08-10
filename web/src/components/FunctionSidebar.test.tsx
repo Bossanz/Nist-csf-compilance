@@ -12,4 +12,5 @@ test("labels the function navigation landmark", () => {
   );
 
   expect(screen.getByRole("navigation", { name: /csf functions/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /gv govern/i }).getAttribute("aria-current")).toBe("page");
 });

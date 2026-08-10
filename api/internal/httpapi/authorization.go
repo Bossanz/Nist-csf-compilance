@@ -103,3 +103,36 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 	}
 	return true
 }
+
+func (h *Handler) includedOutcomeIDs(ctx context.Context, projectID string) (map[string]struct{}, error) {
+	rows, err := h.Store.ListProfile(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	included := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		if row.Included {
+			included[row.SubcategoryID] = struct{}{}
+		}
+	}
+	return included, nil
+}
+
+func (h *Handler) authorizeProjectOutcome(w http.ResponseWriter, r *http.Request, projectID, subcategoryID string, requested *action) bool {
+	if !h.authorizeProject(w, r, projectID, requested) {
+		return false
+	}
+	if h.Auth == nil || currentUser(r).UserType != "stakeholder" {
+		return true
+	}
+	included, err := h.includedOutcomeIDs(r.Context(), projectID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "could not check outcome access")
+		return false
+	}
+	if _, ok := included[subcategoryID]; !ok {
+		writeError(w, http.StatusNotFound, "not_found", "outcome not found")
+		return false
+	}
+	return true
+}
