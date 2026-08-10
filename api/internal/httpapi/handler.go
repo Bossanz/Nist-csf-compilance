@@ -404,7 +404,7 @@ func (h *Handler) profile(w http.ResponseWriter, r *http.Request, id string) {
 	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
 		scoped := make([]store.ProfileRow, 0, len(p))
 		for _, row := range p {
-			if row.Included {
+			if stakeholderCanReadProfile(currentUser(r), row) {
 				scoped = append(scoped, row)
 			}
 		}
@@ -417,6 +417,39 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, projectI
 	if err := decodeJSON(r, &patch); err != nil {
 		writeError(w, 400, "invalid_json", err.Error())
 		return
+	}
+	if h.Auth != nil {
+		user := currentUser(r)
+		if !profileFieldsAllowedForRole(user, patch) {
+			writeError(w, http.StatusForbidden, "forbidden", "Profile fields are not editable by this role")
+			return
+		}
+		if user.UserType == "stakeholder" {
+			rows, err := h.Store.ListProfile(r.Context(), projectID)
+			if errors.Is(err, pgx.ErrNoRows) {
+				writeError(w, http.StatusNotFound, "not_found", "profile not found")
+				return
+			}
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "internal_error", "could not check profile access")
+				return
+			}
+			var target *store.ProfileRow
+			for index := range rows {
+				if rows[index].SubcategoryID == subcategoryID {
+					target = &rows[index]
+					break
+				}
+			}
+			if target == nil {
+				writeError(w, http.StatusNotFound, "not_found", "profile not found")
+				return
+			}
+			if !stakeholderCanEditProfile(user, *target) {
+				writeError(w, http.StatusForbidden, "forbidden", "Outcome is not assigned to this user")
+				return
+			}
+		}
 	}
 	for _, level := range []*string{patch.CurrentCoverageLevel, patch.TargetCoverageLevel} {
 		if level != nil {

@@ -33,6 +33,9 @@ type fakeStore struct {
 	deletedID                    *string
 	profileErr                   error
 	profiles                     []store.ProfileRow
+	updatedPatch                 *store.ProfilePatch
+	profileUpdateResult          store.ProfileRow
+	profileUpdateErr             error
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -57,8 +60,11 @@ func (f fakeStore) GetProject(context.Context, string) (store.Project, error) {
 func (f fakeStore) ListProfile(context.Context, string) ([]store.ProfileRow, error) {
 	return f.profiles, f.profileErr
 }
-func (f fakeStore) UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error) {
-	return store.ProfileRow{}, nil
+func (f fakeStore) UpdateProfile(_ context.Context, _, _ string, patch store.ProfilePatch) (store.ProfileRow, error) {
+	if f.updatedPatch != nil {
+		*f.updatedPatch = patch
+	}
+	return f.profileUpdateResult, f.profileUpdateErr
 }
 func (f fakeStore) DeleteProject(_ context.Context, id string) error {
 	if f.deletedID != nil {
@@ -233,11 +239,13 @@ func TestDeletedProjectProfileIsNotFound(t *testing.T) {
 
 func TestStakeholderProfileOnlyReturnsIncludedOutcomes(t *testing.T) {
 	organizationID := "org-1"
+	assessorID := "assessor-1"
+	otherAssessorID := "assessor-2"
 	rows := []store.ProfileRow{
-		{SubcategoryCode: "GV.OC-01", Included: true},
-		{SubcategoryCode: "GV.OC-02", Included: false},
+		{SubcategoryCode: "GV.OC-01", Included: true, AssignedUserID: &assessorID},
+		{SubcategoryCode: "GV.OC-02", Included: true, AssignedUserID: &otherAssessorID},
 	}
-	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+	handler := authenticatedHandler(store.User{ID: assessorID, OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
 		project:  store.Project{ID: "project-1", OrganizationID: organizationID},
 		profiles: rows,
 	})
@@ -252,6 +260,64 @@ func TestStakeholderProfileOnlyReturnsIncludedOutcomes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(got) != 1 || got[0].SubcategoryCode != "GV.OC-01" {
-		t.Fatalf("expected only included outcome, got %#v", got)
+		t.Fatalf("expected only assigned included outcome, got %#v", got)
+	}
+}
+
+func TestCounselorCannotUpdateProfileFields(t *testing.T) {
+	var patch store.ProfilePatch
+	handler := authenticatedHandler(store.User{ID: "counselor-1", UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{
+		project:      store.Project{ID: "project-1", OrganizationID: "org-1"},
+		updatedPatch: &patch,
+	})
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/profile/subcategory-1", `{"included":true,"rationale":"Relevant","assignedUserID":"assessor-1","currentPriority":"High"}`)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusForbidden || patch.CurrentPriority != nil {
+		t.Fatalf("expected scope-only authorization, got %d patch=%#v body=%s", response.Code, patch, response.Body.String())
+	}
+}
+
+func TestAssignedAssessorCanUpdateProfileOnly(t *testing.T) {
+	organizationID := "org-1"
+	assessorID := "assessor-1"
+	var patch store.ProfilePatch
+	handler := authenticatedHandler(store.User{ID: assessorID, OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project:      store.Project{ID: "project-1", OrganizationID: organizationID},
+		profiles:     []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &assessorID}},
+		updatedPatch: &patch,
+	})
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/profile/subcategory-1", `{"currentPriority":"High","targetCoverageLevel":"full"}`)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || patch.CurrentPriority == nil || *patch.CurrentPriority != "High" || patch.Included != nil || patch.AssignedUserID != nil {
+		t.Fatalf("expected assigned profile update, got %d patch=%#v body=%s", response.Code, patch, response.Body.String())
+	}
+}
+
+func TestUnassignedAssessorCannotUpdateProfile(t *testing.T) {
+	organizationID := "org-1"
+	assessorID := "assessor-1"
+	otherAssessorID := "assessor-2"
+	var patch store.ProfilePatch
+	handler := authenticatedHandler(store.User{ID: assessorID, OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project:      store.Project{ID: "project-1", OrganizationID: organizationID},
+		profiles:     []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &otherAssessorID}},
+		updatedPatch: &patch,
+	})
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/profile/subcategory-1", `{"currentPriority":"High"}`)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "assigned") || patch.CurrentPriority != nil {
+		t.Fatalf("expected unassigned profile denial, got %d patch=%#v body=%s", response.Code, patch, response.Body.String())
 	}
 }

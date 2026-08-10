@@ -41,7 +41,7 @@ func can(user store.User, requested action) bool {
 	case actionCreateProject, actionDeleteProject:
 		return user.Role == "counselor_admin" || user.Role == "counselor"
 	case actionUpdateProfile:
-		return user.Role == "counselor_admin" || user.Role == "counselor"
+		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "org_admin" || user.Role == "assessor"
 	case actionSaveResponse, actionSubmitResponse:
 		return user.Role == "org_admin" || user.Role == "assessor"
 	case actionReviewResponse:
@@ -51,6 +51,45 @@ func can(user store.User, requested action) bool {
 	default:
 		return false
 	}
+}
+
+func stakeholderCanReadProfile(user store.User, row store.ProfileRow) bool {
+	if !row.Included {
+		return false
+	}
+	switch user.Role {
+	case "reviewer", "viewer":
+		return true
+	case "org_admin", "assessor":
+		return row.AssignedUserID != nil && *row.AssignedUserID == user.ID
+	default:
+		return false
+	}
+}
+
+func stakeholderCanEditProfile(user store.User, row store.ProfileRow) bool {
+	if !row.Included || row.AssignedUserID == nil || *row.AssignedUserID != user.ID {
+		return false
+	}
+	return user.Role == "org_admin" || user.Role == "assessor"
+}
+
+func profileFieldsAllowedForRole(user store.User, patch store.ProfilePatch) bool {
+	if user.Role == "counselor_admin" || user.Role == "counselor" {
+		return patch.CurrentPriority == nil &&
+			patch.CurrentCoverageLevel == nil &&
+			patch.CurrentStatusText == nil &&
+			patch.CurrentPoliciesText == nil &&
+			patch.TargetPriority == nil &&
+			patch.TargetCoverageLevel == nil &&
+			patch.TargetApproachText == nil &&
+			patch.Notes == nil &&
+			patch.Considerations == nil
+	}
+	if user.Role == "org_admin" || user.Role == "assessor" {
+		return patch.Included == nil && patch.Rationale == nil && patch.AssignedUserID == nil
+	}
+	return false
 }
 
 type userContextKey struct{}
