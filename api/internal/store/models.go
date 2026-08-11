@@ -39,13 +39,25 @@ type Subcategory struct {
 	Description string `json:"description"`
 }
 type Project struct {
-	ID               string `json:"id"`
-	OrganizationID   string `json:"organizationID"`
-	OrganizationName string `json:"organizationName"`
-	Name             string `json:"name"`
-	Slug             string `json:"slug"`
-	Status           string `json:"status"`
-	CreatedAt        string `json:"createdAt"`
+	ID                   string `json:"id"`
+	OrganizationID       string `json:"organizationID"`
+	OrganizationName     string `json:"organizationName"`
+	Name                 string `json:"name"`
+	Slug                 string `json:"slug"`
+	Status               string `json:"status"`
+	CreatedAt            string `json:"createdAt"`
+	Objective            string `json:"objective"`
+	AssessmentPeriod     string `json:"assessmentPeriod"`
+	TargetCompletionDate string `json:"targetCompletionDate"`
+	ScopeBoundary        string `json:"scopeBoundary"`
+	ComplianceDriver     string `json:"complianceDriver"`
+}
+type ProjectMetadata struct {
+	Objective            string
+	AssessmentPeriod     string
+	TargetCompletionDate string
+	ScopeBoundary        string
+	ComplianceDriver     string
 }
 type Organization struct {
 	ID   string `json:"id"`

@@ -95,6 +95,30 @@ func TestCounselorCreatesProjectInsideSelectedOrganization(t *testing.T) {
 	}
 }
 
+func TestCounselorCreatesProjectWithMetadata(t *testing.T) {
+	var metadata store.ProjectMetadata
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{organization: store.Organization{ID: "org-1"}, createdProjectMetadata: &metadata})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/organizations/org-1/projects", `{"name":"Readiness","objective":"Prepare for registration","assessmentPeriod":"2026","targetCompletionDate":"2026-09-30","scopeBoundary":"Registration systems","complianceDriver":"Regulatory requirement"}`))
+
+	want := store.ProjectMetadata{Objective: "Prepare for registration", AssessmentPeriod: "2026", TargetCompletionDate: "2026-09-30", ScopeBoundary: "Registration systems", ComplianceDriver: "Regulatory requirement"}
+	if response.Code != http.StatusCreated || metadata != want {
+		t.Fatalf("unexpected response: %d %s metadata=%#v", response.Code, response.Body.String(), metadata)
+	}
+}
+
+func TestCounselorRejectsInvalidTargetDate(t *testing.T) {
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{organization: store.Organization{ID: "org-1"}})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/organizations/org-1/projects", `{"name":"Readiness","targetCompletionDate":"30/09/2026"}`))
+
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), `"code":"validation_error"`) {
+		t.Fatalf("unexpected response: %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestCounselorResolvesOrganizationAndProjectSlugs(t *testing.T) {
 	organization := store.Organization{ID: "org-1", Name: "Acme Corporation", Slug: "acme-corporation", Type: "client"}
 	project := store.Project{ID: "project-1", OrganizationID: "org-1", OrganizationName: organization.Name, Name: "Readiness", Slug: "readiness", Status: "setup"}

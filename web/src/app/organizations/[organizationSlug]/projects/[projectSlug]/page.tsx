@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIError, api } from "../../../../../lib/api";
-import type { FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
+import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
 import { organizationPath } from "../../../../../lib/routes";
 import { ProjectAssessmentWorkspace } from "../../../../../components/ProjectAssessmentWorkspace";
 
@@ -27,12 +27,21 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [evidencePreview, setEvidencePreview] = useState<EvidencePreview | null>(null);
+  const [previewTargetSubcategoryID, setPreviewTargetSubcategoryID] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const previewURL = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
     void initialize(active);
     return () => { active = false; };
   }, [organizationSlug, projectSlug]);
+
+  useEffect(() => () => {
+    if (previewURL.current) URL.revokeObjectURL(previewURL.current);
+  }, []);
 
   async function initialize(active: boolean) {
     setLoading(true);
@@ -132,6 +141,38 @@ export default function ProjectPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function previewEvidence(subcategoryID: string, evidenceDocument: ResponseDocument) {
+    if (!project) return;
+    setPreviewTargetSubcategoryID(subcategoryID);
+    setPreviewLoading(true);
+    setPreviewError("");
+    if (previewURL.current) {
+      URL.revokeObjectURL(previewURL.current);
+      previewURL.current = null;
+    }
+    setEvidencePreview(null);
+    try {
+      const blob = await api.downloadResponseDocument(project.id, subcategoryID, evidenceDocument.id);
+      const url = URL.createObjectURL(blob);
+      previewURL.current = url;
+      setEvidencePreview({ subcategoryID, documentID: evidenceDocument.id, url, mimeType: evidenceDocument.mimeType });
+    } catch (cause) {
+      setPreviewError(messageOf(cause));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function closeEvidencePreview() {
+    if (previewURL.current) {
+      URL.revokeObjectURL(previewURL.current);
+      previewURL.current = null;
+    }
+    setEvidencePreview(null);
+    setPreviewTargetSubcategoryID(null);
+    setPreviewError("");
+  }
+
   if (!authChecked || loading && !project) return <main className="screen-center">Loading...</main>;
   if (notFound || !user || !organization || !project) {
     return (
@@ -166,6 +207,12 @@ export default function ProjectPage() {
       onUploadEvidence={uploadEvidence}
       onDeleteEvidence={deleteEvidence}
       onDownloadEvidence={downloadEvidence}
+      onPreviewEvidence={previewEvidence}
+      evidencePreview={evidencePreview}
+      previewTargetSubcategoryID={previewTargetSubcategoryID}
+      previewLoading={previewLoading}
+      previewError={previewError}
+      onCloseEvidencePreview={closeEvidencePreview}
     />
   );
 }

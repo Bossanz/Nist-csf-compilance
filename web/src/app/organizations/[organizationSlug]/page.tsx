@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIError, api } from "../../../lib/api";
-import type { Invitation, Organization, Project, Role, User } from "../../../lib/types";
+import type { Invitation, Organization, Project, ProjectCreateInput, Role, User } from "../../../lib/types";
 import { OrganizationWorkspace } from "../../../components/OrganizationWorkspace";
 import { projectPath } from "../../../lib/routes";
 
@@ -58,7 +58,7 @@ export default function OrganizationPage() {
     }
   }
 
-  async function createProject(input: { name: string }) {
+  async function createProject(input: ProjectCreateInput) {
     if (!organization) return;
     setLoading(true);
     setError("");

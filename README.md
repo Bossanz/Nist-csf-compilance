@@ -88,6 +88,19 @@ Example:
 6. Viewers can read the included outcomes and their review status without changing assessment data.
 7. Counselors can read all project progress and results, while managing project scope, rationale, and outcome assignments.
 
+### Project setup fields
+
+When a Counselor creates a project, the form captures the assessment context:
+
+- Project name (required)
+- Objective / purpose
+- Assessment period (for example, `2026`)
+- Target completion date
+- Scope boundary
+- Compliance driver
+
+Organization, Counselor, framework (`NIST CSF 2.0`), slug, status, and created date are managed by the system. Outcome-level scope, rationale, assignments, Current/Target values, evidence, and review decisions are completed in the assessment workflow after the project is created.
+
 Roles:
 
 - `counselor_admin`: manages organizations and counselors.
@@ -98,6 +111,8 @@ Roles:
 - `viewer`: read-only access to included outcomes.
 
 Assigned `org_admin` and `assessor` users only see and edit their assigned included outcomes. Reviewers and viewers can see all included outcomes. Counselor-only scope controls remain unavailable to stakeholder roles.
+
+Evidence files can be previewed inline when they are PDF or PNG/JPG/JPEG. DOCX and XLSX files remain download-only in v1; every evidence file still keeps its Download action.
 
 ## Database and migrations
 
@@ -123,6 +138,13 @@ If it existed before outcome assignments were added, apply this migration once a
 
 ```powershell
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/006_outcome_assignments.sql
+docker compose restart api
+```
+
+If it existed before project setup metadata was added, apply this migration once as well:
+
+```powershell
+docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/007_project_metadata.sql
 docker compose restart api
 ```
 

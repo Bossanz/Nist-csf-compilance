@@ -24,6 +24,7 @@ type fakeStore struct {
 	createdOrganizationName      *string
 	createdProjectOrganizationID *string
 	createdProjectName           *string
+	createdProjectMetadata       *store.ProjectMetadata
 	auditAction                  *string
 	users                        []store.User
 	updatedUserRole              *string
@@ -53,6 +54,12 @@ func (f fakeStore) CreateScopedProject(_ context.Context, organizationID, name s
 		*f.createdProjectName = name
 	}
 	return store.Project{}, nil
+}
+func (f fakeStore) CreateScopedProjectWithMetadata(_ context.Context, organizationID, name string, metadata store.ProjectMetadata) (store.Project, error) {
+	if f.createdProjectMetadata != nil {
+		*f.createdProjectMetadata = metadata
+	}
+	return f.CreateScopedProject(context.Background(), organizationID, name)
 }
 func (f fakeStore) GetProject(context.Context, string) (store.Project, error) {
 	return f.project, nil

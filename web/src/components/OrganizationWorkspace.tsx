@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Organization, Project, Role, User } from "../lib/types";
+import type { Organization, Project, ProjectCreateInput, Role, User } from "../lib/types";
 
 type Props = {
   user: User;
@@ -13,7 +13,7 @@ type Props = {
   invitationURL?: string;
   onBack: () => void;
   onOpen: (project: Project) => void;
-  onCreateProject: (input: { name: string }) => void;
+  onCreateProject: (input: ProjectCreateInput) => void | Promise<void>;
   onDeleteProject: (project: Project) => Promise<void>;
   onInvite: (input: { email: string; role: Role }) => void;
 };
@@ -22,6 +22,11 @@ const stakeholderRoles: Role[] = ["org_admin", "assessor", "reviewer", "viewer"]
 
 export function OrganizationWorkspace({ user, organization, projects, users, loading, error, invitationURL, onBack, onOpen, onCreateProject, onDeleteProject, onInvite }: Props) {
   const [projectName, setProjectName] = useState("");
+  const [projectObjective, setProjectObjective] = useState("");
+  const [assessmentPeriod, setAssessmentPeriod] = useState("");
+  const [targetCompletionDate, setTargetCompletionDate] = useState("");
+  const [scopeBoundary, setScopeBoundary] = useState("");
+  const [complianceDriver, setComplianceDriver] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("viewer");
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
@@ -95,10 +100,31 @@ export function OrganizationWorkspace({ user, organization, projects, users, loa
         )}
 
         {counselor && (
-          <form className="panel inline-creator" onSubmit={(event) => { event.preventDefault(); onCreateProject({ name: projectName.trim() }); setProjectName(""); }}>
-            <div><h3>New project</h3><p className="muted">Create a fresh assessment inside this organization.</p></div>
+          <form className="panel inline-creator project-create-form" onSubmit={(event) => {
+            event.preventDefault();
+            void onCreateProject({
+              name: projectName.trim(),
+              objective: projectObjective.trim(),
+              assessmentPeriod: assessmentPeriod.trim(),
+              targetCompletionDate,
+              scopeBoundary: scopeBoundary.trim(),
+              complianceDriver: complianceDriver.trim(),
+            });
+            setProjectName("");
+            setProjectObjective("");
+            setAssessmentPeriod("");
+            setTargetCompletionDate("");
+            setScopeBoundary("");
+            setComplianceDriver("");
+          }}>
+            <div className="project-create-heading"><h3>New project</h3><p className="muted">Set the assessment context before stakeholders start answering.</p></div>
             <label className="field"><span>Project name</span><input required value={projectName} onChange={(event) => setProjectName(event.target.value)} /></label>
-            <button className="primary">Create project</button>
+            <label className="field"><span>Objective / purpose</span><textarea rows={3} value={projectObjective} onChange={(event) => setProjectObjective(event.target.value)} /></label>
+            <label className="field"><span>Assessment period</span><input placeholder="e.g. 2026" value={assessmentPeriod} onChange={(event) => setAssessmentPeriod(event.target.value)} /></label>
+            <label className="field"><span>Target completion date</span><input type="date" value={targetCompletionDate} onChange={(event) => setTargetCompletionDate(event.target.value)} /></label>
+            <label className="field"><span>Scope boundary</span><textarea rows={3} value={scopeBoundary} onChange={(event) => setScopeBoundary(event.target.value)} /></label>
+            <label className="field"><span>Compliance driver</span><textarea rows={3} value={complianceDriver} onChange={(event) => setComplianceDriver(event.target.value)} /></label>
+            <button className="primary" type="submit">Create project</button>
           </form>
         )}
       </section>

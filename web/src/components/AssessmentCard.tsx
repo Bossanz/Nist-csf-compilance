@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CoverageLevel, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
+import type { CoverageLevel, EvidencePreview, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
 import { StakeholderResponsePanel } from "./StakeholderResponsePanel";
 
 const coverageLevels: Array<{ value: CoverageLevel; label: string }> = [
@@ -57,6 +57,12 @@ export function AssessmentCard({
   onUploadEvidence,
   onDeleteEvidence,
   onDownloadEvidence,
+  onPreviewEvidence,
+  evidencePreview,
+  previewTargetSubcategoryID,
+  previewLoading,
+  previewError,
+  onCloseEvidencePreview,
 }: {
   row: ProfileRow;
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
@@ -71,6 +77,12 @@ export function AssessmentCard({
   onUploadEvidence?: (id: string, file: File) => Promise<void>;
   onDeleteEvidence?: (id: string, documentID: string) => Promise<void>;
   onDownloadEvidence?: (id: string, document: ResponseDocument) => Promise<void>;
+  onPreviewEvidence?: (id: string, document: ResponseDocument) => Promise<void>;
+  evidencePreview?: EvidencePreview | null;
+  previewTargetSubcategoryID?: string | null;
+  previewLoading?: boolean;
+  previewError?: string;
+  onCloseEvidencePreview?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
@@ -254,6 +266,11 @@ export function AssessmentCard({
             onUpload={(file) => onUploadEvidence(row.subcategoryID, file)}
             onDelete={(documentID) => onDeleteEvidence(row.subcategoryID, documentID)}
             onDownload={(document) => onDownloadEvidence(row.subcategoryID, document)}
+            onPreview={onPreviewEvidence ? (document) => onPreviewEvidence(row.subcategoryID, document) : undefined}
+            preview={evidencePreview?.subcategoryID === row.subcategoryID ? evidencePreview : null}
+            onClosePreview={onCloseEvidencePreview}
+            previewLoading={previewTargetSubcategoryID === row.subcategoryID && previewLoading}
+            previewError={previewTargetSubcategoryID === row.subcategoryID ? previewError : ""}
           />
         )}
         </>

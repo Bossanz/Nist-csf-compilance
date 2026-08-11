@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
+import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
 import { FunctionSidebar } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
 import { ProfileEditor } from "./ProfileEditor";
@@ -26,6 +26,12 @@ type Props = {
   onUploadEvidence: (subcategoryID: string, file: File) => Promise<void>;
   onDeleteEvidence: (subcategoryID: string, documentID: string) => Promise<void>;
   onDownloadEvidence: (subcategoryID: string, document: ResponseDocument) => Promise<void>;
+  onPreviewEvidence?: (subcategoryID: string, document: ResponseDocument) => Promise<void>;
+  evidencePreview?: EvidencePreview | null;
+  previewTargetSubcategoryID?: string | null;
+  previewLoading?: boolean;
+  previewError?: string;
+  onCloseEvidencePreview?: () => void;
 };
 
 export function ProjectAssessmentWorkspace({
@@ -48,6 +54,12 @@ export function ProjectAssessmentWorkspace({
   onUploadEvidence,
   onDeleteEvidence,
   onDownloadEvidence,
+  onPreviewEvidence,
+  evidencePreview,
+  previewTargetSubcategoryID,
+  previewLoading,
+  previewError,
+  onCloseEvidencePreview,
 }: Props) {
   const isCounselor = user.userType === "counselor";
   const canEditScope = isCounselor;
@@ -103,6 +115,12 @@ export function ProjectAssessmentWorkspace({
                 onUploadEvidence={onUploadEvidence}
                 onDeleteEvidence={onDeleteEvidence}
                 onDownloadEvidence={onDownloadEvidence}
+                onPreviewEvidence={onPreviewEvidence}
+                evidencePreview={evidencePreview}
+                previewTargetSubcategoryID={previewTargetSubcategoryID}
+                previewLoading={previewLoading}
+                previewError={previewError}
+                onCloseEvidencePreview={onCloseEvidencePreview}
               />
             </section>
           </div>

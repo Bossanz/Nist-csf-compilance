@@ -1,4 +1,4 @@
-import type { ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
+import type { EvidencePreview, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
 import { AssessmentCard } from "./AssessmentCard";
 
 export function ProfileEditor({
@@ -15,6 +15,12 @@ export function ProfileEditor({
   onUploadEvidence,
   onDeleteEvidence,
   onDownloadEvidence,
+  onPreviewEvidence,
+  evidencePreview,
+  previewTargetSubcategoryID,
+  previewLoading,
+  previewError,
+  onCloseEvidencePreview,
 }: {
   rows: ProfileRow[];
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
@@ -29,6 +35,12 @@ export function ProfileEditor({
   onUploadEvidence?: (id: string, file: File) => Promise<void>;
   onDeleteEvidence?: (id: string, documentID: string) => Promise<void>;
   onDownloadEvidence?: (id: string, document: ResponseDocument) => Promise<void>;
+  onPreviewEvidence?: (id: string, document: ResponseDocument) => Promise<void>;
+  evidencePreview?: EvidencePreview | null;
+  previewTargetSubcategoryID?: string | null;
+  previewLoading?: boolean;
+  previewError?: string;
+  onCloseEvidencePreview?: () => void;
 }) {
   if (rows.length === 0) {
     return <div className="empty-state">No outcomes found for this Function.</div>;
@@ -51,6 +63,12 @@ export function ProfileEditor({
         onUploadEvidence={onUploadEvidence}
         onDeleteEvidence={onDeleteEvidence}
         onDownloadEvidence={onDownloadEvidence}
+        onPreviewEvidence={onPreviewEvidence}
+        evidencePreview={evidencePreview}
+        previewTargetSubcategoryID={previewTargetSubcategoryID}
+        previewLoading={previewLoading}
+        previewError={previewError}
+        onCloseEvidencePreview={onCloseEvidencePreview}
       />)}
     </div>
   );

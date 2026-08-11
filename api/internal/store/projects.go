@@ -13,6 +13,10 @@ func (s *Store) CreateProject(ctx context.Context, organizationID, name string) 
 }
 
 func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name string) (Project, error) {
+	return s.CreateScopedProjectWithMetadata(ctx, organizationID, name, ProjectMetadata{})
+}
+
+func (s *Store) CreateScopedProjectWithMetadata(ctx context.Context, organizationID, name string, metadata ProjectMetadata) (Project, error) {
 	tx, err := s.DB.Begin(ctx)
 	if err != nil {
 		return Project{}, err
@@ -23,7 +27,7 @@ func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name st
 	if err != nil {
 		return Project{}, err
 	}
-	if err = tx.QueryRow(ctx, `INSERT INTO projects(organization_id,name,slug) VALUES ($1,$2,$3) RETURNING id`, organizationID, name, slug).Scan(&projectID); err != nil {
+	if err = tx.QueryRow(ctx, `INSERT INTO projects(organization_id,name,slug,objective,assessment_period,target_completion_date,scope_boundary,compliance_driver) VALUES ($1,$2,$3,$4,$5,NULLIF($6,'')::date,$7,$8) RETURNING id`, organizationID, name, slug, metadata.Objective, metadata.AssessmentPeriod, metadata.TargetCompletionDate, metadata.ScopeBoundary, metadata.ComplianceDriver).Scan(&projectID); err != nil {
 		return Project{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO project_functions(project_id,function_id) SELECT $1,id FROM functions`, projectID); err != nil {
@@ -33,7 +37,7 @@ func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name st
 		return Project{}, err
 	}
 	var p Project
-	err = tx.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, projectID).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt)
+	err = tx.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, projectID).Scan(projectArgs(&p)...)
 	if err != nil {
 		return Project{}, err
 	}
@@ -45,18 +49,18 @@ func (s *Store) CreateScopedProject(ctx context.Context, organizationID, name st
 
 func (s *Store) GetProject(ctx context.Context, id string) (Project, error) {
 	var p Project
-	err := s.DB.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.id=$1`, id).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt)
+	err := s.DB.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, id).Scan(projectArgs(&p)...)
 	return p, err
 }
 
 func (s *Store) GetProjectBySlug(ctx context.Context, organizationID, slug string) (Project, error) {
 	var p Project
-	err := s.DB.QueryRow(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.organization_id=$1 AND lower(p.slug)=lower($2)`, organizationID, slug).Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt)
+	err := s.DB.QueryRow(ctx, projectSelect+` WHERE p.organization_id=$1 AND lower(p.slug)=lower($2)`, organizationID, slug).Scan(projectArgs(&p)...)
 	return p, err
 }
 
 func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
-	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text FROM projects p JOIN organizations o ON o.id=p.organization_id ORDER BY p.created_at DESC,p.id DESC`)
+	rows, err := s.DB.Query(ctx, projectSelect+` ORDER BY p.created_at DESC,p.id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -64,12 +68,18 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	out := []Project{}
 	for rows.Next() {
 		var p Project
-		if err := rows.Scan(&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt); err != nil {
+		if err := rows.Scan(projectArgs(&p)...); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver FROM projects p JOIN organizations o ON o.id=p.organization_id`
+
+func projectArgs(p *Project) []any {
+	return []any{&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt, &p.Objective, &p.AssessmentPeriod, &p.TargetCompletionDate, &p.ScopeBoundary, &p.ComplianceDriver}
 }
 
 func (s *Store) DeleteProject(ctx context.Context, id string) error {

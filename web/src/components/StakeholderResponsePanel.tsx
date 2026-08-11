@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ResponseDocument, ResponseStatus, Role, StakeholderResponse } from "../lib/types";
+import type { EvidencePreview, ResponseDocument, ResponseStatus, Role, StakeholderResponse } from "../lib/types";
 
 const statusLabels: Record<ResponseStatus, string> = {
   draft: "Draft",
@@ -19,9 +19,14 @@ type Props = {
   onUpload: (file: File) => Promise<void>;
   onDelete: (documentID: string) => Promise<void>;
   onDownload: (document: ResponseDocument) => Promise<void>;
+  onPreview?: (document: ResponseDocument) => Promise<void>;
+  preview?: EvidencePreview | null;
+  onClosePreview?: () => void;
+  previewLoading?: boolean;
+  previewError?: string;
 };
 
-export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onReview, onUpload, onDelete, onDownload }: Props) {
+export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onReview, onUpload, onDelete, onDownload, onPreview, preview, onClosePreview, previewLoading, previewError }: Props) {
   const [responseText, setResponseText] = useState(response.responseText);
   const [reviewStatus, setReviewStatus] = useState<"reviewed" | "needs_more_info">(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
   const [reviewComment, setReviewComment] = useState(response.reviewComment);
@@ -118,9 +123,25 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
             {response.documents.map((document) => <li key={document.id}>
               <button className="button-link" type="button" onClick={() => void onDownload(document)}>{document.originalName}</button>
               <small>{formatBytes(document.sizeBytes)}</small>
+              {canPreview(document.mimeType) && onPreview && <button className="secondary" type="button" aria-label={`Preview ${document.originalName}`} onClick={() => void onPreview(document)}>Preview</button>}
               {canEditResponse && <button className="danger" type="button" onClick={() => void run(() => onDelete(document.id))}>Delete</button>}
+              {preview?.documentID === document.id && (
+                <div className="evidence-preview" aria-label={`${document.originalName} preview`}>
+                  <div className="evidence-preview-heading">
+                    <strong>{document.originalName}</strong>
+                    {onClosePreview && <button className="text-button" type="button" aria-label="Close preview" onClick={onClosePreview}>Close preview</button>}
+                  </div>
+                  {preview.mimeType.startsWith("image/") ? (
+                    <img src={preview.url} alt={`${document.originalName} preview`} />
+                  ) : (
+                    <iframe title={`${document.originalName} preview`} src={preview.url} />
+                  )}
+                </div>
+              )}
             </li>)}
           </ul>
+          {previewLoading && <span className="save-state" role="status">Loading preview...</span>}
+          {previewError && <div className="error" role="alert">{previewError}</div>}
         </div>
       )}
 
@@ -135,4 +156,8 @@ function formatBytes(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function canPreview(mimeType: string) {
+  return mimeType === "application/pdf" || mimeType === "image/png" || mimeType === "image/jpeg" || mimeType === "image/jpg";
 }

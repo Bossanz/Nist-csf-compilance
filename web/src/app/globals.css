@@ -325,6 +325,9 @@ button.danger:disabled:hover { text-decoration: none; }
 .person-row strong { font-size: 0.92rem; }
 .person-row span:not(.role-chip) { overflow: hidden; color: var(--muted); font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
 .inline-creator { grid-template-columns: minmax(0, 0.9fr) minmax(220px, 1fr) auto; }
+.project-create-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.project-create-heading, .project-create-form .primary { grid-column: 1 / -1; }
+.project-create-form .primary { justify-self: start; }
 .invite-form { grid-template-columns: minmax(0, 1fr) minmax(150px, 0.45fr) auto; }
 .invitation-result { grid-column: 1 / -1; }
 
@@ -408,9 +411,13 @@ button.danger:disabled:hover { text-decoration: none; }
 .review-panel .primary { justify-self: end; }
 .evidence-list { display: grid; gap: 8px; padding-top: 2px; }
 .evidence-list ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.evidence-list li { display: flex; align-items: center; min-width: 0; gap: 10px; }
+.evidence-list li { display: flex; align-items: center; min-width: 0; gap: 10px; flex-wrap: wrap; }
 .evidence-list li .button-link { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .evidence-list li .danger { margin-left: auto; padding: 3px 5px; }
+.evidence-preview { display: grid; flex-basis: 100%; gap: 10px; margin-top: 4px; padding: 12px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.evidence-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.evidence-preview img { display: block; max-width: 100%; max-height: 480px; margin: 0 auto; object-fit: contain; }
+.evidence-preview iframe { width: 100%; min-height: 560px; border: 1px solid var(--line); background: white; }
 .button-link { display: inline-flex; width: fit-content; padding: 0; color: var(--accent); text-decoration: none; background: transparent; border: 0; cursor: pointer; }
 .button-link:hover { text-decoration: underline; }
 .anchor-primary { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 42px; margin-top: 18px; padding: 10px 16px; color: white; font-size: 0.88rem; font-weight: 750; text-decoration: none; background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-sm); transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease; }
@@ -442,6 +449,7 @@ button.danger:disabled:hover { text-decoration: none; }
   .cards, .summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .create-organization, .create-project { grid-template-columns: 1fr; }
   .inline-creator { grid-template-columns: 1fr 1fr; }
+  .project-create-form { grid-template-columns: 1fr 1fr; }
   .inline-creator .primary { grid-column: 1 / -1; justify-self: start; }
   .delete-confirmation { grid-template-columns: 1fr 1fr; align-items: stretch; }
   .delete-confirmation > div:first-child { grid-column: 1 / -1; }

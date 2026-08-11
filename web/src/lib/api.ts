@@ -1,4 +1,4 @@
-import type { FunctionNode, Invitation, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, Role, StakeholderResponse, Summary, User } from "./types";
+import type { FunctionNode, Invitation, Organization, ProfilePatch, ProfileRow, Project, ProjectCreateInput, ResponseDocument, Role, StakeholderResponse, Summary, User } from "./types";
 const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 export class APIError extends Error { constructor(message:string,public status:number){super(message)} }
 async function request<T>(path: string, init?: RequestInit): Promise<T> { const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData; const headers = isFormData ? { ...(init?.headers || {}) } : { "Content-Type": "application/json", ...(init?.headers || {}) }; const response = await fetch(`${base}${path}`, { ...init, headers }); if (!response.ok) { const body = await response.json().catch(() => null); throw new APIError(body?.error?.message || `Request failed (${response.status})`,response.status); } if(response.status===204)return undefined as T; return response.json() as Promise<T>; }
@@ -13,7 +13,7 @@ export const api = {
   deleteOrganization: (id:string) => request<void>(`/api/organizations/${id}`,{method:"DELETE"}),
   getOrganizationProjects: (id:string) => request<Project[]>(`/api/organizations/${id}/projects`),
   getOrganizationProjectBySlug: (organizationID: string, slug: string) => request<Project>(`/api/organizations/${organizationID}/projects/by-slug/${encodeURIComponent(slug)}`),
-  createOrganizationProject: (id:string,input:{name:string}) => request<Project>(`/api/organizations/${id}/projects`,{method:"POST",body:JSON.stringify(input)}),
+  createOrganizationProject: (id:string,input:ProjectCreateInput) => request<Project>(`/api/organizations/${id}/projects`,{method:"POST",body:JSON.stringify(input)}),
   getOrganizationUsers: (id:string) => request<User[]>(`/api/organizations/${id}/users`),
   updateOrganizationUser: (organizationID:string,userID:string,input:{role:Role;status:"active"|"disabled"}) => request<User>(`/api/organizations/${organizationID}/users/${userID}`,{method:"PATCH",body:JSON.stringify(input)}),
   createInvitation: (organizationID:string,input:{email:string;role:Role}) => request<Invitation>(`/api/organizations/${organizationID}/invitations`,{method:"POST",body:JSON.stringify(input)}),

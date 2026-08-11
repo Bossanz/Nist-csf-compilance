@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"compliance/api/internal/store"
 	"github.com/jackc/pgx/v5"
@@ -19,6 +20,10 @@ type organizationDataStore interface {
 	ListProjectsByOrganization(context.Context, string) ([]store.Project, error)
 	GetProjectBySlug(context.Context, string, string) (store.Project, error)
 	CreateScopedProject(context.Context, string, string) (store.Project, error)
+}
+
+type projectMetadataStore interface {
+	CreateScopedProjectWithMetadata(context.Context, string, string, store.ProjectMetadata) (store.Project, error)
 }
 
 func (h *Handler) organizationStore() (organizationDataStore, bool) {
@@ -144,7 +149,12 @@ func (h *Handler) createOrganizationProject(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var input struct {
-		Name string `json:"name"`
+		Name                 string `json:"name"`
+		Objective            string `json:"objective"`
+		AssessmentPeriod     string `json:"assessmentPeriod"`
+		TargetCompletionDate string `json:"targetCompletionDate"`
+		ScopeBoundary        string `json:"scopeBoundary"`
+		ComplianceDriver     string `json:"complianceDriver"`
 	}
 	if err := decodeJSON(r, &input); err != nil {
 		writeError(w, 400, "invalid_json", "Invalid project request")
@@ -155,7 +165,30 @@ func (h *Handler) createOrganizationProject(w http.ResponseWriter, r *http.Reque
 		writeError(w, 400, "validation_error", "Project name is required")
 		return
 	}
-	project, err := data.CreateScopedProject(r.Context(), id, input.Name)
+	input.Objective = strings.TrimSpace(input.Objective)
+	input.AssessmentPeriod = strings.TrimSpace(input.AssessmentPeriod)
+	input.TargetCompletionDate = strings.TrimSpace(input.TargetCompletionDate)
+	input.ScopeBoundary = strings.TrimSpace(input.ScopeBoundary)
+	input.ComplianceDriver = strings.TrimSpace(input.ComplianceDriver)
+	if input.TargetCompletionDate != "" {
+		if _, err := time.Parse("2006-01-02", input.TargetCompletionDate); err != nil {
+			writeError(w, 400, "validation_error", "target completion date must use YYYY-MM-DD")
+			return
+		}
+	}
+	var project store.Project
+	var err error
+	if metadataStore, supportsMetadata := data.(projectMetadataStore); supportsMetadata {
+		project, err = metadataStore.CreateScopedProjectWithMetadata(r.Context(), id, input.Name, store.ProjectMetadata{
+			Objective:            input.Objective,
+			AssessmentPeriod:     input.AssessmentPeriod,
+			TargetCompletionDate: input.TargetCompletionDate,
+			ScopeBoundary:        input.ScopeBoundary,
+			ComplianceDriver:     input.ComplianceDriver,
+		})
+	} else {
+		project, err = data.CreateScopedProject(r.Context(), id, input.Name)
+	}
 	if err != nil {
 		writeError(w, 500, "internal_error", "Could not create project")
 		return

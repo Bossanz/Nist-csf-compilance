@@ -114,8 +114,7 @@ func (s *Store) ListOrganizationEvidenceKeys(ctx context.Context, organizationID
 }
 
 func (s *Store) ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error) {
-	rows, err := s.DB.Query(ctx, `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text
-		FROM projects p JOIN organizations o ON o.id=p.organization_id WHERE p.organization_id=$1
+	rows, err := s.DB.Query(ctx, projectSelect+` WHERE p.organization_id=$1
 		ORDER BY p.created_at DESC,p.id DESC`, organizationID)
 	if err != nil {
 		return nil, err
@@ -124,7 +123,7 @@ func (s *Store) ListProjectsByOrganization(ctx context.Context, organizationID s
 	projects := []Project{}
 	for rows.Next() {
 		var project Project
-		if err := rows.Scan(&project.ID, &project.OrganizationID, &project.OrganizationName, &project.Name, &project.Slug, &project.Status, &project.CreatedAt); err != nil {
+		if err := rows.Scan(projectArgs(&project)...); err != nil {
 			return nil, err
 		}
 		projects = append(projects, project)

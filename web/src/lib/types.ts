@@ -6,10 +6,32 @@ export type Invitation = { id: string; organizationID: string | null; email: str
 export type FunctionNode = { id: string; code: string; name: string; description: string; categories: CategoryNode[] };
 export type CategoryNode = { id: string; code: string; name: string; description: string; subcategories: SubcategoryNode[] };
 export type SubcategoryNode = { id: string; code: string; description: string };
-export type Project = { id: string; organizationID: string; organizationName: string; name: string; slug: string; status: string; createdAt: string };
+export type ProjectCreateInput = {
+  name: string;
+  objective?: string;
+  assessmentPeriod?: string;
+  targetCompletionDate?: string;
+  scopeBoundary?: string;
+  complianceDriver?: string;
+};
+export type Project = {
+  id: string;
+  organizationID: string;
+  organizationName: string;
+  name: string;
+  slug: string;
+  status: string;
+  createdAt: string;
+  objective?: string;
+  assessmentPeriod?: string;
+  targetCompletionDate?: string;
+  scopeBoundary?: string;
+  complianceDriver?: string;
+};
 export type ProfileRow = { id: string; projectID: string; subcategoryID: string; functionCode: string; categoryCode: string; subcategoryCode: string; description: string; included: boolean; rationale: string; currentPriority: string; currentCoverageLevel: CoverageLevel; currentStatusText: string; currentPoliciesText: string; currentTier: string; targetPriority: string; targetCoverageLevel: CoverageLevel; targetApproachText: string; targetTier: string; notes: string; considerations: string; reviewStatus: string; assignedUserID: string | null; assignedUserName?: string; assignedUserEmail?: string };
 export type ProfilePatch = Partial<Pick<ProfileRow, "included" | "rationale" | "currentPriority" | "currentCoverageLevel" | "currentStatusText" | "currentPoliciesText" | "targetPriority" | "targetCoverageLevel" | "targetApproachText" | "notes" | "considerations" | "assignedUserID">>;
 export type Summary = { coveragePct: number; includedCount: number; pendingCount: number; rejectedCount: number; functions: { code: string; coveragePct: number; includedCount: number }[] };
 export type ResponseStatus = "draft" | "submitted" | "reviewed" | "needs_more_info";
 export type ResponseDocument = { id: string; responseID: string; originalName: string; mimeType: string; sizeBytes: number; uploadedBy: string; createdAt: string };
+export type EvidencePreview = { subcategoryID: string; documentID: string; url: string; mimeType: string };
 export type StakeholderResponse = { id: string; projectID: string; subcategoryID: string; responseText: string; status: ResponseStatus; respondedBy: string | null; submittedAt: string | null; reviewComment: string; reviewedBy: string | null; reviewedAt: string | null; createdAt: string; updatedAt: string; documents: ResponseDocument[] };

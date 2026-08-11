@@ -47,7 +47,7 @@
 
   ```ts
   onPreview: (document: ResponseDocument) => Promise<void>;
-  preview?: { documentID: string; url: string; mimeType: string } | null;
+  preview?: { subcategoryID: string; documentID: string; url: string; mimeType: string } | null;
   onClosePreview: () => void;
   ```
 
@@ -70,11 +70,12 @@
 - Modify: `web/src/app/organizations/[organizationSlug]/projects/[projectSlug]/page.tsx`
 - Modify: `web/src/components/ProjectAssessmentWorkspace.tsx`
 - Modify: `web/src/components/ProfileEditor.tsx`
+- Modify: `web/src/components/AssessmentCard.tsx`
 - Test: `web/src/app/organizations/[organizationSlug]/projects/[projectSlug]/page.test.tsx`
 
 **Interfaces:**
 - Consumes: `api.downloadResponseDocument(projectID, subcategoryID, documentID)` returning a `Blob`.
-- Produces: `previewEvidence(subcategoryID, document)` that creates an object URL, stores the selected preview, and revokes old URLs on replacement/unmount.
+- Produces: `previewEvidence(subcategoryID, document)` that creates an object URL, stores `{ subcategoryID, documentID, url, mimeType }`, and revokes old URLs on replacement/unmount.
 
 - [ ] **Step 1: Write the failing page test**
 
