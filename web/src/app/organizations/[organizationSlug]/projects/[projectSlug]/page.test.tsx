@@ -27,6 +27,7 @@ const profile: ProfileRow[] = [];
 const previewProfile: ProfileRow = {
   id: "profile-1", projectID: "project-1", subcategoryID: "subcategory-1", functionCode: "GV", categoryCode: "GV.OC", subcategoryCode: "GV.OC-01", description: "The organizational mission is understood", included: true, rationale: "", currentPriority: "", currentCoverageLevel: "none", currentStatusText: "", currentPoliciesText: "", currentTier: "", targetPriority: "", targetCoverageLevel: "none", targetApproachText: "", targetTier: "", notes: "", considerations: "", reviewStatus: "draft", assignedUserID: "assessor-1",
 };
+const secondBulkProfile: ProfileRow = { ...previewProfile, id: "profile-2", subcategoryID: "subcategory-2", subcategoryCode: "GV.OC-02", included: false };
 const previewDocument: ResponseDocument = { id: "doc-1", responseID: "response-1", originalName: "evidence.pdf", mimeType: "application/pdf", sizeBytes: 12, uploadedBy: "assessor-1", createdAt: "2026-08-07T00:00:00Z" };
 const previewResponse: StakeholderResponse = { id: "response-1", projectID: "project-1", subcategoryID: "subcategory-1", responseText: "Evidence attached", status: "draft", respondedBy: "assessor-1", submittedAt: null, reviewComment: "", reviewedBy: null, reviewedAt: null, createdAt: "2026-08-07T00:00:00Z", updatedAt: "2026-08-07T00:00:00Z", documents: [previewDocument] };
 
@@ -86,4 +87,18 @@ test("loads and closes a supported evidence preview", async () => {
   expect(screen.getByTitle("evidence.pdf preview").getAttribute("src")).toBe("blob:evidence-preview");
   fireEvent.click(screen.getByRole("button", { name: /close preview/i }));
   expect(revokeObjectURL).toHaveBeenCalledWith("blob:evidence-preview");
+});
+
+test("includes every outcome in the selected Function", async () => {
+  vi.mocked(api.getProfile).mockResolvedValue([previewProfile, secondBulkProfile]);
+  vi.mocked(api.getResponses).mockResolvedValue([]);
+
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("checkbox", { name: /include all outcomes in this function/i }));
+
+  await waitFor(() => {
+    expect(api.updateProfile).toHaveBeenNthCalledWith(1, "project-1", "subcategory-1", { included: true });
+    expect(api.updateProfile).toHaveBeenNthCalledWith(2, "project-1", "subcategory-2", { included: true });
+  });
 });

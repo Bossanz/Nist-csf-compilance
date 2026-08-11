@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { ProjectAssessmentWorkspace } from "./ProjectAssessmentWorkspace";
 import type { FunctionNode, Organization, ProfileRow, Project, Summary, User } from "../lib/types";
@@ -46,7 +46,7 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
@@ -68,6 +68,7 @@ function renderWorkspace(user: User) {
       onUploadEvidence={noop}
       onDeleteEvidence={noop}
       onDownloadEvidence={noop}
+      onSetFunctionIncluded={onSetFunctionIncluded}
     />,
   );
 }
@@ -90,4 +91,20 @@ test("assigned Assessor sees only assigned included outcomes", () => {
 test("Reviewer sees every included outcome", () => {
   renderWorkspace(reviewer);
   expect(visibleOutcomeCount()).toBe("2");
+});
+
+test("Counselor can include all outcomes in the selected Function", async () => {
+  const onSetFunctionIncluded = vi.fn().mockResolvedValue(undefined);
+  renderWorkspace(counselor, onSetFunctionIncluded);
+
+  const toggle = screen.getByRole("checkbox", { name: /include all outcomes in this function/i }) as HTMLInputElement;
+  expect(toggle.checked).toBe(false);
+  fireEvent.click(toggle);
+
+  await waitFor(() => expect(onSetFunctionIncluded).toHaveBeenCalledWith("GV", true));
+});
+
+test("stakeholder roles do not see the bulk include control", () => {
+  renderWorkspace(assessor);
+  expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
 });

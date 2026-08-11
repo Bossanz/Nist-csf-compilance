@@ -83,6 +83,7 @@ Example:
 1. A Counselor Admin signs in and creates a client organization.
 2. A Counselor opens the organization and creates an assessment project.
 3. The Counselor selects which outcomes are included in the project, records the rationale, and assigns each included outcome to one active stakeholder.
+   For speed, the Counselor can include or exclude all outcomes in the currently selected Function, then adjust individual outcomes as needed.
 4. Stakeholders activate their accounts from the invitation link. The assigned stakeholder fills Current Profile, Target Profile, Priority, Coverage, the response, and supporting evidence.
 5. A Reviewer checks submitted responses. `Reviewed` completes the outcome; `Needs more information` returns it to the assigned stakeholder.
 6. Viewers can read the included outcomes and their review status without changing assessment data.

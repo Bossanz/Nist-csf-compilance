@@ -91,6 +91,14 @@ export default function ProjectPage() {
     setSummary(await api.getSummary(project.id));
   }
 
+  async function setFunctionIncluded(functionCode: string, included: boolean) {
+    if (!project) return;
+    const functionRows = profile.filter((row) => row.functionCode === functionCode);
+    await Promise.all(functionRows.map((row) => api.updateProfile(project.id, row.subcategoryID, { included })));
+    setProfile((rows) => rows.map((row) => row.functionCode === functionCode ? { ...row, included } : row));
+    setSummary(await api.getSummary(project.id));
+  }
+
   function replaceResponse(next: StakeholderResponse) {
     setResponses((rows) => {
       const found = rows.some((row) => row.subcategoryID === next.subcategoryID);
@@ -207,6 +215,7 @@ export default function ProjectPage() {
       onUploadEvidence={uploadEvidence}
       onDeleteEvidence={deleteEvidence}
       onDownloadEvidence={downloadEvidence}
+      onSetFunctionIncluded={setFunctionIncluded}
       onPreviewEvidence={previewEvidence}
       evidencePreview={evidencePreview}
       previewTargetSubcategoryID={previewTargetSubcategoryID}

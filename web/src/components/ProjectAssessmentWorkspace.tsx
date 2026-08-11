@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
 import { FunctionSidebar } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
@@ -32,6 +32,7 @@ type Props = {
   previewLoading?: boolean;
   previewError?: string;
   onCloseEvidencePreview?: () => void;
+  onSetFunctionIncluded?: (functionCode: string, included: boolean) => Promise<void>;
 };
 
 export function ProjectAssessmentWorkspace({
@@ -60,10 +61,15 @@ export function ProjectAssessmentWorkspace({
   previewLoading,
   previewError,
   onCloseEvidencePreview,
+  onSetFunctionIncluded,
 }: Props) {
   const isCounselor = user.userType === "counselor";
   const canEditScope = isCounselor;
   const canEditProfile = user.role === "org_admin" || user.role === "assessor";
+  const [bulkState, setBulkState] = useState<"idle" | "saving" | "error">("idle");
+  const [bulkError, setBulkError] = useState("");
+  const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
+  const allIncluded = functionRows.length > 0 && functionRows.every((row) => row.included);
   const visibleProfile = useMemo(
     () => profile.filter((row) => {
       if (row.functionCode !== selectedCode) return false;
@@ -74,6 +80,19 @@ export function ProjectAssessmentWorkspace({
     }),
     [canEditProfile, isCounselor, profile, selectedCode, user.id, user.role],
   );
+
+  async function setFunctionIncluded(included: boolean) {
+    if (!onSetFunctionIncluded) return;
+    setBulkState("saving");
+    setBulkError("");
+    try {
+      await onSetFunctionIncluded(selectedCode, included);
+      setBulkState("idle");
+    } catch (cause) {
+      setBulkState("error");
+      setBulkError(cause instanceof Error ? cause.message : "Could not update outcomes");
+    }
+  }
 
   return (
     <div className="shell">
@@ -99,7 +118,16 @@ export function ProjectAssessmentWorkspace({
                   <p className="section-context">Function {selectedCode}</p>
                   <h2 id="outcome-assessments-heading">Outcome assessments</h2>
                 </div>
-                <div className="outcome-count"><strong>{visibleProfile.length}</strong><span>outcomes</span></div>
+                <div className="workspace-tools">
+                  {isCounselor && onSetFunctionIncluded && functionRows.length > 0 && (
+                    <label className="check-field bulk-scope-toggle">
+                      <input type="checkbox" aria-label="Include all outcomes in this Function" checked={allIncluded} disabled={bulkState === "saving"} onChange={(event) => void setFunctionIncluded(event.target.checked)} />
+                      <span>{bulkState === "saving" ? "Updating outcomes..." : `Include all in ${selectedCode}`}</span>
+                    </label>
+                  )}
+                  <div className="outcome-count"><strong>{visibleProfile.length}</strong><span>outcomes</span></div>
+                  {bulkError && <span className="error bulk-scope-error" role="alert">{bulkError}</span>}
+                </div>
               </div>
               <ProfileEditor
                 rows={visibleProfile}
