@@ -46,7 +46,7 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
@@ -54,7 +54,7 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop) {
       project={project}
       functions={functions}
       organizationUsers={[assessor, otherAssessor]}
-      profile={profile}
+      profile={profileRows}
       responses={[]}
       summary={summary}
       selectedCode="GV"
@@ -104,7 +104,17 @@ test("Counselor can include all outcomes in the selected Function", async () => 
   await waitFor(() => expect(onSetFunctionIncluded).toHaveBeenCalledWith("GV", true));
 });
 
+test("Counselor sees assignment progress for included outcomes", () => {
+  renderWorkspace(counselor, noop, [...profile, row("GV.OC-04", true, null)]);
+
+  const progress = screen.getByRole("region", { name: /assignment progress/i });
+  expect(progress.textContent).toContain("3");
+  expect(progress.textContent).toContain("2");
+  expect(progress.textContent).toContain("1");
+});
+
 test("stakeholder roles do not see the bulk include control", () => {
   renderWorkspace(assessor);
   expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
+  expect(screen.queryByRole("region", { name: /assignment progress/i })).toBeNull();
 });

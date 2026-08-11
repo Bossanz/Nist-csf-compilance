@@ -355,6 +355,11 @@ button.danger:disabled:hover { text-decoration: none; }
 .project-subtitle { margin: 0; color: var(--muted); font-size: 1rem; }
 .project-layout { display: block; }
 .reading-column { width: min(100%, 820px); }
+.assignment-progress { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 14px 0 28px; padding: 14px 16px; color: var(--muted-strong); background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); }
+.assignment-progress-heading { color: var(--accent-dark); font-size: 0.82rem; letter-spacing: 0.02em; }
+.assignment-progress-items { display: flex; align-items: center; justify-content: flex-end; gap: 20px; flex-wrap: wrap; font-size: 0.78rem; }
+.assignment-progress-items span { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.assignment-progress-items b { color: var(--accent-dark); font-size: 1.1rem; letter-spacing: -0.03em; }
 .assessment-region { min-width: 0; }
 .workspace-tools { display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap; }
 .outcome-count { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 0.76rem; }
@@ -487,6 +492,8 @@ button.danger:disabled:hover { text-decoration: none; }
   .delete-confirmation .organization-actions, .delete-confirmation .confirmation-actions { justify-content: stretch; }
   .delete-confirmation .organization-actions button, .delete-confirmation .confirmation-actions button { flex: 1; }
   .project-header { margin-bottom: 24px; }
+  .assignment-progress { align-items: flex-start; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .assignment-progress-items { justify-content: flex-start; gap: 12px 18px; }
   .assessment-summary { grid-template-columns: 88px minmax(0, 1fr) 30px; gap: 10px; padding: 14px 12px; }
   .coverage-route { grid-column: 2; align-items: center; }
   .expand-mark { grid-column: 3; grid-row: 1; }

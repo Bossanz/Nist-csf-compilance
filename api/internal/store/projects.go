@@ -165,9 +165,6 @@ func (s *Store) UpdateProfile(ctx context.Context, projectID, subcategoryID stri
 	if !finalIncluded {
 		finalAssignedUserID = nil
 	}
-	if finalIncluded && finalAssignedUserID == nil {
-		return ProfileRow{}, ErrInvalidProfileAssignment
-	}
 	if finalAssignedUserID != nil {
 		var valid bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND organization_id=$2 AND user_type='stakeholder' AND role IN ('org_admin','assessor') AND status='active')`, *finalAssignedUserID, organizationID).Scan(&valid); err != nil {

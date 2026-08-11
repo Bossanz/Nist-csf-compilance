@@ -76,7 +76,7 @@ Assigned stakeholder patch fields:
 - Target priority, coverage, and approach.
 - Notes and considerations.
 
-Stakeholders cannot modify `included`, `rationale`, or `assignedUserID`. A scope change and assignment are validated as one logical update: an included outcome must have an eligible assignee, and an excluded outcome clears its assignment.
+Stakeholders cannot modify `included`, `rationale`, or `assignedUserID`. A scope change and assignment are validated independently: an included outcome may remain unassigned while the Counselor is configuring scope, and an excluded outcome clears its assignment. When an assignment is present, it must be an eligible active stakeholder.
 
 The existing organization users endpoint supplies the assignee options. The Counselor UI filters it to active `org_admin` and `assessor` users; the API repeats the validation and never trusts the client-side filter.
 

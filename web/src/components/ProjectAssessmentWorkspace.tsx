@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
 import { FunctionSidebar } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
+import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
 
 type Props = {
@@ -70,6 +71,11 @@ export function ProjectAssessmentWorkspace({
   const [bulkError, setBulkError] = useState("");
   const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
   const allIncluded = functionRows.length > 0 && functionRows.every((row) => row.included);
+  const assignmentProgress = useMemo(() => {
+    const includedRows = profile.filter((row) => row.included);
+    const assigned = includedRows.filter((row) => row.assignedUserID !== null).length;
+    return { included: includedRows.length, assigned, unassigned: includedRows.length - assigned };
+  }, [profile]);
   const visibleProfile = useMemo(
     () => profile.filter((row) => {
       if (row.functionCode !== selectedCode) return false;
@@ -112,6 +118,7 @@ export function ProjectAssessmentWorkspace({
         <div className="project-layout">
           <div className="reading-column">
             <SummaryCards summary={summary} />
+            {isCounselor && <AssignmentProgress {...assignmentProgress} />}
             <section className="assessment-region" aria-labelledby="outcome-assessments-heading">
               <div className="workspace-heading">
                 <div>

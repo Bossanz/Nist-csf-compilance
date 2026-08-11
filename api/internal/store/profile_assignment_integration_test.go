@@ -55,12 +55,14 @@ func TestProfileAssignmentLifecycle(t *testing.T) {
 		data.Close()
 	})
 
-	assigned := assessorID
 	included := true
-	row, err := data.UpdateProfile(ctx, projectID, subcategoryID, ProfilePatch{
-		Included:       &included,
-		AssignedUserID: &assigned,
-	})
+	row, err := data.UpdateProfile(ctx, projectID, subcategoryID, ProfilePatch{Included: &included})
+	if err != nil || !row.Included || row.AssignedUserID != nil {
+		t.Fatalf("included profile can be saved before assignment: %#v err=%v", row, err)
+	}
+
+	assigned := assessorID
+	row, err = data.UpdateProfile(ctx, projectID, subcategoryID, ProfilePatch{AssignedUserID: &assigned})
 	if err != nil || row.AssignedUserID == nil || *row.AssignedUserID != assessorID || row.AssignedUserName != "Assignment Assessor" {
 		t.Fatalf("assigned profile: %#v err=%v", row, err)
 	}
