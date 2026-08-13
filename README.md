@@ -1,76 +1,204 @@
 # NIST CSF Compliance Web App
 
-Lean vertical slice for NIST CSF 2.0 compliance work using Next.js, Go, and PostgreSQL.
+A lean NIST CSF 2.0 assessment workspace for Counselors and customer Stakeholders. The application is built with Next.js, Go, and PostgreSQL and is designed to keep the assessment workflow short and easy to follow.
+
+Current status: Version 1 local-development vertical slice.
 
 ## Stack
 
-- **Web:** Next.js 16, React, TypeScript
-- **API:** Go
-- **Database:** PostgreSQL 16
-- **Run:** Docker Compose
+- Frontend: Next.js 16, React 19, TypeScript
+- Backend: Go 1.24
+- Database: PostgreSQL 16
+- Runtime: Docker Compose
+- Authentication: Email/password with server-side sessions
+- Evidence storage: Local Docker volume
 
 ## Quick start
 
-Requirements: Docker Desktop must be running.
+### Requirements
 
-In PowerShell:
+- Windows and PowerShell
+- Docker Desktop with the Docker Engine running
+
+### Start the application
+
+Run these commands from the repository root:
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build -d
 ```
 
-สำหรับ local admin ตามข้อมูลด้านล่าง ให้ตรวจสอบว่า `.env` มีค่าเหล่านี้ก่อนรัน:
+Open:
+
+- Web app: <http://localhost:3000>
+- Login: <http://localhost:3000/login>
+- API health check: <http://localhost:8080/healthz>
+- PostgreSQL: `localhost:5432`
+
+Check container status:
+
+```powershell
+docker compose ps
+```
+
+Follow API logs:
+
+```powershell
+docker compose logs -f api
+```
+
+### Stop the application
+
+```powershell
+docker compose down
+```
+
+This removes containers but keeps the PostgreSQL and evidence volumes.
+
+To reset all local data:
+
+```powershell
+docker compose down -v
+```
+
+> `docker compose down -v` permanently removes local organizations, projects, users, assessments, and evidence files.
+
+## Local test accounts
+
+### Counselor Admin
+
+The bootstrap account is created from `.env`:
+
+| Field | Value |
+| --- | --- |
+| Email | `admin@example.com` |
+| Password | `LocalAdmin!2026` |
+| Role | `counselor_admin` |
+
+The corresponding local configuration is:
 
 ```dotenv
 BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 BOOTSTRAP_ADMIN_PASSWORD=LocalAdmin!2026
 ```
 
-Open the app at <http://localhost:3000>.
+The bootstrap account is created only when the database does not already contain a `counselor_admin`. Changing `.env` does not replace an existing account.
 
-Services:
+### Counselor
 
-- Web: <http://localhost:3000>
-- API health check: <http://localhost:8080/healthz>
-- PostgreSQL: `localhost:5432`
-
-To see logs:
-
-```powershell
-docker compose logs -f api
-```
-
-To stop the application:
-
-```powershell
-docker compose down
-```
-
-`docker compose down` stops and removes containers but keeps the PostgreSQL and evidence volumes.
-
-## Local admin login
-
-Use this account to enter the local development environment:
+This account exists in the current local database:
 
 | Field | Value |
 | --- | --- |
-| Login URL | <http://localhost:3000/login> |
-| Email | `admin@example.com` |
-| Password | `LocalAdmin!2026` |
-| Role | `counselor_admin` |
+| Email | `counselor@example.com` |
+| Password | `Counselor!2026` |
+| Role | `counselor` |
 
-This is a local development credential only. Do not use it in production or a shared environment.
+On a fresh database, use the supported invitation flow or create a test account before using this login.
 
-The bootstrap account is created from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` in `.env`, and only when the database does not already contain a `counselor_admin`. If an existing PostgreSQL volume has another admin, changing `.env` will not replace that account.
+> These credentials are for local development only. Do not use them in production or shared environments.
 
-## URLs and routing
+## System workflow
 
-The API uses UUIDs internally, while browser URLs use readable slugs:
+```text
+Counselor Admin
+  -> Create client Organization
+  -> Open the Organization
 
-- Organizations: `/organizations/{organization-slug}`
-- Projects: `/organizations/{organization-slug}/projects/{project-slug}`
-- Invitation acceptance: `/invite/{token}`
+Counselor
+  -> Create an assessment Project
+  -> Set project context
+  -> Include or exclude NIST CSF outcomes
+  -> Add scope rationale
+  -> Assign each included outcome to one Stakeholder
+
+Stakeholder
+  -> Activate the invited account
+  -> Complete Current and Target profile fields
+  -> Add the response and supporting evidence
+  -> Submit the outcome
+
+Reviewer
+  -> Read the submitted response and evidence
+  -> Mark Reviewed or Needs more information
+
+Counselor
+  -> Read progress and final assessment results
+```
+
+## Roles and permissions
+
+| Role | Main permissions |
+| --- | --- |
+| `counselor_admin` | Create/delete Organizations and manage Counselors |
+| `counselor` | Create/delete Projects, configure scope, add rationale, assign Stakeholders, and read all results |
+| `org_admin` | Manage users inside one Organization and complete assigned outcomes |
+| `assessor` | Complete assigned Current/Target fields, responses, and evidence |
+| `reviewer` | Read included outcomes and perform the final review gate |
+| `viewer` | Read included outcomes without editing assessment data |
+
+Important rules:
+
+- Counselors decide which outcomes belong to a Project.
+- Counselors can use `Include all` for the currently selected Function.
+- An included outcome can be assigned after scope selection.
+- Included but unassigned outcomes remain hidden from Stakeholder users.
+- Stakeholders cannot change scope, rationale, or assignments.
+- Reviewer is the only final review gate.
+
+## Implemented features
+
+- Email/password login and logout
+- Server-side session authentication
+- Role-based access control
+- Organization dashboard
+- Project dashboard
+- Create and delete Organizations
+- Create and delete Projects
+- Project context fields:
+  - Objective / purpose
+  - Assessment period
+  - Target completion date
+  - Scope boundary
+  - Compliance driver
+- Readable slug routing
+- NIST CSF 2.0 catalog:
+  - 6 Functions
+  - 22 Categories
+  - 106 Subcategories
+- Counselor scope configuration
+- Include all outcomes within a Function
+- Assignment progress counts:
+  - Included
+  - Assigned
+  - Waiting for assignment
+- Outcome-level Stakeholder assignment
+- Current Profile and Target Profile
+- Priority and Coverage fields
+- Stakeholder response workflow
+- Evidence upload and delete
+- Inline preview for PDF and PNG/JPG/JPEG
+- Download fallback for DOCX/XLSX
+- Reviewer decisions:
+  - Reviewed
+  - Needs more information
+- Coverage summary
+- Audit log
+- Invitation-based account activation
+- Organization and Project deletion with evidence cleanup
+
+## Routes
+
+The API uses UUIDs internally. Browser URLs use readable slugs:
+
+```text
+/login
+/organizations
+/organizations/{organization-slug}
+/organizations/{organization-slug}/projects/{project-slug}
+/invite/{token}
+```
 
 Example:
 
@@ -78,92 +206,150 @@ Example:
 /organizations/versotis-co-ltd/projects/ru-registration
 ```
 
-## Version 1 workflow
+## Project setup fields
 
-1. A Counselor Admin signs in and creates a client organization.
-2. A Counselor opens the organization and creates an assessment project.
-3. The Counselor selects which outcomes are included in the project and records the rationale. Assignment to an active stakeholder can be completed per outcome afterward; an included but unassigned outcome remains hidden from stakeholder users until it has an assignee.
-   For speed, the Counselor can include or exclude all outcomes in the currently selected Function, then adjust individual outcomes and assignments as needed. The project view also shows Included, Assigned, and Waiting for assignment counts.
-4. Stakeholders activate their accounts from the invitation link. The assigned stakeholder fills Current Profile, Target Profile, Priority, Coverage, the response, and supporting evidence.
-5. A Reviewer checks submitted responses. `Reviewed` completes the outcome; `Needs more information` returns it to the assigned stakeholder.
-6. Viewers can read the included outcomes and their review status without changing assessment data.
-7. Counselors can read all project progress and results, while managing project scope, rationale, and outcome assignments.
-
-### Project setup fields
-
-When a Counselor creates a project, the form captures the assessment context:
+When a Counselor creates a Project, the form captures:
 
 - Project name (required)
 - Objective / purpose
-- Assessment period (for example, `2026`)
+- Assessment period
 - Target completion date
 - Scope boundary
 - Compliance driver
 
-Organization, Counselor, framework (`NIST CSF 2.0`), slug, status, and created date are managed by the system. Outcome-level scope, rationale, assignments, Current/Target values, evidence, and review decisions are completed in the assessment workflow after the project is created.
+Organization, Counselor, framework (`NIST CSF 2.0`), slug, status, and created date are managed by the system. Outcome scope, rationale, assignment, Current/Target values, evidence, and review status are completed in the assessment workflow.
 
-Roles:
+## Repository structure
 
-- `counselor_admin`: manages organizations and counselors.
-- `counselor`: creates and manages client projects, scope, rationale, and stakeholder assignments.
-- `org_admin`: manages users inside one organization.
-- `assessor`: fills assigned outcomes and uploads evidence.
-- `reviewer`: reads all included outcomes and is the only final review gate.
-- `viewer`: read-only access to included outcomes.
-
-Assigned `org_admin` and `assessor` users only see and edit their assigned included outcomes. Reviewers and viewers can see all included outcomes. Counselor-only scope controls remain unavailable to stakeholder roles.
-
-Evidence files can be previewed inline when they are PDF or PNG/JPG/JPEG. DOCX and XLSX files remain download-only in v1; every evidence file still keeps its Download action.
-
-## Database and migrations
-
-The database initializes the NIST CSF 2.0 catalog from the supplied workbook with 6 Functions, 22 Categories, and 106 Subcategories.
-
-Fresh databases run the SQL files in `db/init` in filename order. The API also ensures slug columns and backfilled slugs on startup for existing databases.
-
-If a PostgreSQL volume existed before authentication was added, apply the auth migration once:
-
-```powershell
-docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/003_auth_rbac.sql
-docker compose restart api
+```text
+.
+|-- api/                         # Go API
+|   |-- cmd/server/              # API entrypoint
+|   `-- internal/
+|       |-- auth/                # Login, password, sessions, invitations
+|       |-- domain/              # Business rules and calculations
+|       |-- httpapi/             # HTTP handlers and authorization
+|       `-- store/               # PostgreSQL queries and models
+|-- db/init/                     # Schema, seed data, and migrations
+|-- web/
+|   `-- src/
+|       |-- app/                 # Next.js routes
+|       |-- components/          # UI components
+|       `-- lib/                 # API client, types, and route helpers
+|-- docker-compose.yml
+|-- .env.example
+`-- README.md
 ```
 
-If it existed before stakeholder responses were added, apply this migration once as well:
+## Database and persistent data
 
-```powershell
-docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/004_stakeholder_responses.sql
-docker compose restart api
+Fresh databases run the files in `db/init` in filename order:
+
+```text
+001_schema.sql
+002_seed.sql
+003_auth_rbac.sql
+004_stakeholder_responses.sql
+005_slug_routing.sql
+006_outcome_assignments.sql
+007_project_metadata.sql
 ```
 
-If it existed before outcome assignments were added, apply this migration once as well:
+Docker volumes:
+
+- `pgdata` stores PostgreSQL data.
+- `evidence_data` stores uploaded evidence files.
+
+For an existing database volume, apply any migration that was added after the volume was created, then restart the API. For example:
 
 ```powershell
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/006_outcome_assignments.sql
-docker compose restart api
-```
-
-If it existed before project setup metadata was added, apply this migration once as well:
-
-```powershell
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/007_project_metadata.sql
 docker compose restart api
 ```
 
-Permanent organization deletion is restricted to Counselor Admin and removes organization-owned projects, assessments, stakeholders, invitations, and response metadata after exact-name confirmation. Evidence files are stored in the Docker volume `evidence_data` and cleaned up when their project or organization is deleted.
+## Verify before committing
 
-## Verify locally
+### Go API
 
 ```powershell
-docker compose config
-
 Set-Location api
 go test ./...
-Set-Location ..\web
-npm install
-npm run typecheck
-npm test -- --run
-npm run build
 Set-Location ..
 ```
 
-Version 1 includes email/password authentication, server-side sessions, organization-scoped projects, slug routing, invitation-based account creation, role access control, counselor profile editing, stakeholder responses, local evidence storage, review status, and coverage summaries. Password reset, notifications, reports, and full action planning are intentionally deferred.
+### Web
+
+```powershell
+Set-Location web
+npm.cmd ci
+npm.cmd run typecheck -- --incremental false
+npm.cmd test
+npm.cmd run build
+Set-Location ..
+```
+
+### Docker health check
+
+```powershell
+docker compose up --build -d
+Invoke-WebRequest http://localhost:8080/healthz
+Invoke-WebRequest http://localhost:3000
+```
+
+Expected results:
+
+- API health check returns HTTP `200`.
+- Web returns HTTP `200`.
+- PostgreSQL and API are healthy.
+
+## Troubleshooting
+
+### Docker API connection error
+
+If you see an error such as:
+
+```text
+failed to connect to the docker API
+Docker daemon is not running
+```
+
+Open Docker Desktop, wait until the Docker Engine is running, then retry:
+
+```powershell
+docker compose up --build -d
+```
+
+### Failed to fetch
+
+Check the services in this order:
+
+```powershell
+docker compose ps
+docker compose logs -f api
+Invoke-WebRequest http://localhost:8080/healthz
+```
+
+If the API is not healthy, check PostgreSQL and migrations first.
+
+### `invalid profile assignment`
+
+The intended workflow is:
+
+1. Counselor includes the outcome.
+2. Counselor saves the assessment.
+3. Counselor selects a Responsible stakeholder.
+4. Counselor saves the assessment again.
+
+The selected user must be active, belong to the same Organization, and have role `org_admin` or `assessor`.
+
+## Not included in Version 1
+
+- Password reset
+- Real email notifications
+- Report export
+- Full action planning
+- Production deployment configuration
+- Inline DOCX/XLSX preview
+
+These can be added later without changing the core assessment workflow.
