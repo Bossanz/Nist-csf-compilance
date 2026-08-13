@@ -74,8 +74,7 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows =
 }
 
 function visibleOutcomeCount() {
-  const label = screen.getByText("outcomes");
-  return label.parentElement?.querySelector("strong")?.textContent;
+  return document.querySelector(".outcome-count strong")?.textContent;
 }
 
 test("Counselor sees every outcome for scope configuration", () => {
@@ -86,6 +85,12 @@ test("Counselor sees every outcome for scope configuration", () => {
 test("assigned Assessor sees only assigned included outcomes", () => {
   renderWorkspace(assessor);
   expect(visibleOutcomeCount()).toBe("1");
+});
+
+test("explains the assigned Assessor next step and selected Function", () => {
+  renderWorkspace(assessor);
+  expect(screen.getByText("Complete your assigned outcomes and attach supporting evidence.")).toBeTruthy();
+  expect(screen.getByText("Function: GV — Govern")).toBeTruthy();
 });
 
 test("Reviewer sees every included outcome", () => {
@@ -117,4 +122,11 @@ test("stakeholder roles do not see the bulk include control", () => {
   renderWorkspace(assessor);
   expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
   expect(screen.queryByRole("region", { name: /assignment progress/i })).toBeNull();
+});
+
+test("names the scope assignee control for its outcome", () => {
+  renderWorkspace(counselor);
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  expect(screen.getByLabelText("Responsible stakeholder for GV.OC-01")).toBeTruthy();
 });

@@ -67,6 +67,14 @@ export function ProjectAssessmentWorkspace({
   const isCounselor = user.userType === "counselor";
   const canEditScope = isCounselor;
   const canEditProfile = user.role === "org_admin" || user.role === "assessor";
+  const selectedFunction = functions.find((fn) => fn.code === selectedCode);
+  const taskHint = isCounselor
+    ? "Set project scope and read stakeholder progress."
+    : user.role === "reviewer"
+      ? "Review submitted stakeholder responses and record a final decision."
+      : user.role === "viewer"
+        ? "Read included outcomes, responses, and evidence."
+        : "Complete your assigned outcomes and attach supporting evidence.";
   const [bulkState, setBulkState] = useState<"idle" | "saving" | "error">("idle");
   const [bulkError, setBulkError] = useState("");
   const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
@@ -112,7 +120,7 @@ export function ProjectAssessmentWorkspace({
             <span>{project.status.replaceAll("_", " ")}</span>
           </div>
           <h1>{project.name}</h1>
-          <p className="project-subtitle">Current and target profile assessment</p>
+          <p className="project-subtitle">{taskHint}</p>
         </header>
         {error && <div className="error" role="alert">{error}</div>}
         <div className="project-layout">
@@ -122,17 +130,17 @@ export function ProjectAssessmentWorkspace({
             <section className="assessment-region" aria-labelledby="outcome-assessments-heading">
               <div className="workspace-heading">
                 <div>
-                  <p className="section-context">Function {selectedCode}</p>
-                  <h2 id="outcome-assessments-heading">Outcome assessments</h2>
+                    <p className="section-context">Function: {selectedCode}{selectedFunction ? ` — ${selectedFunction.name}` : ""}</p>
+                  <h2 id="outcome-assessments-heading">Outcomes in this Function</h2>
                 </div>
                 <div className="workspace-tools">
                   {isCounselor && onSetFunctionIncluded && functionRows.length > 0 && (
                     <label className="check-field bulk-scope-toggle">
                       <input type="checkbox" aria-label="Include all outcomes in this Function" checked={allIncluded} disabled={bulkState === "saving"} onChange={(event) => void setFunctionIncluded(event.target.checked)} />
-                      <span>{bulkState === "saving" ? "Updating outcomes..." : `Include all in ${selectedCode}`}</span>
+                      <span>{bulkState === "saving" ? "Applying scope…" : `Include every outcome in ${selectedFunction?.name ?? selectedCode}`}</span>
                     </label>
                   )}
-                  <div className="outcome-count"><strong>{visibleProfile.length}</strong><span>outcomes</span></div>
+                  <div className="outcome-count"><strong>{visibleProfile.length}</strong><span>{isCounselor ? "outcomes in this Function" : "included outcomes"}</span></div>
                   {bulkError && <span className="error bulk-scope-error" role="alert">{bulkError}</span>}
                 </div>
               </div>

@@ -10,8 +10,8 @@ func scanUsers(rows pgx.Rows) ([]User, error) {
 	defer rows.Close()
 	users := []User{}
 	for rows.Next() {
-		var user User
-		if err := rows.Scan(&user.ID, &user.OrganizationID, &user.Name, &user.Email, &user.UserType, &user.Role, &user.Status, &user.PasswordHash); err != nil {
+		user, err := scanUser(rows)
+		if err != nil {
 			return nil, err
 		}
 		users = append(users, user)

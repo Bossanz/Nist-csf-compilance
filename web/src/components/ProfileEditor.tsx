@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { EvidencePreview, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
 import { AssessmentCard } from "./AssessmentCard";
 
@@ -42,8 +43,18 @@ export function ProfileEditor({
   previewError?: string;
   onCloseEvidencePreview?: () => void;
 }) {
+  const responseBySubcategoryID = useMemo(
+    () => new Map(responses.map((response) => [response.subcategoryID, response] as const)),
+    [responses],
+  );
+
   if (rows.length === 0) {
-    return <div className="empty-state">No outcomes found for this Function.</div>;
+    const emptyMessage = role === "counselor"
+      ? "No outcomes found in this Function."
+      : role === "reviewer" || role === "viewer"
+        ? "No included outcomes are available in this Function."
+        : "No included outcomes are assigned to you in this Function.";
+    return <div className="empty-state">{emptyMessage}</div>;
   }
 
   return (
@@ -56,7 +67,7 @@ export function ProfileEditor({
         canEditProfile={canEditProfile}
         assigneeOptions={assigneeOptions}
         role={role}
-        response={responses.find((item) => item.subcategoryID === row.subcategoryID) ?? emptyResponse(row)}
+        response={responseBySubcategoryID.get(row.subcategoryID) ?? emptyResponse(row)}
         onSaveResponse={onSaveResponse}
         onSubmitResponse={onSubmitResponse}
         onReviewResponse={onReviewResponse}

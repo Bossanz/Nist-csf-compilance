@@ -100,3 +100,10 @@ test("keeps unsupported evidence as download-only", () => {
   fireEvent.click(screen.getByRole("button", { name: /policy\.docx/i }));
   expect(onDownload).toHaveBeenCalledWith(document);
 });
+
+test("scopes reviewer field labels to the outcome", () => {
+  render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
+
+  expect(screen.getByLabelText("Review status for subcategory-1")).toBeTruthy();
+  expect(screen.getByLabelText("Review comment for subcategory-1")).toBeTruthy();
+});

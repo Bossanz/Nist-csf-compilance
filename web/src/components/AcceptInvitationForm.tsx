@@ -26,7 +26,11 @@ export function AcceptInvitationForm({
         onAccept({ name: name.trim(), password });
       }}>
         <label className="field"><span>Name</span><input required value={name} onChange={(event) => setName(event.target.value)} /></label>
-        <label className="field"><span>Password</span><input type="password" minLength={12} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <div className="field">
+          <label className="field-label" htmlFor="invite-password">Password</label>
+          <small id="invite-password-help" className="field-help">Use at least 12 characters.</small>
+          <input id="invite-password" type="password" minLength={12} required aria-describedby="invite-password-help" value={password} onChange={(event) => setPassword(event.target.value)} />
+        </div>
         <button className="primary" disabled={loading}>{loading ? "Activating…" : "Activate account"}</button>
       </form>
     </section>

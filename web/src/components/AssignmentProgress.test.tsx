@@ -9,5 +9,7 @@ test("shows included, assigned, and waiting counts", () => {
   expect(progress.textContent).toContain("12");
   expect(progress.textContent).toContain("5");
   expect(progress.textContent).toContain("7");
-  expect(progress.textContent).toContain("Waiting for assignment");
+  expect(progress.textContent).toContain("Included in scope");
+  expect(progress.textContent).toContain("Assigned to stakeholder");
+  expect(progress.textContent).toContain("Waiting for stakeholder assignment");
 });

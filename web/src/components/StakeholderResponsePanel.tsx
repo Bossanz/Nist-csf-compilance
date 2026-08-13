@@ -68,7 +68,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
           <h3 id={`response-${response.subcategoryID}`}>Stakeholder response</h3>
           <p className="response-note">Response and evidence for this outcome.</p>
         </div>
-        <span className={`response-status status-${response.status}`}>{statusLabels[response.status]}</span>
+        <span className={`response-status status-${response.status}`} role="status" aria-live="polite">{statusLabels[response.status]}</span>
       </div>
 
       <label className="field">
@@ -102,14 +102,14 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
           <div className="field-grid">
             <label className="field">
               <span>Review status</span>
-              <select aria-label="Review status" value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value as "reviewed" | "needs_more_info")}>
+              <select aria-label={`Review status for ${response.subcategoryID}`} value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value as "reviewed" | "needs_more_info")}>
                 <option value="reviewed">Reviewed</option>
                 <option value="needs_more_info">Needs more information</option>
               </select>
             </label>
             <label className="field">
               <span>Review comment</span>
-              <textarea aria-label="Review comment" rows={2} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} placeholder="What should be accepted or clarified?" />
+              <textarea aria-label={`Review comment for ${response.subcategoryID}`} rows={2} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} placeholder="What should be accepted or clarified?" />
             </label>
           </div>
           <button className="primary" type="button" disabled={state === "saving"} onClick={() => void run(() => onReview(reviewStatus, reviewComment))}>Save review</button>

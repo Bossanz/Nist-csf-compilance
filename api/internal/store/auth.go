@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"time"
 )
@@ -10,7 +11,9 @@ const userColumns = `id,organization_id,name,email,user_type,role,status,passwor
 
 func scanUser(row interface{ Scan(...any) error }) (User, error) {
 	var user User
-	err := row.Scan(&user.ID, &user.OrganizationID, &user.Name, &user.Email, &user.UserType, &user.Role, &user.Status, &user.PasswordHash)
+	var passwordHash sql.NullString
+	err := row.Scan(&user.ID, &user.OrganizationID, &user.Name, &user.Email, &user.UserType, &user.Role, &user.Status, &passwordHash)
+	user.PasswordHash = passwordHash.String
 	return user, err
 }
 
@@ -21,12 +24,14 @@ func (s *Store) FindUserByEmail(ctx context.Context, email string) (User, error)
 func (s *Store) FindUserBySessionHash(ctx context.Context, tokenHash string) (User, Session, error) {
 	var user User
 	var session Session
+	var passwordHash sql.NullString
 	err := s.DB.QueryRow(ctx, `SELECT u.id,u.organization_id,u.name,u.email,u.user_type,u.role,u.status,u.password_hash,
 		s.id,s.user_id,s.token_hash,s.expires_at,s.last_seen_at,s.created_at
 		FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1`, tokenHash).Scan(
-		&user.ID, &user.OrganizationID, &user.Name, &user.Email, &user.UserType, &user.Role, &user.Status, &user.PasswordHash,
+		&user.ID, &user.OrganizationID, &user.Name, &user.Email, &user.UserType, &user.Role, &user.Status, &passwordHash,
 		&session.ID, &session.UserID, &session.TokenHash, &session.ExpiresAt, &session.LastSeenAt, &session.CreatedAt,
 	)
+	user.PasswordHash = passwordHash.String
 	if err == nil {
 		_, _ = s.DB.Exec(ctx, `UPDATE sessions SET last_seen_at=now() WHERE id=$1`, session.ID)
 	}

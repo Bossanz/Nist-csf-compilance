@@ -24,6 +24,7 @@ export default function ProjectPage() {
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [selectedCode, setSelectedCode] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
@@ -37,7 +38,7 @@ export default function ProjectPage() {
     let active = true;
     void initialize(active);
     return () => { active = false; };
-  }, [organizationSlug, projectSlug]);
+  }, [organizationSlug, projectSlug, retryCount]);
 
   useEffect(() => () => {
     if (previewURL.current) URL.revokeObjectURL(previewURL.current);
@@ -48,8 +49,10 @@ export default function ProjectPage() {
     setError("");
     setNotFound(false);
     try {
-      const currentUser = await api.me();
-      const nextOrganization = await api.getOrganizationBySlug(organizationSlug);
+      const [currentUser, nextOrganization] = await Promise.all([
+        api.me(),
+        api.getOrganizationBySlug(organizationSlug),
+      ]);
       const nextProject = await api.getOrganizationProjectBySlug(nextOrganization.id, projectSlug);
       const usersPromise = currentUser.userType === "counselor" ? api.getOrganizationUsers(nextOrganization.id) : Promise.resolve<User[]>([]);
       const [functionRows, nextProfile, nextSummary, nextResponses] = await Promise.all([
@@ -94,8 +97,11 @@ export default function ProjectPage() {
   async function setFunctionIncluded(functionCode: string, included: boolean) {
     if (!project) return;
     const functionRows = profile.filter((row) => row.functionCode === functionCode);
-    await Promise.all(functionRows.map((row) => api.updateProfile(project.id, row.subcategoryID, { included })));
-    setProfile((rows) => rows.map((row) => row.functionCode === functionCode ? { ...row, included } : row));
+    for (const row of functionRows) {
+      const updated = await api.updateProfile(project.id, row.subcategoryID, { included });
+      const next = updated ?? { ...row, included };
+      setProfile((rows) => rows.map((current) => current.subcategoryID === row.subcategoryID ? next : current));
+    }
     setSummary(await api.getSummary(project.id));
   }
 
@@ -181,7 +187,33 @@ export default function ProjectPage() {
     setPreviewError("");
   }
 
-  if (!authChecked || loading && !project) return <main className="screen-center">Loading...</main>;
+  function retryLoad() {
+    setUser(null);
+    setOrganization(null);
+    setProject(null);
+    setFunctions([]);
+    setOrganizationUsers([]);
+    setProfile([]);
+    setResponses([]);
+    setSummary(emptySummary);
+    setError("");
+    setNotFound(false);
+    setAuthChecked(false);
+    setRetryCount((value) => value + 1);
+  }
+
+  if (!authChecked || loading && !project) return <main className="screen-center" role="status" aria-live="polite" aria-busy="true">Loading assessment…</main>;
+  if (!user && error && !notFound) {
+    return (
+      <main className="screen-center" aria-labelledby="project-load-error">
+        <section className="empty-state" role="alert">
+          <h1 id="project-load-error">Could not load project</h1>
+          <p>{error}</p>
+          <button className="primary" type="button" onClick={retryLoad}>Try again</button>
+        </section>
+      </main>
+    );
+  }
   if (notFound || !user || !organization || !project) {
     return (
       <main className="main dashboard">

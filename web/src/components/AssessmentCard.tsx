@@ -171,7 +171,7 @@ export function AssessmentCard({
             <label className="field grow">
               <span>Responsible stakeholder</span>
               <select
-                aria-label="Responsible stakeholder"
+                aria-label={`Responsible stakeholder for ${row.subcategoryCode}`}
                 value={draft.assignedUserID ?? ""}
                 onChange={(event) => update("assignedUserID", event.target.value || null)}
               >

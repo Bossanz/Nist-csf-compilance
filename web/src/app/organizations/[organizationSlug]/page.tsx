@@ -17,6 +17,7 @@ export default function OrganizationPage() {
   const [members, setMembers] = useState<User[]>([]);
   const [invitationURL, setInvitationURL] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
@@ -25,15 +26,17 @@ export default function OrganizationPage() {
     let active = true;
     void initialize(active);
     return () => { active = false; };
-  }, [organizationSlug]);
+  }, [organizationSlug, retryCount]);
 
   async function initialize(active: boolean) {
     setLoading(true);
     setError("");
     setNotFound(false);
     try {
-      const currentUser = await api.me();
-      const nextOrganization = await api.getOrganizationBySlug(organizationSlug);
+      const [currentUser, nextOrganization] = await Promise.all([
+        api.me(),
+        api.getOrganizationBySlug(organizationSlug),
+      ]);
       const [projectRows, memberRows] = await Promise.all([
         api.getOrganizationProjects(nextOrganization.id),
         api.getOrganizationUsers(nextOrganization.id),
@@ -67,6 +70,7 @@ export default function OrganizationPage() {
       setProjects((rows) => [...rows, created]);
     } catch (cause) {
       setError(messageOf(cause));
+      throw cause;
     } finally {
       setLoading(false);
     }
@@ -83,7 +87,35 @@ export default function OrganizationPage() {
     setInvitationURL(invitation.invitationURL);
   }
 
-  if (!authChecked || !user || loading && !organization) return <main className="screen-center">Loading...</main>;
+  async function updateUser(userID: string, input: { role: Role; status: "active" | "disabled" }) {
+    if (!organization) return;
+    const updated = await api.updateOrganizationUser(organization.id, userID, input);
+    setMembers((rows) => rows.map((row) => row.id === updated.id ? updated : row));
+  }
+
+  function retryLoad() {
+    setUser(null);
+    setOrganization(null);
+    setProjects([]);
+    setMembers([]);
+    setError("");
+    setNotFound(false);
+    setAuthChecked(false);
+    setRetryCount((value) => value + 1);
+  }
+
+  if (!authChecked || loading && !organization) return <main className="screen-center" role="status" aria-live="polite" aria-busy="true">Loading workspace…</main>;
+  if (!user && error && !notFound) {
+    return (
+      <main className="screen-center" aria-labelledby="organization-load-error">
+        <section className="empty-state" role="alert">
+          <h1 id="organization-load-error">Could not load organization</h1>
+          <p>{error}</p>
+          <button className="primary" type="button" onClick={retryLoad}>Try again</button>
+        </section>
+      </main>
+    );
+  }
   if (notFound || !organization) {
     return (
       <main className="main dashboard">
@@ -95,6 +127,7 @@ export default function OrganizationPage() {
       </main>
     );
   }
+  if (!user) return <main className="screen-center" role="status" aria-live="polite">Redirecting to sign in…</main>;
 
   return (
     <OrganizationWorkspace
@@ -110,6 +143,7 @@ export default function OrganizationPage() {
       onCreateProject={createProject}
       onDeleteProject={deleteProject}
       onInvite={invite}
+      onUpdateUser={updateUser}
     />
   );
 }

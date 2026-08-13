@@ -31,6 +31,12 @@ const secondBulkProfile: ProfileRow = { ...previewProfile, id: "profile-2", subc
 const previewDocument: ResponseDocument = { id: "doc-1", responseID: "response-1", originalName: "evidence.pdf", mimeType: "application/pdf", sizeBytes: 12, uploadedBy: "assessor-1", createdAt: "2026-08-07T00:00:00Z" };
 const previewResponse: StakeholderResponse = { id: "response-1", projectID: "project-1", subcategoryID: "subcategory-1", responseText: "Evidence attached", status: "draft", respondedBy: "assessor-1", submittedAt: null, reviewComment: "", reviewedBy: null, reviewedAt: null, createdAt: "2026-08-07T00:00:00Z", updatedAt: "2026-08-07T00:00:00Z", documents: [previewDocument] };
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve; });
+  return { promise, resolve };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.me).mockResolvedValue(user);
@@ -53,6 +59,21 @@ test("loads assessment data after resolving the project slug", async () => {
   expect(api.getOrganizationProjectBySlug).toHaveBeenCalledWith("org-1", "readiness");
   expect(api.getProfile).toHaveBeenCalledWith("project-1");
   expect(screen.queryByRole("complementary", { name: /assessment context/i })).toBeNull();
+});
+
+test("starts authentication and organization lookup together", async () => {
+  const auth = deferred<User>();
+  const organizationLookup = deferred<Organization>();
+  vi.mocked(api.me).mockReturnValue(auth.promise);
+  vi.mocked(api.getOrganizationBySlug).mockReturnValue(organizationLookup.promise);
+
+  render(<ProjectPage />);
+  await waitFor(() => expect(api.me).toHaveBeenCalled());
+  expect(api.getOrganizationBySlug).toHaveBeenCalledWith("acme-corporation");
+
+  auth.resolve(user);
+  organizationLookup.resolve(organization);
+  expect(await screen.findByRole("heading", { name: "Readiness" })).toBeTruthy();
 });
 
 test("loads organization users for Counselor assignment controls", async () => {
@@ -101,4 +122,37 @@ test("includes every outcome in the selected Function", async () => {
     expect(api.updateProfile).toHaveBeenNthCalledWith(1, "project-1", "subcategory-1", { included: true });
     expect(api.updateProfile).toHaveBeenNthCalledWith(2, "project-1", "subcategory-2", { included: true });
   });
+});
+
+test("shows a retryable error when assessment data cannot be loaded", async () => {
+  vi.mocked(api.getProfile).mockRejectedValueOnce(new Error("Assessment API is unavailable"));
+  render(<ProjectPage />);
+
+  expect(await screen.findByRole("heading", { name: /could not load project/i })).toBeTruthy();
+  expect(screen.getByText("Assessment API is unavailable")).toBeTruthy();
+
+  vi.mocked(api.getProfile).mockResolvedValueOnce(profile);
+  fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+
+  expect(await screen.findByRole("heading", { name: "Readiness" })).toBeTruthy();
+});
+
+test("serializes bulk outcome updates and keeps the first update before a later failure", async () => {
+  vi.mocked(api.getProfile).mockResolvedValue([previewProfile, secondBulkProfile]);
+  let resolveFirst: (value: ProfileRow) => void = () => undefined;
+  const firstUpdate = new Promise<ProfileRow>((resolve) => { resolveFirst = resolve; });
+  vi.mocked(api.updateProfile)
+    .mockReturnValueOnce(firstUpdate)
+    .mockRejectedValueOnce(new Error("Second outcome failed"));
+
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("checkbox", { name: /include all outcomes in this function/i }));
+
+  await waitFor(() => expect(api.updateProfile).toHaveBeenCalledTimes(1));
+  expect(api.updateProfile).toHaveBeenNthCalledWith(1, "project-1", "subcategory-1", { included: true });
+  resolveFirst({ ...previewProfile, included: true });
+  await waitFor(() => expect(api.updateProfile).toHaveBeenCalledTimes(2));
+  expect(api.updateProfile).toHaveBeenNthCalledWith(2, "project-1", "subcategory-2", { included: true });
+  expect(await screen.findByText("Second outcome failed")).toBeTruthy();
 });
