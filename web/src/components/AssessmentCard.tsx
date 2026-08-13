@@ -26,6 +26,8 @@ type Draft = {
   considerations: string;
 };
 
+type SaveState = "saved" | "dirty" | "saving" | "error";
+
 function createDraft(row: ProfileRow): Draft {
   return {
     included: row.included,
@@ -41,6 +43,72 @@ function createDraft(row: ProfileRow): Draft {
     notes: row.notes,
     considerations: row.considerations,
   };
+}
+
+const responseStatusLabels: Record<StakeholderResponse["status"], string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  reviewed: "Reviewed",
+  needs_more_info: "Needs more information",
+};
+
+function getResponseSummary(response?: StakeholderResponse) {
+  const hasActivity = Boolean(response && (
+    response.id
+    || response.responseText.trim()
+    || response.documents.length > 0
+    || response.status !== "draft"
+    || response.reviewComment.trim()
+  ));
+
+  return hasActivity
+    ? { label: responseStatusLabels[response!.status], statusClass: response!.status, hasActivity: true }
+    : { label: "Not started", statusClass: "not_started", hasActivity: false };
+}
+
+function displayProfileValue(value: string) {
+  return value.trim() || "Not provided";
+}
+
+function coverageLabel(value: CoverageLevel) {
+  return coverageLevels.find((level) => level.value === value)?.label ?? value;
+}
+
+function ProfileReference({ draft, id }: { draft: Draft; id: string }) {
+  return (
+    <section className="profile-reference" aria-label="Profile reference">
+      <div className="profile-reference-heading">
+        <div>
+          <p className="section-context">Reference</p>
+          <h3>Assessment profile</h3>
+        </div>
+        <span className="status-chip">Read only</span>
+      </div>
+      <div className="profile-reference-columns">
+        <section className="profile-reference-column current-reference" aria-labelledby={"current-profile-reference-" + id}>
+          <h4 id={"current-profile-reference-" + id}>Current profile</h4>
+          <dl className="profile-reference-list">
+            <div><dt>Priority</dt><dd>{displayProfileValue(draft.currentPriority)}</dd></div>
+            <div><dt>Coverage</dt><dd>{coverageLabel(draft.currentCoverageLevel)}</dd></div>
+            <div><dt>Activities</dt><dd>{displayProfileValue(draft.currentStatusText)}</dd></div>
+            <div><dt>Policies and procedures</dt><dd>{displayProfileValue(draft.currentPoliciesText)}</dd></div>
+          </dl>
+        </section>
+        <section className="profile-reference-column target-reference" aria-labelledby={"target-profile-reference-" + id}>
+          <h4 id={"target-profile-reference-" + id}>Target profile</h4>
+          <dl className="profile-reference-list">
+            <div><dt>Priority</dt><dd>{displayProfileValue(draft.targetPriority)}</dd></div>
+            <div><dt>Coverage</dt><dd>{coverageLabel(draft.targetCoverageLevel)}</dd></div>
+            <div><dt>Approach</dt><dd>{displayProfileValue(draft.targetApproachText)}</dd></div>
+          </dl>
+        </section>
+      </div>
+      <dl className="profile-reference-notes">
+        <div><dt>Notes</dt><dd>{displayProfileValue(draft.notes)}</dd></div>
+        <div><dt>Considerations</dt><dd>{displayProfileValue(draft.considerations)}</dd></div>
+      </dl>
+    </section>
+  );
 }
 
 export function AssessmentCard({
@@ -86,14 +154,21 @@ export function AssessmentCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [state, setState] = useState<SaveState>("saved");
   const [error, setError] = useState("");
   const eligibleAssignees = assigneeOptions.filter((user) => user.status === "active" && (user.role === "org_admin" || user.role === "assessor"));
   const detailID = `assessment-body-${row.id}`;
+  const responseSummary = getResponseSummary(response);
+  const assignmentLabel = row.assignedUserID
+    ? row.assignedUserName
+      ? "Assigned to " + row.assignedUserName
+      : "Assigned stakeholder"
+    : "Unassigned";
+  const showResponsePanel = Boolean(response && (canEditProfile || responseSummary.hasActivity));
 
   function update<K extends keyof Draft>(field: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
-    setState("idle");
+    setState("dirty");
   }
 
   async function save() {
@@ -126,7 +201,7 @@ export function AssessmentCard({
   }
 
   return (
-    <article className={`assessment-card ${draft.included ? "is-included" : "is-excluded"}`}>
+      <article className={`assessment-card ${draft.included ? "is-included" : "is-excluded"}`}>
       <button
         className="assessment-summary"
         type="button"
@@ -138,6 +213,10 @@ export function AssessmentCard({
         <span className="outcome-copy">
           <strong>{row.description}</strong>
           <small>{draft.included ? "Included in profile" : "Out of scope"}</small>
+          <span className="outcome-meta">
+            <span className={"status-chip outcome-status status-" + responseSummary.statusClass} aria-label={"Response status: " + responseSummary.label}>{responseSummary.label}</span>
+            <span className="assignment-label">{assignmentLabel}</span>
+          </span>
         </span>
         <span className="coverage-route" aria-label={`Coverage ${draft.currentCoverageLevel} to ${draft.targetCoverageLevel}`}>
           <span>{draft.currentCoverageLevel}</span>
@@ -150,7 +229,7 @@ export function AssessmentCard({
       {expanded ? (
         <>
         <div id={detailID} className="assessment-body">
-          <fieldset className="scope-fields" disabled={!canEditScope}>
+          {canEditScope && <fieldset className="scope-fields">
             <div className="scope-band">
             <label className="check-field">
               <input
@@ -180,9 +259,9 @@ export function AssessmentCard({
               </select>
             </label>
             </div>
-          </fieldset>
+          </fieldset>}
 
-          <fieldset className="profile-fields" disabled={!canEditProfile}>
+          {canEditProfile ? <fieldset className="profile-fields">
             <div className="profile-columns">
             <section className="profile-column current-column" aria-labelledby={`current-${row.id}`}>
               <div className="column-heading">
@@ -245,18 +324,18 @@ export function AssessmentCard({
               <textarea rows={2} value={draft.considerations} onChange={(event) => update("considerations", event.target.value)} />
             </label>
             </div>
-          </fieldset>
+          </fieldset> : <ProfileReference draft={draft} id={row.id} />}
 
           <div className="assessment-actions">
-            <span className={`save-state ${state}`} role="status">
-              {state === "saved" ? "Saved" : state === "error" ? error : "Changes are saved per outcome"}
+            <span className={"save-state " + state} role="status">
+              {state === "saved" ? "Saved" : state === "dirty" ? "Unsaved changes" : state === "saving" ? "Saving…" : error}
             </span>
             {(canEditScope || canEditProfile) && <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
               {state === "saving" ? "Saving…" : "Save assessment"}
             </button>}
           </div>
         </div>
-        {role && response && onSaveResponse && onSubmitResponse && onReviewResponse && onUploadEvidence && onDeleteEvidence && onDownloadEvidence && (
+        {showResponsePanel && role && response && onSaveResponse && onSubmitResponse && onReviewResponse && onUploadEvidence && onDeleteEvidence && onDownloadEvidence && (
           <StakeholderResponsePanel
             role={role}
             response={response}

@@ -40,6 +40,23 @@ test("assessor can save, submit, and upload evidence", async () => {
   await waitFor(() => expect(onUpload).toHaveBeenCalledWith(file));
 });
 
+test("shows unsaved, saving, and saved response states", async () => {
+  let resolveSave!: () => void;
+  const savePromise = new Promise<void>((resolve) => { resolveSave = resolve; });
+  const onSave = vi.fn().mockReturnValue(savePromise);
+  render(<StakeholderResponsePanel role="assessor" response={response} onSave={onSave} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
+
+  expect(screen.getByText("Saved")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText(/client response/i), { target: { value: "Unsaved answer" } });
+  expect(screen.getByText("Unsaved changes")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: /save response/i }));
+  expect(screen.getByText("Saving…")).toBeTruthy();
+
+  resolveSave();
+  await waitFor(() => expect(screen.getByText("Saved")).toBeTruthy());
+});
+
 test("reviewer can mark a submitted response as needing more information", async () => {
   const onReview = vi.fn().mockResolvedValue(undefined);
   render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={onReview} onUpload={noop} onDelete={noop} onDownload={noop} />);

@@ -10,6 +10,8 @@ const statusLabels: Record<ResponseStatus, string> = {
   needs_more_info: "Needs more information",
 };
 
+type SaveState = "saved" | "dirty" | "saving" | "error";
+
 type Props = {
   role: Role;
   response: StakeholderResponse;
@@ -30,7 +32,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
   const [responseText, setResponseText] = useState(response.responseText);
   const [reviewStatus, setReviewStatus] = useState<"reviewed" | "needs_more_info">(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
   const [reviewComment, setReviewComment] = useState(response.reviewComment);
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [state, setState] = useState<SaveState>("saved");
   const [error, setError] = useState("");
   const canRespond = role === "org_admin" || role === "assessor";
   const canEditResponse = canRespond && (response.status === "draft" || response.status === "needs_more_info");
@@ -40,6 +42,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
     setResponseText(response.responseText);
     setReviewStatus(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
     setReviewComment(response.reviewComment);
+    setState("saved");
   }, [response.responseText, response.status, response.reviewComment]);
 
   async function run(action: () => Promise<void>) {
@@ -77,7 +80,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
           rows={4}
           value={responseText}
           disabled={!canEditResponse}
-          onChange={(event) => { setResponseText(event.target.value); setState("idle"); }}
+          onChange={(event) => { setResponseText(event.target.value); setState("dirty"); }}
           placeholder="Describe how this outcome is handled in your organization"
         />
       </label>
@@ -102,14 +105,14 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
           <div className="field-grid">
             <label className="field">
               <span>Review status</span>
-              <select aria-label={`Review status for ${response.subcategoryID}`} value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value as "reviewed" | "needs_more_info")}>
+              <select aria-label={"Review status for " + response.subcategoryID} value={reviewStatus} onChange={(event) => { setReviewStatus(event.target.value as "reviewed" | "needs_more_info"); setState("dirty"); }}>
                 <option value="reviewed">Reviewed</option>
                 <option value="needs_more_info">Needs more information</option>
               </select>
             </label>
             <label className="field">
               <span>Review comment</span>
-              <textarea aria-label={`Review comment for ${response.subcategoryID}`} rows={2} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} placeholder="What should be accepted or clarified?" />
+              <textarea aria-label={"Review comment for " + response.subcategoryID} rows={2} value={reviewComment} onChange={(event) => { setReviewComment(event.target.value); setState("dirty"); }} placeholder="What should be accepted or clarified?" />
             </label>
           </div>
           <button className="primary" type="button" disabled={state === "saving"} onClick={() => void run(() => onReview(reviewStatus, reviewComment))}>Save review</button>
@@ -145,9 +148,13 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
         </div>
       )}
 
-      <span className={`save-state ${state}`} role="status">
-        {state === "saved" ? "Response saved" : state === "error" ? error : response.status === "draft" ? "Not submitted yet" : response.reviewComment}
-      </span>
+      <div className="response-footer">
+        <span className={"save-state " + state} role="status">
+          {state === "saved" ? "Saved" : state === "dirty" ? "Unsaved changes" : state === "saving" ? "Saving…" : error}
+        </span>
+        {response.status === "draft" && <span className="response-note">Not submitted yet</span>}
+        {response.status !== "draft" && response.reviewComment && <span className="response-note">{response.reviewComment}</span>}
+      </div>
     </section>
   );
 }

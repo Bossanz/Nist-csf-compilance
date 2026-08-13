@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { ProjectAssessmentWorkspace } from "./ProjectAssessmentWorkspace";
-import type { FunctionNode, Organization, ProfileRow, Project, Summary, User } from "../lib/types";
+import type { FunctionNode, Organization, ProfileRow, Project, StakeholderResponse, Summary, User } from "../lib/types";
 
 const organization: Organization = { id: "org-1", name: "Acme", slug: "acme", type: "client" };
 const project: Project = { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness", slug: "readiness", status: "setup", createdAt: "2026-08-10T00:00:00Z" };
@@ -11,6 +11,21 @@ const assessor: User = { id: "assessor-1", organizationID: "org-1", name: "Assig
 const otherAssessor: User = { ...assessor, id: "assessor-2", name: "Other Assessor" };
 const counselor: User = { id: "counselor-1", organizationID: null, name: "Counselor", email: "counselor@example.com", userType: "counselor", role: "counselor", status: "active" };
 const reviewer: User = { ...assessor, id: "reviewer-1", name: "Reviewer", role: "reviewer" };
+const submittedResponse: StakeholderResponse = {
+  id: "response-1",
+  projectID: "project-1",
+  subcategoryID: "GV.OC-01",
+  responseText: "Evidence attached.",
+  status: "submitted",
+  respondedBy: assessor.id,
+  submittedAt: "2026-08-10T00:00:00Z",
+  reviewComment: "",
+  reviewedBy: null,
+  reviewedAt: null,
+  createdAt: "2026-08-09T00:00:00Z",
+  updatedAt: "2026-08-10T00:00:00Z",
+  documents: [],
+};
 
 function row(id: string, included: boolean, assignedUserID: string | null): ProfileRow {
   return {
@@ -46,7 +61,7 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = []) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
@@ -55,7 +70,7 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows =
       functions={functions}
       organizationUsers={[assessor, otherAssessor]}
       profile={profileRows}
-      responses={[]}
+      responses={responseRows}
       summary={summary}
       selectedCode="GV"
       error=""
@@ -96,6 +111,12 @@ test("explains the assigned Assessor next step and selected Function", () => {
 test("Reviewer sees every included outcome", () => {
   renderWorkspace(reviewer);
   expect(visibleOutcomeCount()).toBe("2");
+});
+
+test("shows submitted work in the selected Function navigation", () => {
+  renderWorkspace(reviewer, noop, profile, [submittedResponse]);
+
+  expect(screen.getByRole("button", { name: /gv govern.*2 included.*1 to review/i })).toBeTruthy();
 });
 
 test("Counselor can include all outcomes in the selected Function", async () => {

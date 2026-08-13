@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
-import { FunctionSidebar } from "./FunctionSidebar";
+import { FunctionSidebar, type FunctionProgress } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
@@ -78,6 +78,25 @@ export function ProjectAssessmentWorkspace({
   const [bulkState, setBulkState] = useState<"idle" | "saving" | "error">("idle");
   const [bulkError, setBulkError] = useState("");
   const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
+  const responseBySubcategoryID = useMemo(
+    () => new Map(responses.map((response) => [response.subcategoryID, response] as const)),
+    [responses],
+  );
+  const functionProgress = useMemo<Record<string, FunctionProgress>>(
+    () => Object.fromEntries(functions.map((fn) => {
+      const includedRows = profile.filter((row) => row.functionCode === fn.code && row.included);
+      const attention = includedRows.filter((row) => {
+        const response = responseBySubcategoryID.get(row.subcategoryID);
+        if (isCounselor) return row.assignedUserID === null;
+        if (user.role === "reviewer") return response?.status === "submitted";
+        if (user.role === "viewer") return false;
+        return !response || response.status === "draft" || response.status === "needs_more_info";
+      }).length;
+      const attentionLabel = isCounselor ? "unassigned" : user.role === "reviewer" ? "to review" : user.role === "viewer" ? undefined : "open";
+      return [fn.code, { value: includedRows.length, label: "included", attention, attentionLabel }];
+    })),
+    [functions, isCounselor, profile, responseBySubcategoryID, user.role],
+  );
   const allIncluded = functionRows.length > 0 && functionRows.every((row) => row.included);
   const assignmentProgress = useMemo(() => {
     const includedRows = profile.filter((row) => row.included);
@@ -110,7 +129,7 @@ export function ProjectAssessmentWorkspace({
 
   return (
     <div className="shell">
-      <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} />
+      <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} progressByFunction={functionProgress} />
       <main className="main project-main">
         <header className="project-header">
           <button className="text-button back-button" onClick={onBack}>Back to organization</button>

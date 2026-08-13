@@ -39,7 +39,18 @@ describe("ProfileEditor", () => {
 
     expect((screen.getByRole("checkbox", { name: /include in profile/i }) as HTMLInputElement).disabled).toBe(false);
     expect((screen.getByLabelText(/responsible stakeholder/i) as HTMLSelectElement).disabled).toBe(false);
-    expect((screen.getByLabelText(/current priority/i).closest("fieldset") as HTMLFieldSetElement).disabled).toBe(true);
+    expect(screen.queryByLabelText(/current priority/i)).toBeNull();
+    expect(screen.getByRole("region", { name: /profile reference/i })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /stakeholder response/i })).toBeNull();
+  });
+
+  test("Stakeholder sees profile input without counselor scope controls", () => {
+    render(<ProfileEditor rows={[assignedRow]} onSave={vi.fn()} role="assessor" canEditScope={false} canEditProfile assigneeOptions={[]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+    expect(screen.getByLabelText(/current priority/i)).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /include in profile/i })).toBeNull();
   });
 
   test("assigned Assessor edits Current and Target without sending scope fields", async () => {
@@ -63,7 +74,8 @@ describe("ProfileEditor", () => {
     expect(summary.getAttribute("aria-controls")).toBe("assessment-body-profile-1");
     fireEvent.click(summary);
 
-    expect((screen.getByRole("checkbox", { name: /include in profile/i }).closest("fieldset") as HTMLFieldSetElement).disabled).toBe(true);
+    expect(screen.getByRole("region", { name: /profile reference/i })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /include in profile/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
   });
 

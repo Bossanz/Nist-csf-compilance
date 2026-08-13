@@ -14,3 +14,16 @@ test("labels the function navigation landmark", () => {
   expect(screen.getByRole("navigation", { name: /csf functions/i })).toBeTruthy();
   expect(screen.getByRole("button", { name: /gv govern/i }).getAttribute("aria-current")).toBe("page");
 });
+
+test("shows role-relevant progress beside each Function", () => {
+  render(
+    <FunctionSidebar
+      functions={[{ id: "fn-1", code: "GV", name: "Govern", description: "", categories: [] }]}
+      selectedCode="GV"
+      onSelect={() => undefined}
+      progressByFunction={{ GV: { value: 2, label: "submitted" } }}
+    />,
+  );
+
+  expect(screen.getByRole("button", { name: /gv govern.*2 submitted/i })).toBeTruthy();
+});
