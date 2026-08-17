@@ -109,3 +109,29 @@ test("makes Current and Target coverage plus evidence count scannable in the col
   expect(screen.getByText("1 evidence file")).toBeTruthy();
   expect(summary.getAttribute("aria-expanded")).toBe("false");
 });
+test("Counselor can read an empty stakeholder response without seeing stakeholder controls", () => {
+  render(
+    <AssessmentCard
+      row={row}
+      onSave={vi.fn()}
+      canEditScope
+      canEditProfile={false}
+      assigneeOptions={[]}
+      role="counselor"
+      response={{ ...submittedResponse, id: "", responseText: "", status: "draft", submittedAt: null, documents: [] }}
+      onSaveResponse={vi.fn().mockResolvedValue(undefined)}
+      onSubmitResponse={vi.fn().mockResolvedValue(undefined)}
+      onReviewResponse={vi.fn().mockResolvedValue(undefined)}
+      onUploadEvidence={vi.fn().mockResolvedValue(undefined)}
+      onDeleteEvidence={vi.fn().mockResolvedValue(undefined)}
+      onDownloadEvidence={vi.fn().mockResolvedValue(undefined)}
+    />
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  expect(screen.getByRole("heading", { name: /stakeholder response/i })).toBeTruthy();
+  expect(screen.getAllByText("Read only").length).toBeGreaterThan(0);
+  expect(screen.queryByRole("textbox", { name: /client response/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /save response/i })).toBeNull();
+  expect(screen.queryByLabelText(/upload evidence/i)).toBeNull();
+});

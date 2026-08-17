@@ -164,7 +164,8 @@ export function AssessmentCard({
       ? "Assigned to " + row.assignedUserName
       : "Assigned stakeholder"
     : "Unassigned";
-  const showResponsePanel = Boolean(response && (canEditProfile || responseSummary.hasActivity));
+  const isReadOnlyWorkspaceRole = role === "counselor" || role === "counselor_admin" || role === "reviewer" || role === "viewer";
+  const showResponsePanel = Boolean(response && (canEditProfile || isReadOnlyWorkspaceRole || responseSummary.hasActivity));
   const currentCoverageLabel = coverageLabel(draft.currentCoverageLevel);
   const targetCoverageLabel = coverageLabel(draft.targetCoverageLevel);
   const evidenceCount = response?.documents.length ?? 0;
