@@ -4,7 +4,7 @@ import { ProjectAssessmentWorkspace } from "./ProjectAssessmentWorkspace";
 import type { FunctionNode, Organization, ProfileRow, Project, StakeholderResponse, Summary, User } from "../lib/types";
 
 const organization: Organization = { id: "org-1", name: "Acme", slug: "acme", type: "client" };
-const project: Project = { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness", slug: "readiness", status: "setup", createdAt: "2026-08-10T00:00:00Z" };
+const project: Project = { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness", slug: "readiness", status: "in_progress", createdAt: "2026-08-10T00:00:00Z", objective: "Prepare the organization for registration.", assessmentPeriod: "Q3 2026", targetCompletionDate: "2026-09-30", scopeBoundary: "Thailand operations", complianceDriver: "Customer assurance" };
 const functions: FunctionNode[] = [{ id: "function-1", code: "GV", name: "Govern", description: "Governance", categories: [] }];
 const summary: Summary = { coveragePct: 0, includedCount: 2, pendingCount: 2, rejectedCount: 0, functions: [] };
 const assessor: User = { id: "assessor-1", organizationID: "org-1", name: "Assigned Assessor", email: "assessor@example.com", userType: "stakeholder", role: "assessor", status: "active" };
@@ -62,12 +62,12 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = []) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
       organization={organization}
-      project={project}
+      project={projectOverride}
       functions={functions}
       organizationUsers={[assessor, otherAssessor]}
       profile={profileRows}
@@ -96,7 +96,7 @@ function visibleOutcomeCount() {
 test("Counselor sees every outcome for scope configuration", () => {
   renderWorkspace(counselor);
   expect(visibleOutcomeCount()).toBe("3");
-  expect(screen.getByText("Scope & Assignment")).toBeTruthy();
+  expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("Scope & Assignment");
   expect(screen.getAllByText("Included in profile").length).toBe(2);
   expect(screen.getByText("Out of scope")).toBeTruthy();
   expect(screen.getByRole("button", { name: /gv govern.*1 unassigned/i })).toBeTruthy();
@@ -105,7 +105,7 @@ test("Counselor sees every outcome for scope configuration", () => {
 test("assigned Assessor sees only assigned included outcomes", () => {
   renderWorkspace(assessor);
   expect(visibleOutcomeCount()).toBe("1");
-  expect(screen.getByText("My Work")).toBeTruthy();
+  expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("My Work");
   expect(screen.getByRole("button", { name: /gv govern.*1 open/i })).toBeTruthy();
   expect(screen.getByRole("button", { name: /GV\.OC-01/i })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /GV\.OC-02/i })).toBeNull();
@@ -117,10 +117,38 @@ test("explains the assigned Assessor next step and selected Function", () => {
   expect(screen.getByText("Function: GV — Govern")).toBeTruthy();
 });
 
+test("shows the shared project context and active Function progress", () => {
+  renderWorkspace(assessor);
+
+  const context = screen.getByRole("region", { name: "Project context" });
+  expect(context.textContent).toContain("Prepare the organization for registration.");
+  expect(context.textContent).toContain("Q3 2026");
+  expect(context.textContent).toContain("2026");
+  expect(context.textContent).toContain("Thailand operations");
+  expect(context.textContent).toContain("Customer assurance");
+  expect(context.textContent).toContain("in progress");
+  expect(context.textContent).toContain("Overall coverage");
+  expect(context.textContent).toContain("0%");
+  expect(context.textContent).toContain("GV — Govern");
+  expect(context.textContent).toContain("1 included outcome");
+});
+
+test("does not render empty optional project metadata", () => {
+  const projectWithoutMetadata: Project = { ...project, objective: undefined, assessmentPeriod: undefined, targetCompletionDate: undefined, scopeBoundary: undefined, complianceDriver: undefined };
+  renderWorkspace(assessor, noop, profile, [], projectWithoutMetadata);
+
+  const context = screen.getByRole("region", { name: "Project context" });
+  expect(context.textContent).not.toContain("Objective");
+  expect(context.textContent).not.toContain("Assessment period");
+  expect(context.textContent).not.toContain("Target completion");
+  expect(context.textContent).not.toContain("Scope boundary");
+  expect(context.textContent).not.toContain("Compliance driver");
+});
+
 test("Reviewer sees every included outcome", () => {
   renderWorkspace(reviewer);
   expect(visibleOutcomeCount()).toBe("2");
-  expect(screen.getByText("Review Queue")).toBeTruthy();
+  expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("Review Queue");
 });
 
 test("shows submitted work in the selected Function navigation", () => {

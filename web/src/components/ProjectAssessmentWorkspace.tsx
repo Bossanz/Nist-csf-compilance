@@ -36,6 +36,13 @@ type Props = {
   onSetFunctionIncluded?: (functionCode: string, included: boolean) => Promise<void>;
 };
 
+function formatProjectDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
 export function ProjectAssessmentWorkspace({
   user,
   organization,
@@ -120,6 +127,16 @@ export function ProjectAssessmentWorkspace({
     }),
     [canEditProfile, isCounselor, profile, selectedCode, user.id, user.role],
   );
+  const activeFunctionIncludedCount = isCounselor ? functionRows.filter((row) => row.included).length : visibleProfile.filter((row) => row.included).length;
+  const activeFunctionLabel = selectedFunction ? `${selectedCode} — ${selectedFunction.name}` : selectedCode;
+  const projectMetadata = [
+    { label: "Objective", value: project.objective },
+    { label: "Assessment period", value: project.assessmentPeriod },
+    { label: "Target completion", value: project.targetCompletionDate ? formatProjectDate(project.targetCompletionDate) : undefined },
+    { label: "Scope boundary", value: project.scopeBoundary },
+    { label: "Compliance driver", value: project.complianceDriver },
+  ].filter((item): item is { label: string; value: string } => Boolean(item.value?.trim()));
+  const includedOutcomeLabel = `${activeFunctionIncludedCount} included ${activeFunctionIncludedCount === 1 ? "outcome" : "outcomes"}`;
   const emptyQueueMessage = visibleProfile.length > 0
     ? ""
     : isCounselor
@@ -148,6 +165,40 @@ export function ProjectAssessmentWorkspace({
   return (
     <div className="shell">
       <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} progressByFunction={functionProgress} mode={workspaceMode} />
+          <section className="project-context-panel" aria-label="Project context">
+            <div className="project-context-overview">
+              <div>
+                <span className="context-label">Project status</span>
+                <strong>{project.status.replaceAll("_", " ")}</strong>
+              </div>
+              <div>
+                <span className="context-label">Workspace mode</span>
+                <strong>{workspaceMode}</strong>
+              </div>
+              <div>
+                <span className="context-label">Active Function</span>
+                <strong>{activeFunctionLabel}</strong>
+              </div>
+              <div>
+                <span className="context-label">Included outcomes</span>
+                <strong>{includedOutcomeLabel}</strong>
+              </div>
+            </div>
+            {projectMetadata.length > 0 && (
+              <dl className="project-metadata">
+                {projectMetadata.map((item) => (
+                  <div key={item.label}>
+                    <dt>{item.label}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <div className="project-progress">
+              <span className="context-label">Overall coverage</span>
+              <strong>{summary.coveragePct}%</strong>
+            </div>
+          </section>
       <main className="main project-main">
         <header className="project-header">
           <button className="text-button back-button" onClick={onBack}>Back to organization</button>
