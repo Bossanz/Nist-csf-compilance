@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { AssessmentCard } from "./AssessmentCard";
-import type { ProfileRow, StakeholderResponse } from "../lib/types";
+import type { ProfileRow, ResponseDocument, StakeholderResponse } from "../lib/types";
 
 const row: ProfileRow = {
   id: "profile-1",
@@ -43,6 +43,15 @@ const submittedResponse: StakeholderResponse = {
   updatedAt: "2026-08-10T00:00:00Z",
   documents: [],
 };
+const evidenceDocument: ResponseDocument = {
+  id: "document-1",
+  responseID: "response-1",
+  originalName: "registration-evidence.pdf",
+  mimeType: "application/pdf",
+  sizeBytes: 2048,
+  uploadedBy: "assessor-1",
+  createdAt: "2026-08-10T00:00:00Z",
+};
 
 test("shows unsaved, saving, and saved assessment states", async () => {
   let resolveSave!: () => void;
@@ -78,4 +87,25 @@ test("shows response status and assignee in the collapsed outcome summary", () =
 
   expect(screen.getByText("Submitted")).toBeTruthy();
   expect(screen.getByText("Assigned to Ari Assessor")).toBeTruthy();
+});
+
+test("makes Current and Target coverage plus evidence count scannable in the collapsed summary", () => {
+  render(
+    <AssessmentCard
+      row={{ ...row, currentCoverageLevel: "partial", targetCoverageLevel: "substantial" }}
+      onSave={vi.fn()}
+      canEditScope={false}
+      canEditProfile={false}
+      assigneeOptions={[]}
+      response={{ ...submittedResponse, documents: [evidenceDocument] }}
+    />
+  );
+
+  const summary = screen.getByRole("button", { name: /GV\.OC-01/i });
+  expect(summary.textContent).toContain("Current");
+  expect(summary.textContent).toContain("Partial");
+  expect(summary.textContent).toContain("Target");
+  expect(summary.textContent).toContain("Substantial");
+  expect(screen.getByText("1 evidence file")).toBeTruthy();
+  expect(summary.getAttribute("aria-expanded")).toBe("false");
 });

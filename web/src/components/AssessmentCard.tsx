@@ -165,6 +165,9 @@ export function AssessmentCard({
       : "Assigned stakeholder"
     : "Unassigned";
   const showResponsePanel = Boolean(response && (canEditProfile || responseSummary.hasActivity));
+  const currentCoverageLabel = coverageLabel(draft.currentCoverageLevel);
+  const targetCoverageLabel = coverageLabel(draft.targetCoverageLevel);
+  const evidenceCount = response?.documents.length ?? 0;
 
   function update<K extends keyof Draft>(field: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -218,11 +221,22 @@ export function AssessmentCard({
             <span className="assignment-label">{assignmentLabel}</span>
           </span>
         </span>
-        <span className="coverage-route" aria-label={`Coverage ${draft.currentCoverageLevel} to ${draft.targetCoverageLevel}`}>
-          <span>{draft.currentCoverageLevel}</span>
+        <span className="coverage-route" aria-label={`Current coverage: ${currentCoverageLabel}; Target coverage: ${targetCoverageLabel}`}>
+          <span className="coverage-value current-coverage">
+            <small>Current</small>
+            <strong>{currentCoverageLabel}</strong>
+          </span>
           <svg className="coverage-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" /></svg>
-          <span>{draft.targetCoverageLevel}</span>
+          <span className="coverage-value target-coverage">
+            <small>Target</small>
+            <strong>{targetCoverageLabel}</strong>
+          </span>
         </span>
+        {response && (
+          <span className="evidence-count">
+            {evidenceCount} evidence {evidenceCount === 1 ? "file" : "files"}
+          </span>
+        )}
         <span className="expand-mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path d={expanded ? "M4 8h8" : "M8 4v8M4 8h8"} /></svg></span>
       </button>
 
