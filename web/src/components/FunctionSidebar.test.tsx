@@ -27,3 +27,16 @@ test("shows role-relevant progress beside each Function", () => {
 
   expect(screen.getByRole("button", { name: /gv govern.*2 submitted/i })).toBeTruthy();
 });
+
+test("exposes the active role mode alongside the Function index", () => {
+  render(
+    <FunctionSidebar
+      functions={[{ id: "fn-1", code: "GV", name: "Govern", description: "", categories: [] }]}
+      selectedCode="GV"
+      onSelect={() => undefined}
+      mode="Scope & Assignment"
+    />,
+  );
+
+  expect(screen.getByText("Scope & Assignment")).toBeTruthy();
+});

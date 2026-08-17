@@ -7,17 +7,21 @@ export type FunctionProgress = {
   attentionLabel?: string;
 };
 
+export type WorkspaceMode = "Scope & Assignment" | "My Work" | "Review Queue" | "Read-only";
+
 type Props = {
   functions: FunctionNode[];
   selectedCode: string;
   onSelect: (code: string) => void;
   progressByFunction?: Record<string, FunctionProgress>;
+  mode?: WorkspaceMode;
 };
 
-export function FunctionSidebar({ functions, selectedCode, onSelect, progressByFunction }: Props) {
+export function FunctionSidebar({ functions, selectedCode, onSelect, progressByFunction, mode }: Props) {
   return (
     <nav className="sidebar" aria-label="CSF functions">
       <div className="brand">CSF / Workspace</div>
+      {mode && <p className="workspace-mode" aria-label="Active role mode">{mode}</p>}
       <div>
         {functions.map((fn) => (
           <button className={"nav-item " + (selectedCode === fn.code ? "active" : "")} type="button" aria-current={selectedCode === fn.code ? "page" : undefined} key={fn.code} onClick={() => onSelect(fn.code)}>

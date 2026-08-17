@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
-import { FunctionSidebar, type FunctionProgress } from "./FunctionSidebar";
+import { FunctionSidebar, type FunctionProgress, type WorkspaceMode } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
@@ -67,6 +67,13 @@ export function ProjectAssessmentWorkspace({
   const isCounselor = user.userType === "counselor";
   const canEditScope = isCounselor;
   const canEditProfile = user.role === "org_admin" || user.role === "assessor";
+  const workspaceMode: WorkspaceMode = isCounselor
+    ? "Scope & Assignment"
+    : user.role === "reviewer"
+      ? "Review Queue"
+      : user.role === "viewer"
+        ? "Read-only"
+        : "My Work";
   const selectedFunction = functions.find((fn) => fn.code === selectedCode);
   const taskHint = isCounselor
     ? "Set project scope and read stakeholder progress."
@@ -90,7 +97,7 @@ export function ProjectAssessmentWorkspace({
         if (isCounselor) return row.assignedUserID === null;
         if (user.role === "reviewer") return response?.status === "submitted";
         if (user.role === "viewer") return false;
-        return !response || response.status === "draft" || response.status === "needs_more_info";
+        return row.assignedUserID === user.id && (!response || response.status === "draft" || response.status === "needs_more_info");
       }).length;
       const attentionLabel = isCounselor ? "unassigned" : user.role === "reviewer" ? "to review" : user.role === "viewer" ? undefined : "open";
       return [fn.code, { value: includedRows.length, label: "included", attention, attentionLabel }];
@@ -113,6 +120,17 @@ export function ProjectAssessmentWorkspace({
     }),
     [canEditProfile, isCounselor, profile, selectedCode, user.id, user.role],
   );
+  const emptyQueueMessage = visibleProfile.length > 0
+    ? ""
+    : isCounselor
+      ? "No outcomes found in this Function."
+      : user.role === "reviewer"
+        ? functionRows.some((row) => row.included)
+          ? "No submitted review work is available in this Function."
+          : "No included outcomes are available in this Function."
+        : user.role === "viewer"
+          ? "No included outcomes are available in this Function."
+          : "No included outcomes are assigned to you in this Function.";
 
   async function setFunctionIncluded(included: boolean) {
     if (!onSetFunctionIncluded) return;
@@ -129,7 +147,7 @@ export function ProjectAssessmentWorkspace({
 
   return (
     <div className="shell">
-      <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} progressByFunction={functionProgress} />
+      <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} progressByFunction={functionProgress} mode={workspaceMode} />
       <main className="main project-main">
         <header className="project-header">
           <button className="text-button back-button" onClick={onBack}>Back to organization</button>
@@ -163,27 +181,31 @@ export function ProjectAssessmentWorkspace({
                   {bulkError && <span className="error bulk-scope-error" role="alert">{bulkError}</span>}
                 </div>
               </div>
-              <ProfileEditor
-                rows={visibleProfile}
-                onSave={onSaveProfile}
-                canEditScope={canEditScope}
-                canEditProfile={canEditProfile}
-                assigneeOptions={organizationUsers}
-                role={user.role}
-                responses={responses}
-                onSaveResponse={onSaveResponse}
-                onSubmitResponse={onSubmitResponse}
-                onReviewResponse={onReviewResponse}
-                onUploadEvidence={onUploadEvidence}
-                onDeleteEvidence={onDeleteEvidence}
-                onDownloadEvidence={onDownloadEvidence}
-                onPreviewEvidence={onPreviewEvidence}
-                evidencePreview={evidencePreview}
-                previewTargetSubcategoryID={previewTargetSubcategoryID}
-                previewLoading={previewLoading}
-                previewError={previewError}
-                onCloseEvidencePreview={onCloseEvidencePreview}
-              />
+              {emptyQueueMessage ? (
+                <div className="empty-state" role="status">{emptyQueueMessage}</div>
+              ) : (
+                <ProfileEditor
+                  rows={visibleProfile}
+                  onSave={onSaveProfile}
+                  canEditScope={canEditScope}
+                  canEditProfile={canEditProfile}
+                  assigneeOptions={organizationUsers}
+                  role={user.role}
+                  responses={responses}
+                  onSaveResponse={onSaveResponse}
+                  onSubmitResponse={onSubmitResponse}
+                  onReviewResponse={onReviewResponse}
+                  onUploadEvidence={onUploadEvidence}
+                  onDeleteEvidence={onDeleteEvidence}
+                  onDownloadEvidence={onDownloadEvidence}
+                  onPreviewEvidence={onPreviewEvidence}
+                  evidencePreview={evidencePreview}
+                  previewTargetSubcategoryID={previewTargetSubcategoryID}
+                  previewLoading={previewLoading}
+                  previewError={previewError}
+                  onCloseEvidencePreview={onCloseEvidencePreview}
+                />
+              )}
             </section>
           </div>
         </div>

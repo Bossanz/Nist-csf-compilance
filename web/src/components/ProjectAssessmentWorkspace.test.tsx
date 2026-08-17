@@ -11,6 +11,7 @@ const assessor: User = { id: "assessor-1", organizationID: "org-1", name: "Assig
 const otherAssessor: User = { ...assessor, id: "assessor-2", name: "Other Assessor" };
 const counselor: User = { id: "counselor-1", organizationID: null, name: "Counselor", email: "counselor@example.com", userType: "counselor", role: "counselor", status: "active" };
 const reviewer: User = { ...assessor, id: "reviewer-1", name: "Reviewer", role: "reviewer" };
+const viewer: User = { ...assessor, id: "viewer-1", name: "Viewer", role: "viewer" };
 const submittedResponse: StakeholderResponse = {
   id: "response-1",
   projectID: "project-1",
@@ -56,7 +57,7 @@ function row(id: string, included: boolean, assignedUserID: string | null): Prof
 
 const profile: ProfileRow[] = [
   row("GV.OC-01", true, assessor.id),
-  row("GV.OC-02", true, otherAssessor.id),
+  row("GV.OC-02", true, null),
   row("GV.OC-03", false, null),
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
@@ -95,11 +96,19 @@ function visibleOutcomeCount() {
 test("Counselor sees every outcome for scope configuration", () => {
   renderWorkspace(counselor);
   expect(visibleOutcomeCount()).toBe("3");
+  expect(screen.getByText("Scope & Assignment")).toBeTruthy();
+  expect(screen.getAllByText("Included in profile").length).toBe(2);
+  expect(screen.getByText("Out of scope")).toBeTruthy();
+  expect(screen.getByRole("button", { name: /gv govern.*1 unassigned/i })).toBeTruthy();
 });
 
 test("assigned Assessor sees only assigned included outcomes", () => {
   renderWorkspace(assessor);
   expect(visibleOutcomeCount()).toBe("1");
+  expect(screen.getByText("My Work")).toBeTruthy();
+  expect(screen.getByRole("button", { name: /gv govern.*1 open/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /GV\.OC-01/i })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /GV\.OC-02/i })).toBeNull();
 });
 
 test("explains the assigned Assessor next step and selected Function", () => {
@@ -111,12 +120,33 @@ test("explains the assigned Assessor next step and selected Function", () => {
 test("Reviewer sees every included outcome", () => {
   renderWorkspace(reviewer);
   expect(visibleOutcomeCount()).toBe("2");
+  expect(screen.getByText("Review Queue")).toBeTruthy();
 });
 
 test("shows submitted work in the selected Function navigation", () => {
   renderWorkspace(reviewer, noop, profile, [submittedResponse]);
 
   expect(screen.getByRole("button", { name: /gv govern.*2 included.*1 to review/i })).toBeTruthy();
+});
+
+test("Viewer sees included outcomes without an action count or mutation affordance", () => {
+  renderWorkspace(viewer, noop, profile, [submittedResponse]);
+
+  expect(visibleOutcomeCount()).toBe("2");
+  expect(document.querySelector(".nav-meta em")).toBeNull();
+  expect(screen.queryByText("to review")).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  expect(screen.getAllByText("Read only").length).toBeGreaterThan(0);
+  expect(screen.queryByText("Include in profile")).toBeNull();
+  expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+});
+
+test("explains when a stakeholder has no assigned queue", () => {
+  renderWorkspace(assessor, noop, profile.map((item) => ({ ...item, assignedUserID: otherAssessor.id })));
+
+  expect(screen.getByRole("status").textContent).toContain("No included outcomes are assigned to you in this Function.");
 });
 
 test("Counselor can include all outcomes in the selected Function", async () => {
