@@ -106,6 +106,7 @@ test("makes Current and Target coverage plus evidence count scannable in the col
   expect(summary.textContent).toContain("Partial");
   expect(summary.textContent).toContain("Target");
   expect(summary.textContent).toContain("Substantial");
+  expect(screen.getByRole("group", { name: /coverage: partial to substantial/i })).toBeTruthy();
   expect(screen.getByText("1 evidence file")).toBeTruthy();
   expect(summary.getAttribute("aria-expanded")).toBe("false");
 });

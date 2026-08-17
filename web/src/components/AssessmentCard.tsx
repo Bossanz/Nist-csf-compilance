@@ -222,7 +222,7 @@ export function AssessmentCard({
             <span className="assignment-label">{assignmentLabel}</span>
           </span>
         </span>
-        <span className="coverage-route" aria-label={`Current coverage: ${currentCoverageLabel}; Target coverage: ${targetCoverageLabel}`}>
+        <span className="coverage-route" role="group" aria-label={`Coverage: ${currentCoverageLabel} to ${targetCoverageLabel}`}>
           <span className="coverage-value current-coverage">
             <small>Current</small>
             <strong>{currentCoverageLabel}</strong>
