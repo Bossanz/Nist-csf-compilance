@@ -23,7 +23,7 @@ const noop = vi.fn().mockResolvedValue(undefined);
 const pdfDocument: ResponseDocument = { id: "doc-pdf", responseID: "response-1", originalName: "evidence.pdf", mimeType: "application/pdf", sizeBytes: 1024, uploadedBy: "assessor-1", createdAt: "2026-08-07T00:00:00Z" };
 const imageDocument: ResponseDocument = { id: "doc-image", responseID: "response-1", originalName: "diagram.png", mimeType: "image/png", sizeBytes: 2048, uploadedBy: "assessor-1", createdAt: "2026-08-07T00:00:00Z" };
 
-test("assessor can save, submit, and upload evidence", async () => {
+test("assessor can save, send work for review, and upload evidence", async () => {
   const onSave = vi.fn().mockResolvedValue(undefined);
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   const onUpload = vi.fn().mockResolvedValue(undefined);
@@ -32,7 +32,7 @@ test("assessor can save, submit, and upload evidence", async () => {
   fireEvent.change(screen.getByLabelText(/client response/i), { target: { value: "Updated answer" } });
   fireEvent.click(screen.getByRole("button", { name: /save response/i }));
   await waitFor(() => expect(onSave).toHaveBeenCalledWith("Updated answer"));
-  fireEvent.click(screen.getByRole("button", { name: /submit response/i }));
+  fireEvent.click(screen.getByRole("button", { name: /send to reviewer/i }));
   await waitFor(() => expect(onSubmit).toHaveBeenCalled());
 
   const file = new File(["%PDF-1.7"], "evidence.pdf", { type: "application/pdf" });
@@ -61,32 +61,42 @@ test("reviewer can mark a submitted response as needing more information", async
   const onReview = vi.fn().mockResolvedValue(undefined);
   render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={onReview} onUpload={noop} onDelete={noop} onDownload={noop} />);
 
-  fireEvent.change(screen.getByLabelText(/review status/i), { target: { value: "needs_more_info" } });
   fireEvent.change(screen.getByLabelText(/review comment/i), { target: { value: "Please add the access review record." } });
-  fireEvent.click(screen.getByRole("button", { name: /save review/i }));
+  fireEvent.click(screen.getByRole("button", { name: /send back for changes/i }));
 
   await waitFor(() => expect(onReview).toHaveBeenCalledWith("needs_more_info", "Please add the access review record."));
 });
 
-test("Reviewer final decision can complete a submitted outcome", async () => {
+test("Reviewer can approve a submitted outcome", async () => {
   const onReview = vi.fn().mockResolvedValue(undefined);
   render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={onReview} onUpload={noop} onDelete={noop} onDownload={noop} />);
 
-  expect(screen.getByRole("heading", { name: /reviewer final decision/i })).toBeTruthy();
-  fireEvent.change(screen.getByLabelText(/review status/i), { target: { value: "reviewed" } });
+  expect(screen.getByRole("heading", { name: /reviewer decision/i })).toBeTruthy();
   fireEvent.change(screen.getByLabelText(/review comment/i), { target: { value: "Evidence is sufficient." } });
-  fireEvent.click(screen.getByRole("button", { name: /save review/i }));
+  fireEvent.click(screen.getByRole("button", { name: /approve outcome/i }));
 
   await waitFor(() => expect(onReview).toHaveBeenCalledWith("reviewed", "Evidence is sufficient."));
 });
 
-test("viewer sees the response but no mutation controls", () => {
+test("viewer sees the response as readable content without a disabled form", () => {
   render(<StakeholderResponsePanel role="viewer" response={response} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
 
-  expect((screen.getByDisplayValue(response.responseText) as HTMLTextAreaElement).disabled).toBe(true);
+  expect(screen.getByText(response.responseText)).toBeTruthy();
+  expect(screen.queryByRole("textbox", { name: /client response/i })).toBeNull();
+  expect(screen.getByText("Read only")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /save response/i })).toBeNull();
-  expect(screen.queryByRole("button", { name: /submit response/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /send to reviewer/i })).toBeNull();
   expect(screen.queryByLabelText(/upload evidence/i)).toBeNull();
+});
+
+test("reviewer reads the response as content while retaining the final decision controls", () => {
+  render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
+
+  expect(screen.getByText(response.responseText)).toBeTruthy();
+  expect(screen.queryByRole("textbox", { name: /client response/i })).toBeNull();
+  expect(screen.getByRole("heading", { name: /reviewer decision/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /approve outcome/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /send back for changes/i })).toBeTruthy();
 });
 
 test("previews supported evidence without using the download action", async () => {
@@ -121,6 +131,5 @@ test("keeps unsupported evidence as download-only", () => {
 test("scopes reviewer field labels to the outcome", () => {
   render(<StakeholderResponsePanel role="reviewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
 
-  expect(screen.getByLabelText("Review status for subcategory-1")).toBeTruthy();
   expect(screen.getByLabelText("Review comment for subcategory-1")).toBeTruthy();
 });

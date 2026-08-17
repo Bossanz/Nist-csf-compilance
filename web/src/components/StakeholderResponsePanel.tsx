@@ -30,17 +30,16 @@ type Props = {
 
 export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onReview, onUpload, onDelete, onDownload, onPreview, preview, onClosePreview, previewLoading, previewError }: Props) {
   const [responseText, setResponseText] = useState(response.responseText);
-  const [reviewStatus, setReviewStatus] = useState<"reviewed" | "needs_more_info">(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
   const [reviewComment, setReviewComment] = useState(response.reviewComment);
   const [state, setState] = useState<SaveState>("saved");
   const [error, setError] = useState("");
   const canRespond = role === "org_admin" || role === "assessor";
   const canEditResponse = canRespond && (response.status === "draft" || response.status === "needs_more_info");
   const canReview = role === "reviewer" && response.status === "submitted";
+  const saveLabel = state === "saved" ? "Saved" : state === "dirty" ? "Unsaved changes" : state === "saving" ? "Saving…" : error;
 
   useEffect(() => {
     setResponseText(response.responseText);
-    setReviewStatus(response.status === "needs_more_info" ? "needs_more_info" : "reviewed");
     setReviewComment(response.reviewComment);
     setState("saved");
   }, [response.responseText, response.status, response.reviewComment]);
@@ -74,16 +73,25 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
         <span className={`response-status status-${response.status}`} role="status" aria-live="polite">{statusLabels[response.status]}</span>
       </div>
 
-      <label className="field">
-        <span>Client response</span>
-        <textarea
-          rows={4}
-          value={responseText}
-          disabled={!canEditResponse}
-          onChange={(event) => { setResponseText(event.target.value); setState("dirty"); }}
-          placeholder="Describe how this outcome is handled in your organization"
-        />
-      </label>
+      {canEditResponse ? (
+        <label className="field">
+          <span>Client response</span>
+          <textarea
+            rows={4}
+            value={responseText}
+            onChange={(event) => { setResponseText(event.target.value); setState("dirty"); }}
+            placeholder="Describe how this outcome is handled in your organization"
+          />
+        </label>
+      ) : (
+        <div className="response-readonly" aria-label="Client response">
+          <div className="response-readonly-heading">
+            <span className="field-label">Client response</span>
+            <span className="status-chip">Read only</span>
+          </div>
+          <p className={responseText.trim() ? "" : "response-empty"}>{responseText.trim() || "No response provided yet."}</p>
+        </div>
+      )}
 
       {canEditResponse && (
         <div className="response-actions">
@@ -94,28 +102,24 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
           </label>
           <div className="response-buttons">
             <button className="secondary" type="button" disabled={state === "saving"} onClick={() => void run(() => onSave(responseText))}>Save response</button>
-            <button className="primary" type="button" disabled={state === "saving" || !response.id} onClick={() => void run(onSubmit)}>Submit response</button>
+            <button className="primary" type="button" disabled={state === "saving" || !response.id} onClick={() => void run(onSubmit)}>Send to reviewer</button>
           </div>
         </div>
       )}
 
       {canReview && (
         <div className="review-panel">
-          <h4>Reviewer final decision</h4>
+          <h4>Reviewer decision</h4>
           <div className="field-grid">
-            <label className="field">
-              <span>Review status</span>
-              <select aria-label={"Review status for " + response.subcategoryID} value={reviewStatus} onChange={(event) => { setReviewStatus(event.target.value as "reviewed" | "needs_more_info"); setState("dirty"); }}>
-                <option value="reviewed">Reviewed</option>
-                <option value="needs_more_info">Needs more information</option>
-              </select>
-            </label>
             <label className="field">
               <span>Review comment</span>
               <textarea aria-label={"Review comment for " + response.subcategoryID} rows={2} value={reviewComment} onChange={(event) => { setReviewComment(event.target.value); setState("dirty"); }} placeholder="What should be accepted or clarified?" />
             </label>
           </div>
-          <button className="primary" type="button" disabled={state === "saving"} onClick={() => void run(() => onReview(reviewStatus, reviewComment))}>Save review</button>
+          <div className="response-buttons">
+            <button className="secondary" type="button" disabled={state === "saving"} onClick={() => void run(() => onReview("needs_more_info", reviewComment))}>Send back for changes</button>
+            <button className="primary" type="button" disabled={state === "saving"} onClick={() => void run(() => onReview("reviewed", reviewComment))}>Approve outcome</button>
+          </div>
         </div>
       )}
 
@@ -149,10 +153,13 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
       )}
 
       <div className="response-footer">
-        <span className={"save-state " + state} role="status">
-          {state === "saved" ? "Saved" : state === "dirty" ? "Unsaved changes" : state === "saving" ? "Saving…" : error}
-        </span>
-        {response.status === "draft" && <span className="response-note">Not submitted yet</span>}
+        {(canEditResponse || canReview) && (
+          <span className={"save-state " + state} role="status">
+            {saveLabel}
+          </span>
+        )}
+        {response.status === "draft" && <span className="response-note">Not sent to reviewer yet</span>}
+        {response.status === "submitted" && <span className="response-note">Waiting for reviewer decision</span>}
         {response.status !== "draft" && response.reviewComment && <span className="response-note">{response.reviewComment}</span>}
       </div>
     </section>
