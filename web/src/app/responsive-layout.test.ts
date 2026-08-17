@@ -23,6 +23,23 @@ test("gives mobile organization and project actions full-width touch targets", (
   expect(css).toContain(".organization-card { grid-column: 1 / -1; }");
 });
 
+test("gives the role-first project context and outcome summary readable structure", () => {
+  expect(css).toContain(".project-context-panel {");
+  expect(css).toContain(".project-context-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
+  expect(css).toContain(".project-metadata { display: grid;");
+  expect(css).toContain(".project-progress { display: flex;");
+  expect(css).toContain(".coverage-value { display: grid;");
+  expect(css).toContain(".evidence-count {");
+});
+
+test("stacks project context and evidence actions at narrow widths", () => {
+  expect(css).toContain(".project-context-overview { grid-template-columns: 1fr; gap: 12px; }");
+  expect(css).toContain(".project-metadata { grid-template-columns: 1fr; gap: 10px; }");
+  expect(css).toContain(".project-progress { align-items: flex-start; flex-direction: column; gap: 4px; }");
+  expect(css).toContain(".evidence-list li .button-link { max-width: 100%; }");
+  expect(css).toContain(".response-buttons button { flex: 1; }");
+  expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+});
 test("keeps mobile assessment content readable and stacked", () => {
   expect(css).toContain(".project-card { min-height: auto; gap: 18px; padding: 16px; }");
   expect(css).toContain(".project-card-top { align-items: flex-start; flex-direction: column; gap: 4px; }");

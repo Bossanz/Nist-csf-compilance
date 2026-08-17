@@ -165,6 +165,16 @@ export function ProjectAssessmentWorkspace({
   return (
     <div className="shell">
       <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} progressByFunction={functionProgress} mode={workspaceMode} />
+      <main className="main project-main">
+        <header className="project-header">
+          <button className="text-button back-button" onClick={onBack}>Back to organization</button>
+          <div className="project-context">
+            <span>{organization.name}</span>
+            <span aria-hidden="true">/</span>
+            <span>{project.status.replaceAll("_", " ")}</span>
+          </div>
+          <h1>{project.name}</h1>
+          <p className="project-subtitle">{taskHint}</p>
           <section className="project-context-panel" aria-label="Project context">
             <div className="project-context-overview">
               <div>
@@ -199,16 +209,6 @@ export function ProjectAssessmentWorkspace({
               <strong>{summary.coveragePct}%</strong>
             </div>
           </section>
-      <main className="main project-main">
-        <header className="project-header">
-          <button className="text-button back-button" onClick={onBack}>Back to organization</button>
-          <div className="project-context">
-            <span>{organization.name}</span>
-            <span aria-hidden="true">/</span>
-            <span>{project.status.replaceAll("_", " ")}</span>
-          </div>
-          <h1>{project.name}</h1>
-          <p className="project-subtitle">{taskHint}</p>
         </header>
         {error && <div className="error" role="alert">{error}</div>}
         <div className="project-layout">
