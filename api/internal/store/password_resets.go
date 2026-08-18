@@ -12,6 +12,10 @@ func (s *Store) FindActiveUserByEmail(ctx context.Context, email string) (User, 
 	return scanUser(s.DB.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE lower(email)=lower($1) AND status='active'`, strings.TrimSpace(email)))
 }
 
+func (s *Store) FindActiveUserByID(ctx context.Context, userID string) (User, error) {
+	return scanUser(s.DB.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id=$1 AND status='active'`, userID))
+}
+
 func (s *Store) CreatePasswordResetToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error {
 	return pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM password_reset_tokens WHERE user_id=$1 AND used_at IS NULL`, userID); err != nil {
