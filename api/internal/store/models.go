@@ -9,6 +9,7 @@ var ErrInvalidProfileAssignment = errors.New("invalid profile assignment")
 var ErrInvalidProjectTransition = errors.New("invalid project transition")
 var ErrProjectFinalized = errors.New("project is finalized")
 var ErrProjectNotReady = errors.New("project is not ready to finalize")
+var ErrInvalidPasswordResetToken = errors.New("invalid password reset token")
 
 type AuditEvent struct {
 	ActorUserID    string
