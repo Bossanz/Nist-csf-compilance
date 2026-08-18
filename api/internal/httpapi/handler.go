@@ -390,6 +390,7 @@ func (h *Handler) finalizeProject(w http.ResponseWriter, r *http.Request, projec
 		EntityID:       &project.ID,
 		Metadata:       map[string]any{"approvedCount": approvedCount, "includedCount": includedCount},
 	})
+	h.notifyProjectFinalized(r.Context(), project)
 	writeJSON(w, http.StatusOK, project)
 }
 

@@ -78,6 +78,7 @@ func (h *Handler) submitResponse(w http.ResponseWriter, r *http.Request, project
 		return
 	}
 	h.writeResponseAudit(r, projectID, subcategoryID, response.ID, "response.submitted")
+	h.notifyResponseSubmitted(r.Context(), projectID, subcategoryID)
 	writeJSON(w, http.StatusOK, response)
 }
 
@@ -108,6 +109,7 @@ func (h *Handler) reviewResponse(w http.ResponseWriter, r *http.Request, project
 		action = "response.reviewed"
 	}
 	h.writeResponseAudit(r, projectID, subcategoryID, response.ID, action)
+	h.notifyResponseReviewed(r.Context(), projectID, subcategoryID, input.Status, input.Comment)
 	writeJSON(w, http.StatusOK, response)
 }
 

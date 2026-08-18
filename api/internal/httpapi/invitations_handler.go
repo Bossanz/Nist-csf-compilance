@@ -75,6 +75,7 @@ func (h *Handler) writeInvitationResult(w http.ResponseWriter, r *http.Request, 
 	base := strings.TrimRight(h.AppOrigin, "/")
 	response := invitationResponse{Invitation: invitation, InvitationURL: base + "/invite/" + raw}
 	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: invitation.OrganizationID, Action: "user.invited", EntityType: "invitation", EntityID: &invitation.ID, Metadata: map[string]any{"email": invitation.Email, "role": invitation.Role}})
+	h.notifyInvitation(r.Context(), invitation, raw)
 	writeJSON(w, 201, response)
 }
 
