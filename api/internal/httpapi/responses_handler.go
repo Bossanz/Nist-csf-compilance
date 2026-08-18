@@ -77,6 +77,7 @@ func (h *Handler) submitResponse(w http.ResponseWriter, r *http.Request, project
 		writeResponseError(w, err, "could not submit response")
 		return
 	}
+	h.writeResponseAudit(r, projectID, subcategoryID, response.ID, "response.submitted")
 	writeJSON(w, http.StatusOK, response)
 }
 
@@ -102,7 +103,27 @@ func (h *Handler) reviewResponse(w http.ResponseWriter, r *http.Request, project
 		writeResponseError(w, err, "could not review response")
 		return
 	}
+	action := "response.needs_more_info"
+	if input.Status == string(domain.ResponseReviewed) {
+		action = "response.reviewed"
+	}
+	h.writeResponseAudit(r, projectID, subcategoryID, response.ID, action)
 	writeJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) writeResponseAudit(r *http.Request, projectID, subcategoryID, responseID, action string) {
+	project, err := h.Store.GetProject(r.Context(), projectID)
+	if err != nil {
+		return
+	}
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{
+		OrganizationID: &project.OrganizationID,
+		ProjectID:      &projectID,
+		Action:         action,
+		EntityType:     "response",
+		EntityID:       &responseID,
+		Metadata:       map[string]any{"subcategoryID": subcategoryID},
+	})
 }
 
 func writeResponseError(w http.ResponseWriter, err error, message string) {

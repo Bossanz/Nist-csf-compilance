@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIError, api } from "../../../../../lib/api";
 import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
-import { organizationPath } from "../../../../../lib/routes";
+import { organizationPath, projectPath } from "../../../../../lib/routes";
 import { ProjectAssessmentWorkspace } from "../../../../../components/ProjectAssessmentWorkspace";
 
 const emptySummary: Summary = { coveragePct: 0, includedCount: 0, pendingCount: 0, rejectedCount: 0, functions: [] };
@@ -109,6 +109,11 @@ export default function ProjectPage() {
   async function submitScope() {
     if (!project) return;
     setProject(await api.submitProjectScope(project.id));
+  }
+
+  async function finalizeProject() {
+    if (!project) return;
+    setProject(await api.finalizeProject(project.id));
   }
 
 
@@ -270,6 +275,9 @@ export default function ProjectPage() {
       previewLoading={previewLoading}
       previewError={previewError}
       onCloseEvidencePreview={closeEvidencePreview}
+      onFinalizeProject={finalizeProject}
+      onOpenFinalReport={() => router.push(`${projectPath(organization, project)}/report`)}
+      onOpenAuditPackage={() => router.push(`${projectPath(organization, project)}/audit`)}
     />
   );
 }

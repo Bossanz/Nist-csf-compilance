@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"compliance/api/internal/store"
 	"errors"
 	"io"
 	"log"
@@ -50,6 +51,16 @@ func (h *Handler) uploadResponseDocument(w http.ResponseWriter, r *http.Request,
 		writeDocumentError(w, err, "could not save document")
 		return
 	}
+	if project, projectErr := h.Store.GetProject(r.Context(), projectID); projectErr == nil {
+		h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{
+			OrganizationID: &project.OrganizationID,
+			ProjectID:      &projectID,
+			Action:         "evidence.uploaded",
+			EntityType:     "evidence",
+			EntityID:       &document.ID,
+			Metadata:       map[string]any{"subcategoryID": subcategoryID, "originalName": header.Filename, "mimeType": mimeType, "sizeBytes": size},
+		})
+	}
 	writeJSON(w, http.StatusCreated, document)
 }
 
@@ -97,6 +108,16 @@ func (h *Handler) deleteResponseDocument(w http.ResponseWriter, r *http.Request,
 	}
 	if err := h.Evidence.Remove(document.StorageKey); err != nil {
 		logStorageCleanupFailure(document.StorageKey, err)
+	}
+	if project, projectErr := h.Store.GetProject(r.Context(), projectID); projectErr == nil {
+		h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{
+			OrganizationID: &project.OrganizationID,
+			ProjectID:      &projectID,
+			Action:         "evidence.deleted",
+			EntityType:     "evidence",
+			EntityID:       &document.ID,
+			Metadata:       map[string]any{"subcategoryID": subcategoryID, "originalName": document.OriginalName},
+		})
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

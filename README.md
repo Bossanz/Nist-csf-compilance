@@ -2,7 +2,7 @@
 
 A lean NIST CSF 2.0 assessment workspace for Counselors and customer Stakeholders. The application is built with Next.js, Go, and PostgreSQL and is designed to keep the assessment workflow short and easy to follow.
 
-Current status: Version 3 local-development workflow slice. The core flow covers Counselor scope setup, Stakeholder assessment, Reviewer approval, evidence preview, and light/dark themes.
+Current status: Version 3 local-development workflow slice. The core flow covers Counselor scope setup, Stakeholder assessment, Reviewer approval, evidence preview, project finalization, and audit handoff.
 
 ## Stack
 
@@ -126,7 +126,9 @@ Reviewer
   -> Mark Approved or Needs more information
 
 Counselor
-  -> Read progress, reviewer decisions, and final assessment results
+  -> Read progress and reviewer decisions
+  -> Finalize the Project after every included outcome is Approved
+  -> Open the Final Report and Audit Package
 ```
 
 Project setup starts in `setup`. The Project moves to `in_review` only after the Counselor submits a valid scope. Every included outcome must have one active Stakeholder assessor before submission. An included but unassigned outcome remains hidden from Stakeholder users.
@@ -139,6 +141,51 @@ Response status is stored with internal values but shown in reader-friendly UI l
 | `submitted` | Reviewing | Assessor sent the response to the Reviewer |
 | `reviewed` | Approved | Reviewer accepted the response |
 | `needs_more_info` | Needs more information | Reviewer returned it for clarification |
+
+### Project finalization
+
+Finalization is a server-enforced final gate. A Counselor or Counselor Admin can finalize a Project only when:
+
+- At least one outcome is included.
+- Every included outcome has a Stakeholder response.
+- Every included response has been Approved by the Reviewer.
+
+Finalization changes the stored project status from `in_review` to `closed`, shown in the UI as **Finalized**. The API records `finalized_at` and `finalized_by`, writes a `project.finalized` audit event, and makes scope, profile, response, review, upload, and evidence-delete mutations read-only. Authorized readers can still view reports and preview/download evidence.
+
+The traceability chain is:
+
+```text
+Scope decision + rationale
+  -> Stakeholder assignment
+  -> Current / Target profile and response
+  -> Evidence metadata
+  -> Reviewer decision and comment
+  -> Project finalization
+```
+
+### Final Report and Audit Package
+
+The Final Report is the human-readable, print-friendly result for a finalized assessment. It contains project context, finalization metadata, overall and per-Function coverage, every included outcome, Current/Target profiles, stakeholder responses, reviewer decisions, and evidence metadata. Use the browser's **Print / Save as PDF** action to produce a PDF without adding a server-side PDF service.
+
+The Audit Package is the auditor-facing traceability view. It contains:
+
+- Scope register with inclusion, rationale, and assignment.
+- Included outcome register with response, review, and evidence metadata.
+- Reviewer history and chronological audit trail.
+- A CSV evidence register containing stable outcome fields, response/review status, evidence names, and MIME types.
+
+The package deliberately excludes private evidence storage keys. Binary evidence remains accessible through the existing authorized preview/download endpoints.
+
+The corresponding project API endpoints are:
+
+```text
+POST /api/projects/{project-id}/finalize
+GET  /api/projects/{project-id}/final-report
+GET  /api/projects/{project-id}/audit-package
+GET  /api/projects/{project-id}/audit-package.csv
+```
+
+The JSON report endpoints use the same project-level authorization as the workspace. The CSV endpoint is intended for an evidence register and does not embed uploaded files.
 
 ## Roles and permissions
 
@@ -218,6 +265,11 @@ The workspace shows the overall percentage in the assessment summary and a separ
 - Reviewer decisions:
   - Approved
   - Needs more information
+- Project finalization gate after all included outcomes are Approved
+- Read-only lock after finalization
+- Print-friendly Final Report with browser PDF export
+- Auditor-ready Audit Package with scope, assignment, response, evidence, review, and audit trail
+- CSV evidence register export without private storage keys
 - Coverage summary
 - Audit log
 - Invitation-based account activation
@@ -232,6 +284,8 @@ The API uses UUIDs internally. Browser URLs use readable slugs:
 /organizations
 /organizations/{organization-slug}
 /organizations/{organization-slug}/projects/{project-slug}
+/organizations/{organization-slug}/projects/{project-slug}/report
+/organizations/{organization-slug}/projects/{project-slug}/audit
 /invite/{token}
 ```
 
@@ -292,6 +346,7 @@ Fresh databases run the files in `db/init` in filename order:
 005_slug_routing.sql
 006_outcome_assignments.sql
 007_project_metadata.sql
+008_project_finalization.sql
 ```
 
 Docker volumes:
@@ -304,6 +359,7 @@ For an existing database volume, apply any migration that was added after the vo
 ```powershell
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/006_outcome_assignments.sql
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/007_project_metadata.sql
+docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/008_project_finalization.sql
 docker compose restart api
 ```
 

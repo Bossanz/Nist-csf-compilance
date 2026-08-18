@@ -40,6 +40,15 @@ type fakeStore struct {
 	submittedScopeProjectID      *string
 	submitScopeResult            store.Project
 	submitScopeErr               error
+	finalizedProject             store.Project
+	finalizeApproved             int
+	finalizeIncluded             int
+	finalizeErr                  error
+	finalizedProjectID           *string
+	finalizedActorID             *string
+	finalReport                  store.FinalReport
+	auditPackage                 store.AuditPackage
+	reportingErr                 error
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -81,6 +90,21 @@ func (f fakeStore) SubmitProjectScope(_ context.Context, id string) (store.Proje
 		*f.submittedScopeProjectID = id
 	}
 	return f.submitScopeResult, f.submitScopeErr
+}
+func (f fakeStore) FinalizeProject(_ context.Context, projectID, actorID string) (store.Project, int, int, error) {
+	if f.finalizedProjectID != nil {
+		*f.finalizedProjectID = projectID
+	}
+	if f.finalizedActorID != nil {
+		*f.finalizedActorID = actorID
+	}
+	return f.finalizedProject, f.finalizeApproved, f.finalizeIncluded, f.finalizeErr
+}
+func (f fakeStore) GetFinalReport(context.Context, string) (store.FinalReport, error) {
+	return f.finalReport, f.reportingErr
+}
+func (f fakeStore) GetAuditPackage(context.Context, string) (store.AuditPackage, error) {
+	return f.auditPackage, f.reportingErr
 }
 func (f fakeStore) DeleteProject(_ context.Context, id string) error {
 	if f.deletedID != nil {
@@ -227,6 +251,68 @@ func TestDeleteProjectHandlesStoreFailure(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError || !strings.Contains(w.Body.String(), `"code":"internal_error"`) {
 		t.Fatalf("unexpected response: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCounselorFinalizesProject(t *testing.T) {
+	var projectID, actorID string
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{ID: "counselor-1", UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{
+		finalizedProject:   store.Project{ID: "project-1", OrganizationID: organizationID, Status: "closed"},
+		finalizeApproved:   1,
+		finalizeIncluded:   1,
+		finalizedProjectID: &projectID,
+		finalizedActorID:   &actorID,
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/projects/project-1/finalize", ""))
+
+	if response.Code != http.StatusOK || projectID != "project-1" || actorID != "counselor-1" || !strings.Contains(response.Body.String(), `"status":"closed"`) {
+		t.Fatalf("unexpected response: %d %s project=%s actor=%s", response.Code, response.Body.String(), projectID, actorID)
+	}
+}
+
+func TestAssessorCannotFinalizeProject(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{ID: "assessor-1", OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{project: store.Project{ID: "project-1", OrganizationID: organizationID, Status: "in_review"}})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/projects/project-1/finalize", ""))
+
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestFinalizationReportsProjectNotReady(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{ID: "counselor-1", UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{
+		project:          store.Project{ID: "project-1", OrganizationID: organizationID, Status: "in_review"},
+		finalizeErr:      store.ErrProjectNotReady,
+		finalizeApproved: 0,
+		finalizeIncluded: 1,
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/projects/project-1/finalize", ""))
+
+	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), `"code":"project_not_ready"`) {
+		t.Fatalf("expected project_not_ready conflict, got %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestFinalizedProjectRejectsProfileMutation(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{ID: "assessor-1", OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project: store.Project{ID: "project-1", OrganizationID: organizationID, Status: "closed"},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPut, "/api/projects/project-1/profile/subcategory-1", `{"currentPriority":"High"}`))
+
+	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), `"code":"project_finalized"`) {
+		t.Fatalf("expected project_finalized conflict, got %d: %s", response.Code, response.Body.String())
 	}
 }
 

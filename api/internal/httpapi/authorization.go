@@ -28,6 +28,7 @@ const (
 	actionCreateProject      action = "create_project"
 	actionDeleteProject      action = "delete_project"
 	actionSubmitScope        action = "submit_scope"
+	actionFinalizeProject    action = "finalize_project"
 	actionUpdateProfile      action = "update_profile"
 	actionSaveResponse       action = "save_response"
 	actionSubmitResponse     action = "submit_response"
@@ -40,7 +41,7 @@ func can(user store.User, requested action) bool {
 	switch requested {
 	case actionCreateOrganization, actionDeleteOrganization, actionManageCounselor:
 		return user.Role == "counselor_admin"
-	case actionCreateProject, actionDeleteProject, actionSubmitScope:
+	case actionCreateProject, actionDeleteProject, actionSubmitScope, actionFinalizeProject:
 		return user.Role == "counselor_admin" || user.Role == "counselor"
 	case actionUpdateProfile:
 		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "org_admin" || user.Role == "assessor"
@@ -144,6 +145,10 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 	}
 	if requested != nil && !can(currentUser(r), *requested) {
 		writeError(w, http.StatusForbidden, "forbidden", "Permission denied")
+		return false
+	}
+	if requested != nil && project.Status == "closed" && *requested != actionDeleteProject && *requested != actionFinalizeProject {
+		writeError(w, http.StatusConflict, "project_finalized", "Project is finalized and read-only")
 		return false
 	}
 	return true

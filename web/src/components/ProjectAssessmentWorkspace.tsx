@@ -6,6 +6,7 @@ import { FunctionSidebar, type FunctionProgress, type WorkspaceMode } from "./Fu
 import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
+import { ProjectFinalizationPanel } from "./ProjectFinalizationPanel";
 
 type Props = {
   user: User;
@@ -35,6 +36,9 @@ type Props = {
   onCloseEvidencePreview?: () => void;
   onSetFunctionIncluded?: (functionCode: string, included: boolean) => Promise<void>;
   onSubmitScope: () => Promise<void>;
+  onFinalizeProject?: () => Promise<void>;
+  onOpenFinalReport?: () => void;
+  onOpenAuditPackage?: () => void;
 };
 
 function formatProjectDate(value: string) {
@@ -72,12 +76,18 @@ export function ProjectAssessmentWorkspace({
   onCloseEvidencePreview,
   onSetFunctionIncluded,
   onSubmitScope,
+  onFinalizeProject,
+  onOpenFinalReport,
+  onOpenAuditPackage,
 }: Props) {
   const isCounselor = user.userType === "counselor";
+  const isFinalized = project.status === "closed";
   const scopeSubmitted = project.status !== "setup";
-  const canEditScope = isCounselor;
-  const canEditProfile = user.role === "org_admin" || user.role === "assessor";
-  const workspaceMode: WorkspaceMode = isCounselor
+  const canEditScope = isCounselor && !isFinalized;
+  const canEditProfile = !isFinalized && (user.role === "org_admin" || user.role === "assessor");
+  const workspaceMode: WorkspaceMode = isFinalized
+    ? "Read-only"
+    : isCounselor
     ? "Scope & Assignment"
     : user.role === "reviewer"
       ? "Review Queue"
@@ -85,7 +95,9 @@ export function ProjectAssessmentWorkspace({
         ? "Read-only"
         : "My Work";
   const selectedFunction = functions.find((fn) => fn.code === selectedCode);
-  const taskHint = isCounselor
+  const taskHint = isFinalized
+    ? "Project finalized. Read the final report and audit package."
+    : isCounselor
     ? scopeSubmitted
       ? "Read stakeholder progress and final results."
       : "Select outcomes, add rationale, and assign an Assessor before submitting the scope."
@@ -132,6 +144,16 @@ export function ProjectAssessmentWorkspace({
     const assigned = includedRows.filter((row) => row.assignedUserID !== null).length;
     return { included: includedRows.length, assigned, unassigned: includedRows.length - assigned };
   }, [profile]);
+  const finalizationReadiness = useMemo(() => {
+    const includedRows = profile.filter((row) => row.included);
+    const approvedCount = includedRows.filter((row) => responseBySubcategoryID.get(row.subcategoryID)?.status === "reviewed").length;
+    const remaining = includedRows.filter((row) => responseBySubcategoryID.get(row.subcategoryID)?.status !== "reviewed").map((row) => {
+      const status = responseBySubcategoryID.get(row.subcategoryID)?.status;
+      const reason = status === "submitted" ? "Reviewing" : status === "needs_more_info" ? "Returned for changes" : "Waiting for Assessor response";
+      return { code: row.subcategoryCode, reason };
+    });
+    return { includedCount: includedRows.length, approvedCount, remaining };
+  }, [profile, responseBySubcategoryID]);
   const visibleProfile = useMemo(
     () => profile.filter((row) => {
       if (row.functionCode !== selectedCode) return false;
@@ -200,7 +222,7 @@ export function ProjectAssessmentWorkspace({
           <div className="project-context">
             <span>{organization.name}</span>
             <span aria-hidden="true">/</span>
-            <span>{project.status.replaceAll("_", " ")}</span>
+            <span>{displayProjectStatus(project.status)}</span>
           </div>
           <h1>{project.name}</h1>
           <p className="project-subtitle">{taskHint}</p>
@@ -208,7 +230,7 @@ export function ProjectAssessmentWorkspace({
             <div className="project-context-overview">
               <div>
                 <span className="context-label">Project status</span>
-                <strong>{project.status.replaceAll("_", " ")}</strong>
+            <strong>{displayProjectStatus(project.status)}</strong>
               </div>
               <div>
                 <span className="context-label">Workspace mode</span>
@@ -245,6 +267,17 @@ export function ProjectAssessmentWorkspace({
               </button>
               {scopeSubmitError && <p className="error scope-submit-error" role="alert">{scopeSubmitError}</p>}
             </section>
+          )}
+          {isCounselor && (project.status === "in_review" || isFinalized) && onFinalizeProject && onOpenFinalReport && onOpenAuditPackage && (
+            <ProjectFinalizationPanel
+              status={project.status}
+              includedCount={finalizationReadiness.includedCount}
+              approvedCount={finalizationReadiness.approvedCount}
+              remaining={finalizationReadiness.remaining}
+              onFinalize={onFinalizeProject}
+              onOpenReport={onOpenFinalReport}
+              onOpenAudit={onOpenAuditPackage}
+            />
           )}
         </header>
         {error && <div className="error" role="alert">{error}</div>}
@@ -301,4 +334,9 @@ export function ProjectAssessmentWorkspace({
       </main>
     </div>
   );
+}
+
+function displayProjectStatus(status: string) {
+  if (status === "closed") return "Finalized";
+  return status.replaceAll("_", " ");
 }

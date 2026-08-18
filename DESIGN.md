@@ -267,6 +267,14 @@ Login and invitation activation use a two-column white-panel composition on desk
 
 Coverage summaries use restrained metric blocks for Overall, Included, Pending, and Returned counts. The Function navigation carries the per-Function percentage, included count, and role-specific attention count so progress is visible without repeating a large dashboard banner.
 
+### Finalization & Audit Handoff
+
+Project finalization is a deliberate reading state, not a decorative success screen. The Counselor sees readiness counts and the remaining outcome codes; the primary action stays disabled until every included outcome is Approved by the Reviewer. Once finalized, the workspace uses a clear **Finalized** label, presents the Final Report and Audit Package links, and removes mutation controls while preserving evidence preview and download.
+
+The Final Report is a calm, print-first reading surface: project context and finalization metadata come first, followed by overall and per-Function coverage, then the included outcome register. Each outcome keeps Current / Target, stakeholder response, reviewer decision, and evidence metadata together so an auditor can read the assessment without jumping between screens. The browser print stylesheet removes navigation and actions, keeps table headers with their rows, and preserves the Current / Target tonal distinction in print where supported.
+
+The Audit Package uses a denser register layout appropriate for handoff. Scope and assignment appear before response/evidence records, reviewer history follows the outcome register, and the chronological audit trail closes the package. The CSV action is explicit and secondary to reading; its columns mirror the traceability chain while omitting private storage keys. Audit pages remain read-only and reuse the existing white-paper surfaces, thin rules, compact mono labels, and the same magenta/purple orientation cues as the workspace.
+
 ## Do's and Don'ts
 
 ### Do:

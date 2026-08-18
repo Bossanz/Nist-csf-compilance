@@ -28,6 +28,13 @@ type dataStore interface {
 type scopeStore interface {
 	SubmitProjectScope(context.Context, string) (store.Project, error)
 }
+type finalizationStore interface {
+	FinalizeProject(context.Context, string, string) (store.Project, int, int, error)
+}
+type reportingStore interface {
+	GetFinalReport(context.Context, string) (store.FinalReport, error)
+	GetAuditPackage(context.Context, string) (store.AuditPackage, error)
+}
 type responseStore interface {
 	ListResponses(context.Context, string) ([]store.StakeholderResponse, error)
 	SaveResponseDraft(context.Context, string, string, string, string) (store.StakeholderResponse, error)
@@ -197,6 +204,35 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "projects" {
 		id := parts[2]
+		if len(parts) == 4 && parts[3] == "final-report" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.finalReport(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "audit-package" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.auditPackage(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "audit-package.csv" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.auditPackageCSV(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "finalize" && r.Method == http.MethodPost {
+			action := actionFinalizeProject
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.finalizeProject(w, r, id)
+			return
+		}
 		if len(parts) == 5 && parts[3] == "scope" && parts[4] == "submit" && r.Method == http.MethodPost {
 			action := actionSubmitScope
 			if !h.authorizeProject(w, r, id, &action) {
@@ -298,6 +334,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeError(w, http.StatusNotFound, "not_found", "route not found")
+}
+
+func (h *Handler) finalizeProject(w http.ResponseWriter, r *http.Request, projectID string) {
+	data, ok := h.Store.(finalizationStore)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "internal_error", "finalization store unavailable")
+		return
+	}
+	project, approvedCount, includedCount, err := data.FinalizeProject(r.Context(), projectID, currentUser(r).ID)
+	switch {
+	case errors.Is(err, store.ErrProjectNotReady):
+		writeError(w, http.StatusConflict, "project_not_ready", "Every included outcome must be approved before finalization")
+		return
+	case errors.Is(err, store.ErrProjectFinalized):
+		writeError(w, http.StatusConflict, "project_finalized", "Project is already finalized")
+		return
+	case errors.Is(err, pgx.ErrNoRows):
+		writeError(w, http.StatusNotFound, "not_found", "project not found")
+		return
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "could not finalize project")
+		return
+	}
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{
+		OrganizationID: &project.OrganizationID,
+		ProjectID:      &project.ID,
+		Action:         "project.finalized",
+		EntityType:     "project",
+		EntityID:       &project.ID,
+		Metadata:       map[string]any{"approvedCount": approvedCount, "includedCount": includedCount},
+	})
+	writeJSON(w, http.StatusOK, project)
 }
 
 func (h *Handler) functions(w http.ResponseWriter, r *http.Request) {

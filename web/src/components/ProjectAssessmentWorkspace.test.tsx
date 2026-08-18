@@ -62,7 +62,7 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop, onFinalizeProject = noop, onOpenFinalReport = noop, onOpenAuditPackage = noop) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
@@ -86,6 +86,9 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows =
       onDownloadEvidence={noop}
       onSetFunctionIncluded={onSetFunctionIncluded}
       onSubmitScope={onSubmitScope}
+      onFinalizeProject={onFinalizeProject}
+      onOpenFinalReport={onOpenFinalReport}
+      onOpenAuditPackage={onOpenAuditPackage}
     />,
   );
 }
@@ -243,4 +246,34 @@ test("Counselor can read stakeholder work after scope submission", () => {
 
   expect(screen.getByRole("heading", { name: /stakeholder response/i })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /submit scope/i })).toBeNull();
+});
+
+test("Counselor can finalize when every included outcome is approved", async () => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  const onFinalizeProject = vi.fn().mockResolvedValue(undefined);
+  const approvedResponses = [
+    { ...submittedResponse, subcategoryID: "GV.OC-01", status: "reviewed" as const },
+    { ...submittedResponse, id: "response-2", subcategoryID: "GV.OC-02", status: "reviewed" as const },
+  ];
+  renderWorkspace(counselor, noop, profile, approvedResponses, { ...project, status: "in_review" }, noop, onFinalizeProject);
+
+  fireEvent.click(screen.getByRole("button", { name: /finalize project/i }));
+
+  await waitFor(() => expect(onFinalizeProject).toHaveBeenCalledOnce());
+});
+
+test("finalized Counselor workspace is read-only and links to reports", () => {
+  const onOpenFinalReport = vi.fn();
+  const onOpenAuditPackage = vi.fn();
+  renderWorkspace(counselor, noop, profile, [], { ...project, status: "closed" }, noop, noop, onOpenFinalReport, onOpenAuditPackage);
+
+  expect(screen.getByText("Project is finalized")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /open final report/i }));
+  fireEvent.click(screen.getByRole("button", { name: /open audit package/i }));
+  expect(onOpenFinalReport).toHaveBeenCalledOnce();
+  expect(onOpenAuditPackage).toHaveBeenCalledOnce();
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+  expect(screen.queryByText("Include in profile")).toBeNull();
 });

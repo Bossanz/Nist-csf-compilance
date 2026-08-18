@@ -7,6 +7,8 @@ import (
 
 var ErrInvalidProfileAssignment = errors.New("invalid profile assignment")
 var ErrInvalidProjectTransition = errors.New("invalid project transition")
+var ErrProjectFinalized = errors.New("project is finalized")
+var ErrProjectNotReady = errors.New("project is not ready to finalize")
 
 type AuditEvent struct {
 	ActorUserID    string
@@ -40,18 +42,20 @@ type Subcategory struct {
 	Description string `json:"description"`
 }
 type Project struct {
-	ID                   string `json:"id"`
-	OrganizationID       string `json:"organizationID"`
-	OrganizationName     string `json:"organizationName"`
-	Name                 string `json:"name"`
-	Slug                 string `json:"slug"`
-	Status               string `json:"status"`
-	CreatedAt            string `json:"createdAt"`
-	Objective            string `json:"objective"`
-	AssessmentPeriod     string `json:"assessmentPeriod"`
-	TargetCompletionDate string `json:"targetCompletionDate"`
-	ScopeBoundary        string `json:"scopeBoundary"`
-	ComplianceDriver     string `json:"complianceDriver"`
+	ID                   string     `json:"id"`
+	OrganizationID       string     `json:"organizationID"`
+	OrganizationName     string     `json:"organizationName"`
+	Name                 string     `json:"name"`
+	Slug                 string     `json:"slug"`
+	Status               string     `json:"status"`
+	CreatedAt            string     `json:"createdAt"`
+	Objective            string     `json:"objective"`
+	AssessmentPeriod     string     `json:"assessmentPeriod"`
+	TargetCompletionDate string     `json:"targetCompletionDate"`
+	ScopeBoundary        string     `json:"scopeBoundary"`
+	ComplianceDriver     string     `json:"complianceDriver"`
+	FinalizedAt          *time.Time `json:"finalizedAt"`
+	FinalizedBy          *string    `json:"finalizedBy"`
 }
 type ProjectMetadata struct {
 	Objective            string

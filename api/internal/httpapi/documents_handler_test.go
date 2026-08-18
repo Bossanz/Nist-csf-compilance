@@ -75,6 +75,25 @@ func documentHandlerWithProfiles(user store.User, documents *fakeDocumentStore, 
 	return handler
 }
 
+func TestEvidenceUploadWritesAuditEvent(t *testing.T) {
+	var auditAction string
+	organizationID := "org-1"
+	documents := &fakeDocumentStore{document: store.ResponseDocument{ID: "document-1", OriginalName: "evidence.pdf", MIMEType: "application/pdf"}}
+	evidence := &fakeEvidenceStorage{storageKey: "stored-evidence", size: 12}
+	assessorID := "assessor-1"
+	data := fakeStore{project: store.Project{ID: "project-1", OrganizationID: organizationID}, profiles: []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &assessorID}}, auditAction: &auditAction}
+	handler := authenticatedHandler(store.User{ID: "assessor-1", OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, data)
+	handler.Documents = documents
+	handler.Evidence = evidence
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, multipartRequest(t, "/api/projects/project-1/responses/subcategory-1/documents", "evidence.pdf", "application/pdf", []byte("%PDF-1.7")))
+
+	if response.Code != http.StatusCreated || auditAction != "evidence.uploaded" {
+		t.Fatalf("expected evidence.uploaded audit event, got status=%d action=%q body=%s", response.Code, auditAction, response.Body.String())
+	}
+}
+
 func multipartRequest(t *testing.T, path, fileName, contentType string, contents []byte) *http.Request {
 	t.Helper()
 	var body bytes.Buffer

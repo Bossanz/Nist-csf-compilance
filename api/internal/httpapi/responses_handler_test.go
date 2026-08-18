@@ -143,6 +143,22 @@ func TestReviewerCanReviewSubmittedResponse(t *testing.T) {
 	}
 }
 
+func TestReviewerDecisionWritesAuditEvent(t *testing.T) {
+	var auditAction string
+	organizationID := "org-1"
+	responses := &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", Status: string(domain.ResponseSubmitted)}}
+	data := fakeStore{project: store.Project{ID: "project-1", OrganizationID: organizationID}, profiles: []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true}}, auditAction: &auditAction}
+	handler := authenticatedHandler(store.User{ID: "reviewer-1", OrganizationID: &organizationID, UserType: "stakeholder", Role: "reviewer", Status: "active"}, data)
+	handler.Responses = responses
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, responseRequest(http.MethodPost, "/api/projects/project-1/responses/subcategory-1/review", `{"status":"reviewed","comment":"Evidence is sufficient"}`))
+
+	if response.Code != http.StatusOK || auditAction != "response.reviewed" {
+		t.Fatalf("expected response.reviewed audit event, got status=%d action=%q body=%s", response.Code, auditAction, response.Body.String())
+	}
+}
+
 func TestViewerCannotMutateResponse(t *testing.T) {
 	responses := &fakeResponseStore{}
 	handler := responseHandler(store.User{ID: "viewer-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "viewer", Status: "active"}, responses)

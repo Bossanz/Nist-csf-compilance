@@ -83,6 +83,53 @@ func (s *Store) SubmitProjectScope(ctx context.Context, projectID string) (Proje
 	}
 	return project, nil
 }
+
+func (s *Store) FinalizeProject(ctx context.Context, projectID, actorID string) (Project, int, int, error) {
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return Project{}, 0, 0, err
+	}
+	defer tx.Rollback(ctx)
+
+	var status string
+	if err := tx.QueryRow(ctx, `SELECT status FROM projects WHERE id=$1 FOR UPDATE`, projectID).Scan(&status); err != nil {
+		return Project{}, 0, 0, err
+	}
+	if status == "closed" {
+		return Project{}, 0, 0, ErrProjectFinalized
+	}
+	if status != "in_review" {
+		return Project{}, 0, 0, ErrProjectNotReady
+	}
+
+	var includedCount, approvedCount int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE p.included),
+		       count(*) FILTER (WHERE p.included AND r.status='reviewed')
+		FROM project_subcategory_profiles p
+		LEFT JOIN stakeholder_responses r
+		  ON r.project_id=p.project_id AND r.subcategory_id=p.subcategory_id
+		WHERE p.project_id=$1`, projectID).Scan(&includedCount, &approvedCount); err != nil {
+		return Project{}, 0, 0, err
+	}
+	if includedCount == 0 || approvedCount != includedCount {
+		return Project{}, approvedCount, includedCount, ErrProjectNotReady
+	}
+
+	if _, err := tx.Exec(ctx, `UPDATE projects SET status='closed', finalized_at=now(), finalized_by=$2 WHERE id=$1`, projectID, actorID); err != nil {
+		return Project{}, 0, 0, err
+	}
+
+	var project Project
+	if err := tx.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, projectID).Scan(projectArgs(&project)...); err != nil {
+		return Project{}, 0, 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Project{}, 0, 0, err
+	}
+	return project, approvedCount, includedCount, nil
+}
+
 func (s *Store) GetProject(ctx context.Context, id string) (Project, error) {
 	var p Project
 	err := s.DB.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, id).Scan(projectArgs(&p)...)
@@ -112,10 +159,10 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	return out, rows.Err()
 }
 
-const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver FROM projects p JOIN organizations o ON o.id=p.organization_id`
+const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver,p.finalized_at,p.finalized_by FROM projects p JOIN organizations o ON o.id=p.organization_id`
 
 func projectArgs(p *Project) []any {
-	return []any{&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt, &p.Objective, &p.AssessmentPeriod, &p.TargetCompletionDate, &p.ScopeBoundary, &p.ComplianceDriver}
+	return []any{&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt, &p.Objective, &p.AssessmentPeriod, &p.TargetCompletionDate, &p.ScopeBoundary, &p.ComplianceDriver, &p.FinalizedAt, &p.FinalizedBy}
 }
 
 func (s *Store) DeleteProject(ctx context.Context, id string) error {

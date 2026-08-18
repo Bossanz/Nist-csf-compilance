@@ -27,6 +27,8 @@ export type Project = {
   targetCompletionDate?: string;
   scopeBoundary?: string;
   complianceDriver?: string;
+  finalizedAt?: string | null;
+  finalizedBy?: string | null;
 };
 export type ProfileRow = { id: string; projectID: string; subcategoryID: string; functionCode: string; categoryCode: string; subcategoryCode: string; description: string; included: boolean; rationale: string; currentPriority: string; currentCoverageLevel: CoverageLevel; currentStatusText: string; currentPoliciesText: string; currentTier: string; targetPriority: string; targetCoverageLevel: CoverageLevel; targetApproachText: string; targetTier: string; notes: string; considerations: string; reviewStatus: string; assignedUserID: string | null; assignedUserName?: string; assignedUserEmail?: string };
 export type ProfilePatch = Partial<Pick<ProfileRow, "included" | "rationale" | "currentPriority" | "currentCoverageLevel" | "currentStatusText" | "currentPoliciesText" | "targetPriority" | "targetCoverageLevel" | "targetApproachText" | "notes" | "considerations" | "assignedUserID">>;
@@ -35,3 +37,12 @@ export type ResponseStatus = "draft" | "submitted" | "reviewed" | "needs_more_in
 export type ResponseDocument = { id: string; responseID: string; originalName: string; mimeType: string; sizeBytes: number; uploadedBy: string; createdAt: string };
 export type EvidencePreview = { subcategoryID: string; documentID: string; url: string; mimeType: string };
 export type StakeholderResponse = { id: string; projectID: string; subcategoryID: string; responseText: string; status: ResponseStatus; respondedBy: string | null; submittedAt: string | null; reviewComment: string; reviewedBy: string | null; reviewedAt: string | null; createdAt: string; updatedAt: string; documents: ResponseDocument[] };
+export type ReportFunctionSummary = { code: string; coveragePct: number; includedCount: number; approvedCount: number; reviewingCount: number; returnedCount: number; pendingCount: number; evidenceCount: number };
+export type ReportSummary = { coveragePct: number; includedCount: number; approvedCount: number; reviewingCount: number; returnedCount: number; pendingCount: number; evidenceCount: number; functions: ReportFunctionSummary[] };
+export type ReportResponse = { id: string; responseText: string; status: ResponseStatus; respondedBy: string | null; submittedAt: string | null; reviewComment: string; reviewedBy: string | null; reviewedAt: string | null };
+export type ReportEvidence = { id: string; originalName: string; mimeType: string; sizeBytes: number; uploadedBy: string; createdAt: string };
+export type ReportOutcome = { profile: ProfileRow; response: ReportResponse | null; evidence: ReportEvidence[] };
+export type FinalReportData = { project: Project; summary: ReportSummary; outcomes: ReportOutcome[] };
+export type ScopeRegisterEntry = { profile: ProfileRow };
+export type AuditTrailEntry = { id: string; actorUserID: string | null; actorName: string; actorEmail: string; action: string; entityType: string; entityID: string | null; metadata: Record<string, unknown>; createdAt: string };
+export type AuditPackageData = { project: Project; summary: ReportSummary; scope: ScopeRegisterEntry[]; outcomes: ReportOutcome[]; auditTrail: AuditTrailEntry[] };
