@@ -11,6 +11,7 @@ Current status: Version 3 local-development workflow slice. The core flow covers
 - Database: PostgreSQL 16
 - Runtime: Docker Compose
 - Authentication: Email/password with server-side sessions
+- Email delivery: local log mode by default, optional plain-text SMTP
 - Evidence storage: Local Docker volume
 
 ## Quick start
@@ -98,6 +99,28 @@ This account exists in the current local database:
 On a fresh database, use the supported invitation flow or create a test account before using this login.
 
 > These credentials are for local development only. Do not use them in production or shared environments.
+
+### Password recovery and email notifications
+
+Local development uses `EMAIL_MODE=log`, so the API prints plain-text messages and one-time links in its logs instead of contacting an SMTP server:
+
+```powershell
+docker compose logs -f api
+```
+
+Use the `Forgot password?` link on the login page to request a reset. The API returns the same acknowledgement whether the email belongs to an active account or not. Only active accounts receive a reset link, and a successful reset or password change revokes all existing sessions.
+
+For real email delivery, copy `.env.example` to `.env` and set `EMAIL_MODE=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`. Invitation, response-review, and project-finalization notifications use the same sender. Delivery is best-effort: a mail failure is logged and does not roll back a successful assessment mutation.
+
+The related API endpoints are:
+
+```text
+POST /api/auth/password-reset/request
+POST /api/auth/password-reset/confirm
+PUT  /api/auth/password
+```
+
+Invitation creation still returns the one-time invitation URL in the API response for local/manual activation. In SMTP mode, the same URL is also sent to the invited email.
 
 ## System workflow
 
@@ -273,6 +296,9 @@ The workspace shows the overall percentage in the assessment summary and a separ
 - Coverage summary
 - Audit log
 - Invitation-based account activation
+- Password reset and authenticated password change
+- Local-log or optional SMTP email delivery
+- Invitation, response-review, and project-finalization notifications
 - Organization and Project deletion with evidence cleanup
 
 ## Routes
@@ -281,6 +307,9 @@ The API uses UUIDs internally. Browser URLs use readable slugs:
 
 ```text
 /login
+/forgot-password
+/reset-password?token={one-time-token}
+/account/password
 /organizations
 /organizations/{organization-slug}
 /organizations/{organization-slug}/projects/{project-slug}
@@ -347,6 +376,7 @@ Fresh databases run the files in `db/init` in filename order:
 006_outcome_assignments.sql
 007_project_metadata.sql
 008_project_finalization.sql
+009_password_reset_tokens.sql
 ```
 
 Docker volumes:
@@ -360,6 +390,7 @@ For an existing database volume, apply any migration that was added after the vo
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/006_outcome_assignments.sql
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/007_project_metadata.sql
 docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/008_project_finalization.sql
+docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/009_password_reset_tokens.sql
 docker compose restart api
 ```
 
@@ -442,11 +473,9 @@ The selected user must be active, belong to the same Organization, and have role
 
 ## Not included in the current local slice
 
-- Password reset
-- Real email notifications
-- Report export
+- Server-side PDF report export (use browser Print / Save as PDF)
 - Full action planning
-- Production deployment configuration
+- Production deployment configuration, HTTPS, secrets management, and PostgreSQL backup
 - Inline DOCX/XLSX preview
 
 These can be added later without changing the core assessment workflow.

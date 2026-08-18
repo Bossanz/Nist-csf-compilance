@@ -128,6 +128,8 @@ The interface turns a complex assessment into a clear, accountable trust workspa
 
 The system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text.
 
+The public account-recovery screens (`/forgot-password` and `/reset-password`) and authenticated password screen (`/account/password`) reuse the same two-column auth layout, explicit field labels, readable error states, and visible return links. Recovery success copy remains generic so the interface does not reveal whether an email belongs to an account.
+
 **Key Characteristics:**
 
 - Paper-white work surfaces with a cool neutral page canvas in light mode, and deep navy work surfaces with blue-black elevation in dark mode.
