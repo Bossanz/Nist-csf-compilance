@@ -3,6 +3,7 @@ package httpapi
 import (
 	authservice "compliance/api/internal/auth"
 	"compliance/api/internal/domain"
+	"compliance/api/internal/notifications"
 	"compliance/api/internal/store"
 	"context"
 	"encoding/json"
@@ -65,6 +66,7 @@ type Handler struct {
 	LoginThrottle *LoginThrottle
 	AppOrigin     string
 	Invitations   *authservice.InvitationService
+	EmailSender   notifications.EmailSender
 }
 type errorBody struct {
 	Error struct {
@@ -73,8 +75,8 @@ type errorBody struct {
 	} `json:"error"`
 }
 
-func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, secureCookies bool, appOrigin string) http.Handler {
-	return &Handler{Store: s, Responses: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
+func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, emailSender notifications.EmailSender, secureCookies bool, appOrigin string) http.Handler {
+	return &Handler{Store: s, Responses: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
