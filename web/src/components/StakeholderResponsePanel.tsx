@@ -139,7 +139,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
                     {onClosePreview && <button className="text-button" type="button" aria-label="Close preview" onClick={onClosePreview}>Close preview</button>}
                   </div>
                   {preview.mimeType.startsWith("image/") ? (
-                    <img src={preview.url} alt={`${document.originalName} preview`} />
+                    <img src={preview.url} alt={`${document.originalName} preview`} loading="lazy" decoding="async" />
                   ) : (
                     <iframe title={`${document.originalName} preview`} src={preview.url} />
                   )}

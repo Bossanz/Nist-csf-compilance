@@ -114,9 +114,17 @@ export function ProjectAssessmentWorkspace({
         return row.assignedUserID === user.id && (!response || response.status === "draft" || response.status === "needs_more_info");
       }).length;
       const attentionLabel = isCounselor ? "unassigned" : user.role === "reviewer" ? "to review" : user.role === "viewer" ? undefined : "open";
-      return [fn.code, { value: includedRows.length, label: "included", attention, attentionLabel }];
+      const functionSummary = summary.functions.find((item) => item.code === fn.code);
+      return [fn.code, {
+        value: includedRows.length,
+        label: "included",
+        coveragePct: functionSummary?.coveragePct ?? 0,
+        includedCount: functionSummary?.includedCount ?? includedRows.length,
+        attention,
+        attentionLabel,
+      }];
     })),
-    [functions, isCounselor, profile, responseBySubcategoryID, scopeSubmitted, user.role],
+    [functions, isCounselor, profile, responseBySubcategoryID, scopeSubmitted, summary.functions, user.role],
   );
   const allIncluded = functionRows.length > 0 && functionRows.every((row) => row.included);
   const assignmentProgress = useMemo(() => {
@@ -225,10 +233,6 @@ export function ProjectAssessmentWorkspace({
                 ))}
               </dl>
             )}
-            <div className="project-progress">
-              <span className="context-label">Overall coverage</span>
-              <strong>{summary.coveragePct}%</strong>
-            </div>
           </section>
           {isCounselor && !scopeSubmitted && (
             <section className="scope-submit-panel" aria-label="Scope submission">

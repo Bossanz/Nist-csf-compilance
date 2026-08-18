@@ -54,3 +54,16 @@ test("resolves a project by organization and project slugs", async () => {
 
   expect(fetchMock).toHaveBeenCalledWith("/api/organizations/org-1/projects/by-slug/readiness", expect.any(Object));
 });
+
+test("forwards an abort signal when downloading evidence", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(["evidence"]) });
+  vi.stubGlobal("fetch", fetchMock);
+  const controller = new AbortController();
+
+  await api.downloadResponseDocument("project-1", "subcategory-1", "document-1", controller.signal);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/projects/project-1/responses/subcategory-1/documents/document-1",
+    { signal: controller.signal },
+  );
+});

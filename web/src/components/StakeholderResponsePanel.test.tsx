@@ -113,7 +113,10 @@ test("renders and closes an inline image preview", () => {
   const onClosePreview = vi.fn();
   render(<StakeholderResponsePanel role="viewer" response={{ ...response, documents: [imageDocument] }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} onPreview={noop} preview={{ subcategoryID: response.subcategoryID, documentID: imageDocument.id, url: "blob:image-preview", mimeType: imageDocument.mimeType }} onClosePreview={onClosePreview} />);
 
-  expect(screen.getByRole("img", { name: /diagram\.png preview/i }).getAttribute("src")).toBe("blob:image-preview");
+  const image = screen.getByRole("img", { name: /diagram\.png preview/i });
+  expect(image.getAttribute("src")).toBe("blob:image-preview");
+  expect(image.getAttribute("loading")).toBe("lazy");
+  expect(image.getAttribute("decoding")).toBe("async");
   fireEvent.click(screen.getByRole("button", { name: /close preview/i }));
   expect(onClosePreview).toHaveBeenCalled();
 });

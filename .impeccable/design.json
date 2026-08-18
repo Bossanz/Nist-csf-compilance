@@ -1,48 +1,475 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-13T13:07:00.1220912+07:00",
+  "generatedAt": "2026-08-18T15:30:00+07:00",
   "title": "Design System: CSF Compliance",
   "extensions": {
     "colorMeta": {
-      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#17231f", "tonalRamp": ["#08100e", "#0d1916", "#17231f", "#2e4039", "#61716b", "#9eaba6", "#d6dfdc", "#f3f7f5"] },
-      "muted": { "role": "neutral", "displayName": "Muted Graphite", "canonical": "#61716b", "tonalRamp": ["#1c2e28", "#30433c", "#4b5d56", "#61716b", "#8a9993", "#b5c2bd", "#d9e2df", "#f4f7f6"] },
-      "muted-strong": { "role": "neutral", "displayName": "Strong Graphite", "canonical": "#42534d", "tonalRamp": ["#14221e", "#263630", "#42534d", "#61716b", "#87958f", "#b0bcb7", "#d5dfdb", "#f2f6f4"] },
-      "line": { "role": "neutral", "displayName": "Rule Gray", "canonical": "#dbe5e1", "tonalRamp": ["#263833", "#4d625a", "#71827b", "#9aa9a3", "#b9c8c3", "#dbe5e1", "#edf3f0", "#fbfcfc"] },
-      "line-strong": { "role": "neutral", "displayName": "Strong Rule", "canonical": "#b4c7c0", "tonalRamp": ["#1b2d27", "#3c5149", "#62766e", "#879b93", "#b4c7c0", "#d0ddd8", "#e4ece8", "#f8faf9"] },
-      "accent": { "role": "primary", "displayName": "Casefile Teal", "canonical": "#0d7567", "tonalRamp": ["#073b35", "#075448", "#09695d", "#0d7567", "#5ba99d", "#9bcec4", "#d0e8e2", "#f2f8f6"] },
-      "accent-dark": { "role": "primary", "displayName": "Deep Teal Ink", "canonical": "#0b4d44", "tonalRamp": ["#03221e", "#06352f", "#0b4d44", "#29756a", "#62a79d", "#9bcac2", "#cce5df", "#f0f8f6"] },
-      "accent-soft": { "role": "primary", "displayName": "Teal Wash", "canonical": "#e7f3ef", "tonalRamp": ["#073b35", "#075448", "#09695d", "#0d7567", "#5ba99d", "#9bcec4", "#d0e8e2", "#e7f3ef"] },
-      "accent-faint": { "role": "primary", "displayName": "Faint Teal", "canonical": "#f2f8f6", "tonalRamp": ["#0b4d44", "#17675c", "#328779", "#62a79d", "#9bcac2", "#c5e0da", "#e1f0ec", "#f2f8f6"] },
-      "surface": { "role": "neutral", "displayName": "Paper White", "canonical": "#ffffff", "tonalRamp": ["#1b2925", "#42534d", "#61716b", "#8a9993", "#b4c7c0", "#dbe5e1", "#eef3f1", "#ffffff"] },
-      "surface-subtle": { "role": "neutral", "displayName": "Quiet Paper", "canonical": "#f7faf9", "tonalRamp": ["#1a2924", "#40524b", "#60726b", "#879791", "#b2c1bb", "#d3dfda", "#e8f0ed", "#f7faf9"] },
-      "canvas": { "role": "neutral", "displayName": "Cool Desk", "canonical": "#eef3f1", "tonalRamp": ["#263731", "#50625b", "#778780", "#a2b0aa", "#c1cec9", "#d7e1dd", "#e5eeea", "#eef3f1"] },
-      "current": { "role": "status", "displayName": "Current Blue", "canonical": "#edf4fb", "tonalRamp": ["#172f43", "#295679", "#477b9d", "#6f9cba", "#9dbbce", "#c0d5e1", "#dce9f1", "#edf4fb"] },
-      "current-ink": { "role": "status", "displayName": "Current Blue Ink", "canonical": "#295679", "tonalRamp": ["#102235", "#1b3b55", "#295679", "#4d7b9a", "#7fa5bc", "#acc6d5", "#d0e1e9", "#f0f7fb"] },
-      "target": { "role": "status", "displayName": "Target Sand", "canonical": "#f8f1e4", "tonalRamp": ["#4a3414", "#76571f", "#9d7a3b", "#bd9f69", "#d7c29a", "#e8dabd", "#f2e9d7", "#f8f1e4"] },
-      "target-ink": { "role": "status", "displayName": "Target Sand Ink", "canonical": "#76571f", "tonalRamp": ["#34230c", "#523b15", "#76571f", "#9a7a3f", "#bd9f69", "#d8c49c", "#ecdfc7", "#fbf7ef"] },
-      "error": { "role": "status", "displayName": "Error Red", "canonical": "#a9342b", "tonalRamp": ["#3c0c08", "#681610", "#8d251d", "#a9342b", "#ca6b63", "#e29d97", "#f1cdca", "#fbf1ef"] },
-      "error-soft": { "role": "status", "displayName": "Soft Error", "canonical": "#fff4f2", "tonalRamp": ["#5a1510", "#8d251d", "#b74d44", "#ca6b63", "#e29d97", "#f1cdca", "#f8e2df", "#fff4f2"] },
-      "success": { "role": "status", "displayName": "Success Green", "canonical": "#207052", "tonalRamp": ["#08291d", "#104832", "#207052", "#4b9576", "#7fba9e", "#afd3bd", "#d4e9dc", "#f0f8f3"] },
-      "warning": { "role": "status", "displayName": "Warning Ochre", "canonical": "#9a6716", "tonalRamp": ["#3b2505", "#63410b", "#9a6716", "#bc8b34", "#d5ad68", "#e5cc9f", "#f1e4c8", "#fbf7ed"] }
+      "magenta": {
+        "role": "primary",
+        "displayName": "Versotis Magenta",
+        "canonical": "#e6007a",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "magenta-soft": {
+        "role": "primary",
+        "displayName": "Bright Magenta",
+        "canonical": "#ff2d9a",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "purple": {
+        "role": "primary",
+        "displayName": "Versotis Purple",
+        "canonical": "#7b2cbf",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "purple-soft": {
+        "role": "primary",
+        "displayName": "Soft Purple",
+        "canonical": "#9b5de5",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "navy": {
+        "role": "neutral",
+        "displayName": "Versotis Navy",
+        "canonical": "#0b1d3a",
+        "tonalRamp": [
+          "#061126",
+          "#0b1d3a",
+          "#17365f",
+          "#2d5682",
+          "#6081a8",
+          "#a7bcd2",
+          "#e9f0f7",
+          "#ffffff"
+        ]
+      },
+      "navy-deep": {
+        "role": "neutral",
+        "displayName": "Deep Navy",
+        "canonical": "#060e1d",
+        "tonalRamp": [
+          "#061126",
+          "#0b1d3a",
+          "#17365f",
+          "#2d5682",
+          "#6081a8",
+          "#a7bcd2",
+          "#e9f0f7",
+          "#ffffff"
+        ]
+      },
+      "gold": {
+        "role": "status",
+        "displayName": "Signal Gold",
+        "canonical": "#f5df4d",
+        "tonalRamp": [
+          "#403b03",
+          "#6b6305",
+          "#958a0a",
+          "#c0b31f",
+          "#f5df4d",
+          "#f8ea75",
+          "#fbf2a8",
+          "#fffce6"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0b1d3a",
+        "tonalRamp": [
+          "#061126",
+          "#0b1d3a",
+          "#17365f",
+          "#2d5682",
+          "#6081a8",
+          "#a7bcd2",
+          "#e9f0f7",
+          "#ffffff"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Graphite",
+        "canonical": "#5a6580",
+        "tonalRamp": [
+          "#111625",
+          "#222c42",
+          "#35415c",
+          "#47546d",
+          "#5a6580",
+          "#7c87a0",
+          "#acb5c5",
+          "#e8ebf1"
+        ]
+      },
+      "muted-strong": {
+        "role": "neutral",
+        "displayName": "Strong Graphite",
+        "canonical": "#33415e",
+        "tonalRamp": [
+          "#080d18",
+          "#121c2d",
+          "#1f2b43",
+          "#2a3651",
+          "#33415e",
+          "#53617b",
+          "#8490a6",
+          "#d9dee7"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Rule Gray",
+        "canonical": "rgba(11, 29, 58, 0.1)",
+        "tonalRamp": [
+          "#1d2b43",
+          "#34445d",
+          "#53627a",
+          "#738097",
+          "#9da8b8",
+          "#c6cdd8",
+          "#e3e7ed",
+          "#f7f9fb"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "rgba(11, 29, 58, 0.16)",
+        "tonalRamp": [
+          "#142039",
+          "#273956",
+          "#3d5271",
+          "#5a6e8d",
+          "#7c8ca5",
+          "#a9b5c6",
+          "#d1d8e2",
+          "#f1f4f8"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Active Magenta",
+        "canonical": "#e6007a",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Action Purple",
+        "canonical": "#7b2cbf",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Pink Wash",
+        "canonical": "#ffd1ec",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "accent-faint": {
+        "role": "primary",
+        "displayName": "Faint Pink",
+        "canonical": "#fff1f8",
+        "tonalRamp": [
+          "#33001b",
+          "#5c0033",
+          "#8b004e",
+          "#b80068",
+          "#e6007a",
+          "#f24b9f",
+          "#fa9dcc",
+          "#ffe0f0"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#061126",
+          "#0b1d3a",
+          "#17365f",
+          "#2d5682",
+          "#6081a8",
+          "#a7bcd2",
+          "#e9f0f7",
+          "#ffffff"
+        ]
+      },
+      "surface-subtle": {
+        "role": "neutral",
+        "displayName": "Quiet Paper",
+        "canonical": "#fafbfd",
+        "tonalRamp": [
+          "#17233a",
+          "#33415e",
+          "#5a6580",
+          "#8490a6",
+          "#acb5c5",
+          "#d9dee7",
+          "#edf0f4",
+          "#fafbfd"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool Desk",
+        "canonical": "#f1f4fa",
+        "tonalRamp": [
+          "#142039",
+          "#273956",
+          "#3d5271",
+          "#5a6e8d",
+          "#7c8ca5",
+          "#a9b5c6",
+          "#d1d8e2",
+          "#f1f4fa"
+        ]
+      },
+      "current": {
+        "role": "status",
+        "displayName": "Current Blue",
+        "canonical": "#edf2ff",
+        "tonalRamp": [
+          "#102235",
+          "#1b3b55",
+          "#295679",
+          "#477b9d",
+          "#6f9cba",
+          "#9dbbce",
+          "#dce9f1",
+          "#edf2ff"
+        ]
+      },
+      "current-ink": {
+        "role": "status",
+        "displayName": "Current Blue Ink",
+        "canonical": "#295a8a",
+        "tonalRamp": [
+          "#102235",
+          "#1b3b55",
+          "#295a8a",
+          "#477b9d",
+          "#6f9cba",
+          "#9dbbce",
+          "#dce9f1",
+          "#f0f7fb"
+        ]
+      },
+      "target": {
+        "role": "status",
+        "displayName": "Target Sand",
+        "canonical": "#fff3dc",
+        "tonalRamp": [
+          "#34230c",
+          "#523b15",
+          "#785b1a",
+          "#9a7a3f",
+          "#bd9f69",
+          "#d8c49c",
+          "#ecdfc7",
+          "#fff3dc"
+        ]
+      },
+      "target-ink": {
+        "role": "status",
+        "displayName": "Target Sand Ink",
+        "canonical": "#785b1a",
+        "tonalRamp": [
+          "#34230c",
+          "#523b15",
+          "#785b1a",
+          "#9a7a3f",
+          "#bd9f69",
+          "#d8c49c",
+          "#ecdfc7",
+          "#fffaf0"
+        ]
+      },
+      "error": {
+        "role": "status",
+        "displayName": "Error Red",
+        "canonical": "#b42318",
+        "tonalRamp": [
+          "#3b0a06",
+          "#68120d",
+          "#8d1b13",
+          "#b42318",
+          "#d65e54",
+          "#e59791",
+          "#f1c7c3",
+          "#fff2f0"
+        ]
+      },
+      "error-soft": {
+        "role": "status",
+        "displayName": "Soft Error",
+        "canonical": "#fff2f0",
+        "tonalRamp": [
+          "#5a1510",
+          "#8d251d",
+          "#b74d44",
+          "#d65e54",
+          "#e59791",
+          "#f1c7c3",
+          "#fae0dd",
+          "#fff2f0"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success Green",
+        "canonical": "#147d55",
+        "tonalRamp": [
+          "#06291a",
+          "#0b4c30",
+          "#147d55",
+          "#2f966d",
+          "#69d6a2",
+          "#a0e6bf",
+          "#d1f1df",
+          "#f0fff7"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning Ochre",
+        "canonical": "#9a5f00",
+        "tonalRamp": [
+          "#3b2200",
+          "#633d00",
+          "#9a5f00",
+          "#bd7c11",
+          "#d9a248",
+          "#e7c98e",
+          "#f3e4c5",
+          "#fff8e7"
+        ]
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "System UI Display", "purpose": "High-emphasis organization, project, and authentication headings." },
-      "headline": { "displayName": "System UI Headline", "purpose": "Section headings and major workspace titles." },
-      "title": { "displayName": "System UI Title", "purpose": "Outcome, card, and form-group titles." },
-      "body": { "displayName": "System UI Body", "purpose": "Long compliance reading and form content." },
-      "label": { "displayName": "System UI Label", "purpose": "Field labels, metadata, and context markers." }
+      "display": {
+        "displayName": "Space Grotesk Display",
+        "purpose": "High-emphasis organization, project, and authentication headings."
+      },
+      "headline": {
+        "displayName": "Space Grotesk Headline",
+        "purpose": "Section headings and major workspace titles."
+      },
+      "title": {
+        "displayName": "Space Grotesk Title",
+        "purpose": "Outcome, card, and form-group titles."
+      },
+      "body": {
+        "displayName": "Space Grotesk Body",
+        "purpose": "Long compliance reading and form content."
+      },
+      "label": {
+        "displayName": "JetBrains Mono Label",
+        "purpose": "Field labels, metadata, outcome codes, and context markers."
+      }
     },
     "shadows": [
-      { "name": "ambient-panel", "value": "0 10px 26px rgba(22, 49, 42, 0.07)", "purpose": "Quiet lift for organization forms, deletion confirmation, and authentication panels." },
-      { "name": "focus-ring", "value": "0 0 0 4px rgba(13, 117, 103, 0.16)", "purpose": "Visible keyboard and field focus." }
+      {
+        "name": "ambient-panel",
+        "value": "0 24px 60px -30px rgba(11, 29, 58, 0.24)",
+        "purpose": "Quiet lift for organization forms, deletion confirmation, and authentication panels."
+      },
+      {
+        "name": "primary-action",
+        "value": "0 14px 28px -18px var(--accent-glow)",
+        "purpose": "Soft separation for branded primary actions."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 4px rgba(230, 0, 122, 0.18)",
+        "purpose": "Visible keyboard and field focus."
+      }
     ],
     "motion": [
-      { "name": "state-transition", "value": "0.16s ease", "purpose": "Button, border, field, and navigation state transitions." },
-      { "name": "assessment-reveal", "value": "0.18s ease-out", "purpose": "Expanded assessment content entering the reading flow." }
+      {
+        "name": "state-transition",
+        "value": "0.16s ease",
+        "purpose": "Button, border, field, and navigation state transitions."
+      },
+      {
+        "name": "assessment-reveal",
+        "value": "0.18s ease-out",
+        "purpose": "Expanded assessment content entering the reading flow."
+      }
     ],
     "breakpoints": [
-      { "name": "rail-to-row", "value": "1100px" },
-      { "name": "single-column", "value": "760px" }
+      {
+        "name": "rail-to-row",
+        "value": "1100px"
+      },
+      {
+        "name": "single-column",
+        "value": "760px"
+      }
     ]
   },
   "components": [
@@ -52,7 +479,7 @@
       "refersTo": "button-primary",
       "description": "The one clear action in a form or workflow section.",
       "html": "<button class=\"ds-btn-primary\" type=\"button\">Create project</button>",
-      "css": ".ds-btn-primary { min-height: 42px; padding: 10px 16px; color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-sm); font: 750 0.88rem/1.2 system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease; } .ds-btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); } .ds-btn-primary:focus-visible { outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: 3px; } .ds-btn-primary:active { transform: translateY(1px); }"
+      "css": ".ds-btn-primary { min-height: 42px; padding: 10px 16px; color: #fff; background: var(--accent-grad); border: 1px solid transparent; border-radius: var(--radius-sm); font: 750 0.88rem/1.2 var(--font-sans); cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease; box-shadow: 0 14px 28px -18px var(--accent-glow); } .ds-btn-primary:hover { background: linear-gradient(135deg, var(--magenta-soft), var(--purple)); } .ds-btn-primary:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: 3px; } .ds-btn-primary:active { transform: translateY(1px); }"
     },
     {
       "name": "Secondary Button",
@@ -60,7 +487,7 @@
       "refersTo": "button-secondary",
       "description": "A quiet navigation or supporting action.",
       "html": "<button class=\"ds-btn-secondary\" type=\"button\">Open workspace</button>",
-      "css": ".ds-btn-secondary { min-height: 42px; padding: 10px 16px; color: var(--accent-dark); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font: 750 0.88rem/1.2 system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease; } .ds-btn-secondary:hover { background: var(--accent-faint); border-color: var(--accent); } .ds-btn-secondary:focus-visible { outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: 3px; } .ds-btn-secondary:active { transform: translateY(1px); }"
+      "css": ".ds-btn-secondary { min-height: 42px; padding: 10px 16px; color: var(--accent-dark); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font: 750 0.88rem/1.2 var(--font-sans); cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease; } .ds-btn-secondary:hover { background: var(--accent-faint); border-color: var(--accent); } .ds-btn-secondary:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: 3px; } .ds-btn-secondary:active { transform: translateY(1px); }"
     },
     {
       "name": "Danger Text Action",
@@ -68,7 +495,7 @@
       "refersTo": "button-danger",
       "description": "A deliberately secondary destructive action with a confirmation step behind it.",
       "html": "<button class=\"ds-btn-danger\" type=\"button\">Delete</button>",
-      "css": ".ds-btn-danger { min-height: 44px; padding: 10px 8px; color: var(--error); background: transparent; border: 0; border-radius: 6px; font: 750 0.82rem/1.2 system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, color 0.16s ease; } .ds-btn-danger:hover { background: var(--error-soft); text-decoration: underline; } .ds-btn-danger:focus-visible { outline: 3px solid rgba(169, 52, 43, 0.24); outline-offset: 3px; }"
+      "css": ".ds-btn-danger { min-height: 44px; padding: 10px 8px; color: var(--error); background: transparent; border: 0; border-radius: 6px; font: 750 0.82rem/1.2 var(--font-sans); cursor: pointer; transition: background 0.16s ease, color 0.16s ease; } .ds-btn-danger:hover { background: var(--error-soft); text-decoration: underline; } .ds-btn-danger:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: 3px; }"
     },
     {
       "name": "Text Field",
@@ -76,7 +503,7 @@
       "refersTo": "input",
       "description": "A readable white field with an explicit label above it.",
       "html": "<label class=\"ds-field\"><span>Email</span><input type=\"email\" /></label>",
-      "css": ".ds-field { display: grid; min-width: 0; gap: 7px; } .ds-field > span { color: var(--muted-strong); font: 750 0.78rem/1.3 system-ui, sans-serif; } .ds-field input { width: 100%; padding: 11px 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font: 400 15px/1.65 system-ui, sans-serif; transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; } .ds-field input:hover { border-color: #7fa99c; } .ds-field input:focus-visible { border-color: var(--accent); box-shadow: var(--shadow-focus); outline: 0; }"
+      "css": ".ds-field { display: grid; min-width: 0; gap: 7px; } .ds-field > span { color: var(--muted-strong); font: 750 0.78rem/1.3 var(--font-sans); } .ds-field input { width: 100%; padding: 11px 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font: 400 15px/1.65 var(--font-sans); transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; } .ds-field input:hover { border-color: var(--input-hover); } .ds-field input:focus-visible { border-color: var(--accent); box-shadow: var(--shadow-focus); outline: 0; }"
     },
     {
       "name": "Function Navigation",
@@ -84,44 +511,90 @@
       "refersTo": "nav-item",
       "description": "A labeled index that keeps the reader oriented within the CSF Functions.",
       "html": "<nav class=\"ds-sidebar\" aria-label=\"CSF functions\"><button class=\"ds-nav-item ds-nav-item-active\" type=\"button\" aria-current=\"page\">GV <span>Govern</span></button></nav>",
-      "css": ".ds-sidebar { display: flex; min-width: 0; flex-direction: column; padding: 28px 14px 20px; background: var(--surface); border-right: 1px solid var(--line); } .ds-nav-item { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--muted); text-align: left; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); font: 400 15px/1.65 system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease; } .ds-nav-item:hover, .ds-nav-item-active { color: var(--accent-dark); background: var(--accent-soft); border-color: var(--line); } .ds-nav-item-active span { opacity: 0.78; } .ds-nav-item:focus-visible { outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: 3px; }"
+      "css": ".ds-sidebar { display: flex; min-width: 0; flex-direction: column; padding: 28px 14px 20px; background: var(--surface); border-right: 1px solid var(--line); } .ds-nav-item { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--muted); text-align: left; background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); font: 400 15px/1.65 var(--font-sans); cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease; } .ds-nav-item:hover, .ds-nav-item-active { color: var(--accent-dark); background: var(--accent-soft); border-color: var(--accent-line); } .ds-nav-item:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: 3px; }"
     },
     {
       "name": "Status Chip",
       "kind": "chip",
       "refersTo": "status-chip",
-      "description": "A text-labeled role, project, or response state.",
-      "html": "<span class=\"ds-status-chip\">In progress</span>",
-      "css": ".ds-status-chip { display: inline-flex; width: fit-content; align-items: center; padding: 5px 9px; color: var(--accent-dark); background: var(--accent-soft); border-radius: 999px; font: 800 0.68rem/1.2 system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; }"
+      "description": "A compact text-labeled state for project, response, role, and coverage context.",
+      "html": "<span class=\"ds-status-chip\">Reviewing</span>",
+      "css": ".ds-status-chip { display: inline-flex; width: fit-content; align-items: center; padding: 5px 9px; color: var(--accent-dark); background: var(--accent-soft); border-radius: var(--radius-pill); font: 800 0.68rem/1.2 var(--font-sans); letter-spacing: 0.05em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Project Context Metadata",
+      "kind": "custom",
+      "refersTo": "project-metadata",
+      "description": "A top-aligned project facts grid that keeps long scope copy and short dates visually anchored together.",
+      "html": "<dl class=\"ds-project-metadata\"><div><dt>Assessment period</dt><dd>Q3 2026</dd></div><div><dt>Scope boundary</dt><dd>Production web application and API</dd></div></dl>",
+      "css": ".ds-project-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding-top: 14px; border-top: 1px solid var(--line); } .ds-project-metadata > div { display: grid; align-content: start; align-items: start; min-width: 0; gap: 3px; } .ds-project-metadata dt { color: var(--muted); font: 750 0.68rem/1.3 var(--font-sans); } .ds-project-metadata dd { margin: 0; color: var(--ink); font: 400 0.82rem/1.65 var(--font-sans); overflow-wrap: anywhere; }"
     },
     {
       "name": "Assessment Card",
-      "kind": "custom",
+      "kind": "card",
       "refersTo": "assessment-card",
-      "description": "An expandable outcome row that keeps the code, title, coverage route, and detail body together.",
-      "html": "<article class=\"ds-assessment-card\"><button class=\"ds-assessment-summary\" type=\"button\" aria-expanded=\"false\"><span class=\"ds-outcome-code\">GV.OC-01</span><strong>Organizational context is understood</strong><span class=\"ds-coverage-route\">Current → Target</span><span class=\"ds-expand-mark\" aria-hidden=\"true\">+</span></button></article>",
-      "css": ".ds-assessment-card { min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); } .ds-assessment-summary { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto 32px; align-items: center; width: 100%; min-height: 76px; gap: 18px; padding: 16px 18px; color: var(--ink); text-align: left; background: var(--surface); border: 0; cursor: pointer; } .ds-assessment-summary:hover { background: var(--surface-subtle); } .ds-assessment-summary:focus-visible { outline: 3px solid rgba(13, 117, 103, 0.3); outline-offset: -3px; } .ds-outcome-code { color: var(--accent); font: 850 0.8rem/1.3 system-ui, sans-serif; letter-spacing: 0.02em; } .ds-coverage-route { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font: 600 0.68rem/1.2 system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; } .ds-expand-mark { display: grid; width: 30px; height: 30px; place-items: center; color: var(--accent); border: 1px solid var(--line-strong); border-radius: 50%; font: 400 1.1rem/1 system-ui, sans-serif; }"
+      "description": "An expandable outcome row that keeps code, title, coverage route, and detail body together.",
+      "html": "<article class=\"ds-assessment-card\"><button class=\"ds-assessment-summary\" type=\"button\" aria-expanded=\"false\"><span class=\"ds-outcome-code\">GV.OC-01</span><strong>Organizational mission informs risk management</strong><span class=\"ds-coverage-route\">Current → Target</span><span class=\"ds-expand-mark\" aria-hidden=\"true\">+</span></button></article>",
+      "css": ".ds-assessment-card { min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); } .ds-assessment-summary { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto 32px; align-items: center; width: 100%; min-height: 76px; gap: 18px; padding: 16px 18px; color: var(--ink); text-align: left; background: var(--surface); border: 0; cursor: pointer; } .ds-assessment-summary:hover { background: var(--surface-subtle); } .ds-assessment-summary:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: -3px; } .ds-outcome-code { color: var(--accent); font: 850 0.8rem/1.3 var(--font-mono); } .ds-expand-mark { display: grid; width: 30px; height: 30px; place-items: center; color: var(--accent); border: 1px solid var(--line-strong); border-radius: 50%; }"
     },
     {
-      "name": "Response and Evidence Panel",
+      "name": "Response & Evidence Panel",
       "kind": "custom",
       "refersTo": "response-panel",
-      "description": "A single white work surface for Stakeholder response, evidence, review, and inline preview.",
-      "html": "<section class=\"ds-response-panel\"><div class=\"ds-response-heading\"><h3>Stakeholder response</h3><span class=\"ds-response-status\">Draft</span></div><label class=\"ds-field\"><span>Response</span><textarea rows=\"3\"></textarea></label><div class=\"ds-response-buttons\"><button class=\"ds-btn-secondary\" type=\"button\">Save response</button><button class=\"ds-btn-primary\" type=\"button\">Submit response</button></div></section>",
-      "css": ".ds-response-panel { display: grid; gap: 16px; padding: 22px; color: var(--ink); background: var(--surface); border-top: 1px solid var(--line); border-radius: var(--radius-md); } .ds-response-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; } .ds-response-heading h3 { margin: 0; color: var(--ink); font: 700 1.06rem/1.18 system-ui, sans-serif; } .ds-response-status { padding: 5px 9px; color: var(--muted); background: var(--canvas); border-radius: 999px; font: 800 0.68rem/1.2 system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; } .ds-response-buttons { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }"
+      "description": "A single surface for stakeholder response, evidence, review actions, and labeled status.",
+      "html": "<section class=\"ds-response-panel\"><div><h3>Stakeholder response</h3><p>Response and evidence for this outcome.</p></div><textarea aria-label=\"Response\"></textarea><button class=\"ds-btn-primary\" type=\"button\">Send to reviewer</button></section>",
+      "css": ".ds-response-panel { display: grid; gap: 16px; padding: 22px; color: var(--ink); background: var(--surface); border-top: 1px solid var(--line); } .ds-response-panel textarea { min-height: 90px; padding: 11px 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); resize: vertical; } .ds-response-panel textarea:focus-visible { border-color: var(--accent); box-shadow: var(--shadow-focus); outline: 0; }"
     }
   ],
   "narrative": {
-    "northStar": "Clean Editorial Casefile",
-    "overview": "The interface treats every assessment as a calm working case file. White reading surfaces hold the content; the cool desk canvas gives pages and groups enough separation to scan; restrained teal marks the active Function, the next action, and the few statuses that need attention. The result is deliberately quiet because the product is used for long compliance-reading sessions, not quick dashboard glances.\n\nThe system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language avoids gradients, decorative chrome, dense metric tiles, and heavy shadows that compete with compliance text.",
-    "keyCharacteristics": ["White-first work surfaces with a cool neutral page canvas.", "Teal used as orientation and action, not as decoration.", "Editorial reading measure with explicit Current / Target comparison.", "Thin borders, modest corners, and one soft ambient shadow for raised panels.", "Role-aware surfaces that distinguish reading, reviewing, and completing input."],
-    "rules": [
-      { "name": "The Teal Rarity Rule", "body": "Teal should explain where the reader is or what action is available; it should not fill whole sections without a functional reason.", "section": "colors" },
-      { "name": "The Labeled State Rule", "body": "Current, target, submitted, reviewed, error, and permission states use color alongside a visible text label.", "section": "colors" },
-      { "name": "The Reading Measure Rule", "body": "Let hierarchy and a readable line length do the organizing; do not compensate for long compliance text with oversized decorative type.", "section": "typography" },
-      { "name": "The Flat Workpaper Rule", "body": "If a border and surface change can establish hierarchy, do not add a shadow.", "section": "elevation" }
+    "northStar": "Versotis Trust Workspace",
+    "overview": "The interface turns a complex assessment into a clear, accountable trust workspace. Paper-white reading surfaces hold the content in light mode; deep navy surfaces create the same calm reading hierarchy in dark mode; magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. A visible theme toggle can select light or dark mode, while the system preference remains the default when no explicit choice is stored. The result borrows Versotis' strategic energy without sacrificing long compliance-reading sessions in either ambient light.\n\nThe system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text.",
+    "keyCharacteristics": [
+      "Paper-white work surfaces with a cool neutral page canvas in light mode, and deep navy work surfaces with blue-black elevation in dark mode.",
+      "Magenta-to-purple used as orientation and action, not as decoration.",
+      "Space Grotesk for the product voice, IBM Plex Sans Thai Looped for Thai fallback, and JetBrains Mono for wayfinding/data labels.",
+      "Editorial reading measure with explicit Current / Target comparison.",
+      "Thin borders, modest corners, and one soft ambient shadow for raised panels.",
+      "Role-aware surfaces that distinguish reading, reviewing, and completing input.",
+      "Project context metadata aligned from a shared top edge so uneven copy lengths do not make short values appear vertically suspended."
     ],
-    "dos": ["Do keep compliance copy on white surfaces with a readable measure.", "Do use the cool desk canvas and thin rules to group content before reaching for shadow.", "Do reserve teal for active location, primary action, focus, and meaningful status.", "Do distinguish Counselor interpretation from Stakeholder response/evidence input through layout and labels.", "Do make Current and Target profiles visually distinct and textually labeled.", "Do preserve visible keyboard focus, role/status text, and responsive reading order at every breakpoint."],
-    "donts": ["Don't reintroduce gradients, glass effects, decorative illustrations, or dense dashboard chrome.", "Don't use color alone to communicate response, coverage, or permission state.", "Don't turn every list row into a raised card; use borders and tonal layers first.", "Don't use a monospace or novelty display face as a technical costume.", "Don't make Stakeholder input controls look like Counselor-owned profile editing controls.", "Don't stretch assessment copy across the full viewport when a readable measure is available."]
+    "rules": [
+      {
+        "name": "The Brand Cue Rule",
+        "body": "Magenta and purple should explain where the reader is or what action is available; the brand gradient belongs to actions and orientation, not whole reading sections.",
+        "section": "colors"
+      },
+      {
+        "name": "The Labeled State Rule",
+        "body": "Current, target, submitted, reviewed, error, and permission states use color alongside a visible text label.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reading Measure Rule",
+        "body": "Let hierarchy and a readable line length do the organizing; do not compensate for long compliance text with oversized decorative type.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Workpaper Rule",
+        "body": "If a border and surface change can establish hierarchy, do not add a shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep compliance copy on white surfaces with a readable measure.",
+      "Do use the cool desk canvas and thin rules to group content before reaching for shadow.",
+      "Do reserve magenta/purple for active location, primary action, focus, and meaningful status.",
+      "Do distinguish Counselor interpretation from Stakeholder response/evidence input through layout and labels.",
+      "Do make Current and Target profiles visually distinct and textually labeled.",
+      "Do preserve visible keyboard focus, role/status text, and responsive reading order at every breakpoint."
+    ],
+    "donts": [
+      "Don't use the brand gradient outside primary actions or purposeful orientation cues; avoid glass effects, decorative illustrations, and dense dashboard chrome.",
+      "Don't use color alone to communicate response, coverage, or permission state.",
+      "Don't turn every list row into a raised card; use borders and tonal layers first.",
+      "Don't use JetBrains Mono as a display face; reserve it for codes, labels, and measurement.",
+      "Don't make Stakeholder input controls look like Counselor-owned profile editing controls.",
+      "Don't stretch assessment copy across the full viewport when a readable measure is available."
+    ]
   }
 }

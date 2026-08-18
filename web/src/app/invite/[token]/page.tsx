@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AcceptInvitationForm } from "../../../components/AcceptInvitationForm";
+import { ThemeToggle } from "../../../components/ThemeToggle";
 import { api } from "../../../lib/api";
 
 export default function InvitationPage() {
@@ -29,6 +30,7 @@ export default function InvitationPage() {
   return (
     <main className="auth-layout invitation-layout">
       <section className="auth-intro">
+        <div className="auth-theme-control"><ThemeToggle /></div>
         <div className="context-line"><span>NIST CSF 2.0</span><span aria-hidden="true">/</span><span>Invitation</span></div>
         <h2>Join the assessment workspace.</h2>
         <p>Your access and permissions were selected by the organization administrator.</p>

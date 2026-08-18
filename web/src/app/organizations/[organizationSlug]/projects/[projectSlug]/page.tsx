@@ -33,6 +33,7 @@ export default function ProjectPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const previewURL = useRef<string | null>(null);
+  const previewRequest = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -41,6 +42,7 @@ export default function ProjectPage() {
   }, [organizationSlug, projectSlug, retryCount]);
 
   useEffect(() => () => {
+    previewRequest.current?.abort();
     if (previewURL.current) URL.revokeObjectURL(previewURL.current);
   }, []);
 
@@ -162,6 +164,9 @@ export default function ProjectPage() {
 
   async function previewEvidence(subcategoryID: string, evidenceDocument: ResponseDocument) {
     if (!project) return;
+    previewRequest.current?.abort();
+    const controller = new AbortController();
+    previewRequest.current = controller;
     setPreviewTargetSubcategoryID(subcategoryID);
     setPreviewLoading(true);
     setPreviewError("");
@@ -171,18 +176,23 @@ export default function ProjectPage() {
     }
     setEvidencePreview(null);
     try {
-      const blob = await api.downloadResponseDocument(project.id, subcategoryID, evidenceDocument.id);
+      const blob = await api.downloadResponseDocument(project.id, subcategoryID, evidenceDocument.id, controller.signal);
+      if (previewRequest.current !== controller) return;
       const url = URL.createObjectURL(blob);
       previewURL.current = url;
       setEvidencePreview({ subcategoryID, documentID: evidenceDocument.id, url, mimeType: evidenceDocument.mimeType });
     } catch (cause) {
+      if (cause instanceof Error && cause.name === "AbortError") return;
+      if (previewRequest.current !== controller) return;
       setPreviewError(messageOf(cause));
     } finally {
-      setPreviewLoading(false);
+      if (previewRequest.current === controller) setPreviewLoading(false);
     }
   }
 
   function closeEvidencePreview() {
+    previewRequest.current?.abort();
+    previewRequest.current = null;
     if (previewURL.current) {
       URL.revokeObjectURL(previewURL.current);
       previewURL.current = null;

@@ -28,6 +28,19 @@ test("shows role-relevant progress beside each Function", () => {
   expect(screen.getByRole("button", { name: /gv govern.*2 reviewing/i })).toBeTruthy();
 });
 
+test("shows Function coverage as a percentage when supplied", () => {
+  render(
+    <FunctionSidebar
+      functions={[{ id: "fn-1", code: "GV", name: "Govern", description: "", categories: [] }]}
+      selectedCode="GV"
+      onSelect={() => undefined}
+      progressByFunction={{ GV: { value: 2, label: "included", coveragePct: 67, includedCount: 2 } }}
+    />,
+  );
+
+  expect(screen.getByRole("button", { name: /gv govern.*67% 2 included/i })).toBeTruthy();
+});
+
 test("exposes the active role mode alongside the Function index", () => {
   render(
     <FunctionSidebar

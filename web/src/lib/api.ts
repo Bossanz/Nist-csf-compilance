@@ -2,7 +2,7 @@ import type { FunctionNode, Invitation, Organization, ProfilePatch, ProfileRow, 
 const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 export class APIError extends Error { constructor(message:string,public status:number){super(message)} }
 async function request<T>(path: string, init?: RequestInit): Promise<T> { const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData; const headers = isFormData ? { ...(init?.headers || {}) } : { "Content-Type": "application/json", ...(init?.headers || {}) }; const response = await fetch(`${base}${path}`, { ...init, headers }); if (!response.ok) { const body = await response.json().catch(() => null); throw new APIError(body?.error?.message || `Request failed (${response.status})`,response.status); } if(response.status===204)return undefined as T; return response.json() as Promise<T>; }
-async function download(path: string): Promise<Blob> { const response = await fetch(`${base}${path}`); if (!response.ok) { const body = await response.json().catch(() => null); throw new APIError(body?.error?.message || `Request failed (${response.status})`,response.status); } return response.blob(); }
+async function download(path: string, signal?: AbortSignal): Promise<Blob> { const response = await fetch(`${base}${path}`, { signal }); if (!response.ok) { const body = await response.json().catch(() => null); throw new APIError(body?.error?.message || `Request failed (${response.status})`,response.status); } return response.blob(); }
 export const api = {
   login: (input:{email:string;password:string}) => request<User>("/api/auth/login",{method:"POST",body:JSON.stringify(input)}),
   logout: () => request<void>("/api/auth/logout",{method:"POST"}),
@@ -34,7 +34,7 @@ export const api = {
   submitResponse: (projectID: string, subcategoryID: string) => request<StakeholderResponse>(`/api/projects/${projectID}/responses/${subcategoryID}/submit`, { method: "POST", body: JSON.stringify({}) }),
   reviewResponse: (projectID: string, subcategoryID: string, input: { status: "reviewed" | "needs_more_info"; comment: string }) => request<StakeholderResponse>(`/api/projects/${projectID}/responses/${subcategoryID}/review`, { method: "POST", body: JSON.stringify(input) }),
   uploadResponseDocument: (projectID: string, subcategoryID: string, file: File) => { const form = new FormData(); form.append("file", file); return request<ResponseDocument>(`/api/projects/${projectID}/responses/${subcategoryID}/documents`, { method: "POST", body: form }); },
-  downloadResponseDocument: (projectID: string, subcategoryID: string, documentID: string) => download(`/api/projects/${projectID}/responses/${subcategoryID}/documents/${documentID}`),
+  downloadResponseDocument: (projectID: string, subcategoryID: string, documentID: string, signal?: AbortSignal) => download(`/api/projects/${projectID}/responses/${subcategoryID}/documents/${documentID}`, signal),
   deleteResponseDocument: (projectID: string, subcategoryID: string, documentID: string) => request<void>(`/api/projects/${projectID}/responses/${subcategoryID}/documents/${documentID}`, { method: "DELETE" }),
   getSummary: (id: string) => request<Summary>(`/api/projects/${id}/summary`),
 };

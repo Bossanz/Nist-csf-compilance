@@ -128,10 +128,13 @@ test("shows the shared project context and active Function progress", () => {
   expect(context.textContent).toContain("Thailand operations");
   expect(context.textContent).toContain("Customer assurance");
   expect(context.textContent).toContain("in progress");
-  expect(context.textContent).toContain("Overall coverage");
-  expect(context.textContent).toContain("0%");
+  expect(context.textContent).not.toContain("Overall coverage");
   expect(context.textContent).toContain("GV — Govern");
   expect(context.textContent).toContain("1 included outcome");
+  expect(screen.getByRole("button", { name: /gv govern.*0% 2 included/i })).toBeTruthy();
+  const summaryRegion = screen.getByRole("region", { name: /assessment workflow summary/i });
+  expect(summaryRegion.textContent).toContain("Overall coverage");
+  expect(summaryRegion.textContent).toContain("0%");
 });
 
 test("does not render empty optional project metadata", () => {

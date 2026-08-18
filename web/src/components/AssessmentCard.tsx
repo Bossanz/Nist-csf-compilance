@@ -176,6 +176,7 @@ export function AssessmentCard({
   const [error, setError] = useState("");
   const eligibleAssignees = assigneeOptions.filter((user) => user.status === "active" && (user.role === "org_admin" || user.role === "assessor"));
   const detailID = `assessment-body-${row.id}`;
+  const headingID = `assessment-heading-${row.id}`;
   const responseSummary = getResponseSummary(response);
   const canEditAssessment = canEditProfile && (!response || response.status === "draft" || response.status === "needs_more_info");
   const assignmentLabel = row.assignedUserID
@@ -224,7 +225,8 @@ export function AssessmentCard({
   }
 
   return (
-      <article className={`assessment-card ${draft.included ? "is-included" : "is-excluded"}`}>
+      <article className={`assessment-card ${draft.included ? "is-included" : "is-excluded"}`} aria-labelledby={headingID}>
+      <h3 id={headingID} className="sr-only">{row.subcategoryCode}: {row.description}</h3>
       <button
         className="assessment-summary"
         type="button"
@@ -264,6 +266,7 @@ export function AssessmentCard({
         <>
         <div id={detailID} className="assessment-body">
           {canEditScope && <fieldset className="scope-fields">
+            <legend className="sr-only">Scope and assignment</legend>
             <div className="scope-band">
             <label className="check-field">
               <input
@@ -298,6 +301,7 @@ export function AssessmentCard({
           {!canEditScope && scopeSubmitted && draft.rationale.trim() && <CounselorRationale rationale={draft.rationale} />}
 
           {canEditAssessment ? <fieldset className="profile-fields">
+            <legend className="sr-only">Assessment profile</legend>
             <div className="profile-columns">
             <section className="profile-column current-column" aria-labelledby={`current-${row.id}`}>
               <div className="column-heading">

@@ -126,6 +126,17 @@ test("makes Current and Target coverage plus evidence count scannable in the col
   expect(screen.getByText("1 evidence file")).toBeTruthy();
   expect(summary.getAttribute("aria-expanded")).toBe("false");
 });
+
+test("names the outcome article and its grouped form sections for assistive technology", () => {
+  render(<AssessmentCard row={row} onSave={vi.fn()} canEditScope={true} canEditProfile={false} assigneeOptions={[]} />);
+
+  const article = screen.getByRole("article", { name: /GV\.OC-01: The organizational mission is understood/i });
+  expect(article).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  expect(screen.getByRole("group", { name: /scope and assignment/i })).toBeTruthy();
+});
+
 test("Counselor can read an empty stakeholder response without seeing stakeholder controls", () => {
   render(
     <AssessmentCard

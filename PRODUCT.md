@@ -41,9 +41,10 @@ The product separates counselor-owned assessment/profile decisions from stakehol
 
 ## Brand Commitments
 
-- The interface should follow a Clean Editorial Layout and Reader-Friendly Layout direction.
-- Use the 60/30/10 color rule with white as the dominant reading surface, light neutral structure, and a restrained teal accent.
-- Do not add visual noise that competes with long-form compliance reading.
+- The interface should follow the Versotis-inspired Trust Workspace direction while preserving a reader-friendly compliance layout.
+- Use the 60/30/10 color rule with white as the dominant reading surface, light navy-neutral structure, and magenta-to-purple brand accents.
+- Use Space Grotesk with IBM Plex Sans Thai Looped fallback, and reserve JetBrains Mono for outcome codes and compact wayfinding labels.
+- Keep the brand gradient limited to primary actions and purposeful orientation cues so visual energy never competes with long-form compliance reading.
 
 ## Evidence on Hand
 

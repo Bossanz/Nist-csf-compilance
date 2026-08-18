@@ -29,6 +29,7 @@ const previewProfile: ProfileRow = {
 };
 const secondBulkProfile: ProfileRow = { ...previewProfile, id: "profile-2", subcategoryID: "subcategory-2", subcategoryCode: "GV.OC-02", included: false };
 const previewDocument: ResponseDocument = { id: "doc-1", responseID: "response-1", originalName: "evidence.pdf", mimeType: "application/pdf", sizeBytes: 12, uploadedBy: "assessor-1", createdAt: "2026-08-07T00:00:00Z" };
+const secondPreviewDocument: ResponseDocument = { ...previewDocument, id: "doc-2", originalName: "second-evidence.pdf" };
 const previewResponse: StakeholderResponse = { id: "response-1", projectID: "project-1", subcategoryID: "subcategory-1", responseText: "Evidence attached", status: "draft", respondedBy: "assessor-1", submittedAt: null, reviewComment: "", reviewedBy: null, reviewedAt: null, createdAt: "2026-08-07T00:00:00Z", updatedAt: "2026-08-07T00:00:00Z", documents: [previewDocument] };
 
 function deferred<T>() {
@@ -104,11 +105,40 @@ test("loads and closes a supported evidence preview", async () => {
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
   fireEvent.click(screen.getByRole("button", { name: /preview evidence\.pdf/i }));
 
-  await waitFor(() => expect(api.downloadResponseDocument).toHaveBeenCalledWith("project-1", "subcategory-1", "doc-1"));
+  await waitFor(() => expect(api.downloadResponseDocument).toHaveBeenCalledWith("project-1", "subcategory-1", "doc-1", expect.any(AbortSignal)));
   expect(createObjectURL).toHaveBeenCalled();
   expect(screen.getByTitle("evidence.pdf preview").getAttribute("src")).toBe("blob:evidence-preview");
   fireEvent.click(screen.getByRole("button", { name: /close preview/i }));
   expect(revokeObjectURL).toHaveBeenCalledWith("blob:evidence-preview");
+});
+
+test("cancels a stale evidence preview request before starting another", async () => {
+  vi.mocked(api.getOrganizationProjectBySlug).mockResolvedValue({ ...project, status: "in_review" });
+  vi.mocked(api.getProfile).mockResolvedValue([previewProfile]);
+  vi.mocked(api.getResponses).mockResolvedValue([{ ...previewResponse, documents: [previewDocument, secondPreviewDocument] }]);
+  vi.stubGlobal("URL", { createObjectURL: vi.fn().mockReturnValue("blob:second-evidence-preview"), revokeObjectURL: vi.fn() });
+  const firstDownload = deferred<Blob>();
+  const secondDownload = deferred<Blob>();
+  vi.mocked(api.downloadResponseDocument)
+    .mockReturnValueOnce(firstDownload.promise)
+    .mockReturnValueOnce(secondDownload.promise);
+
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  fireEvent.click(screen.getByRole("button", { name: /preview evidence\.pdf/i }));
+  await waitFor(() => expect(api.downloadResponseDocument).toHaveBeenCalledTimes(1));
+
+  fireEvent.click(screen.getByRole("button", { name: /preview second-evidence\.pdf/i }));
+  await waitFor(() => expect(api.downloadResponseDocument).toHaveBeenCalledTimes(2));
+
+  const firstCall = vi.mocked(api.downloadResponseDocument).mock.calls[0] as unknown as [string, string, string, AbortSignal];
+  expect(firstCall[3]).toBeInstanceOf(AbortSignal);
+  expect(firstCall[3].aborted).toBe(true);
+
+  secondDownload.resolve(new Blob(["%PDF-1.7"], { type: "application/pdf" }));
+  await waitFor(() => expect(screen.getByTitle("second-evidence.pdf preview")).toBeTruthy());
+  fireEvent.click(screen.getByRole("button", { name: /close preview/i }));
 });
 
 test("includes every outcome in the selected Function", async () => {

@@ -2,7 +2,7 @@
 
 A lean NIST CSF 2.0 assessment workspace for Counselors and customer Stakeholders. The application is built with Next.js, Go, and PostgreSQL and is designed to keep the assessment workflow short and easy to follow.
 
-Current status: Version 1 local-development vertical slice.
+Current status: Version 3 local-development workflow slice. The core flow covers Counselor scope setup, Stakeholder assessment, Reviewer approval, evidence preview, and light/dark themes.
 
 ## Stack
 
@@ -109,23 +109,36 @@ Counselor Admin
 Counselor
   -> Create an assessment Project
   -> Set project context
-  -> Include or exclude NIST CSF outcomes
-  -> Add scope rationale
-  -> Assign each included outcome to one Stakeholder
+  -> Select which NIST CSF outcomes are in scope
+  -> Add a reason for each selected outcome
+  -> Assign each included outcome to one Stakeholder assessor
+  -> Submit the Project scope
 
 Stakeholder
   -> Activate the invited account
+  -> See only included outcomes after scope submission
   -> Complete Current and Target profile fields
   -> Add the response and supporting evidence
-  -> Submit the outcome for review (status: Reviewing)
+  -> Submit the outcome (UI status: Reviewing)
 
 Reviewer
-  -> Read the Reviewing response and evidence
+  -> Read the response and evidence
   -> Mark Approved or Needs more information
 
 Counselor
-  -> Read progress and final assessment results
+  -> Read progress, reviewer decisions, and final assessment results
 ```
+
+Project setup starts in `setup`. The Project moves to `in_review` only after the Counselor submits a valid scope. Every included outcome must have one active Stakeholder assessor before submission. An included but unassigned outcome remains hidden from Stakeholder users.
+
+Response status is stored with internal values but shown in reader-friendly UI language:
+
+| Internal status | UI label | Meaning |
+| --- | --- | --- |
+| `draft` | Draft | Assessor is still preparing the response |
+| `submitted` | Reviewing | Assessor sent the response to the Reviewer |
+| `reviewed` | Approved | Reviewer accepted the response |
+| `needs_more_info` | Needs more information | Reviewer returned it for clarification |
 
 ## Roles and permissions
 
@@ -142,11 +155,30 @@ Important rules:
 
 - Counselors decide which outcomes belong to a Project.
 - Counselors can use `Include all` for the currently selected Function.
-- An included outcome can be assigned after scope selection.
+- Counselors provide the scope rationale and assign one active Stakeholder assessor per included outcome.
+- Current/Target profile fields, responses, and evidence belong to the Stakeholder assessor.
+- Stakeholders see only included outcomes after the Counselor submits the Project scope.
 - Included but unassigned outcomes remain hidden from Stakeholder users.
 - Stakeholders cannot change scope, rationale, or assignments.
 - Reviewer is the only final review gate.
 - Outcomes in Reviewing or Approved status lock Stakeholder profile and evidence edits.
+
+## Coverage calculation
+
+Coverage is calculated from the **Current coverage** of included outcomes only. Target coverage, evidence count, and review status do not change the percentage directly.
+
+```text
+None = 0
+Partial = 1
+Substantial = 2
+Full = 3
+
+Coverage % = sum(Current coverage scores)
+              / (included outcomes × 3)
+              × 100
+```
+
+The workspace shows the overall percentage in the assessment summary and a separate percentage for each NIST CSF Function. A Function with no included outcomes displays `0%`.
 
 ## Implemented features
 
@@ -170,6 +202,7 @@ Important rules:
   - 106 Subcategories
 - Counselor scope configuration
 - Include all outcomes within a Function
+- Per-Function and overall coverage percentages
 - Assignment progress counts:
   - Included
   - Assigned
@@ -181,6 +214,7 @@ Important rules:
 - Evidence upload and delete
 - Inline preview for PDF and PNG/JPG/JPEG
 - Download fallback for DOCX/XLSX
+- Light/dark theme toggle with system-theme fallback
 - Reviewer decisions:
   - Approved
   - Needs more information
@@ -219,6 +253,10 @@ When a Counselor creates a Project, the form captures:
 - Compliance driver
 
 Organization, Counselor, framework (`NIST CSF 2.0`), slug, status, and created date are managed by the system. Outcome scope, rationale, assignment, Current/Target values, evidence, and review status are completed in the assessment workflow.
+
+### Scope and assignment example
+
+For a project such as `RU Registration Readiness`, the Counselor can include `GV.OC-01`, `DE.AE-02`, `DE.AE-08`, and `DE.CM-09`, explain why each outcome is relevant, and assign each one to a Stakeholder assessor. The assessor then completes the Current/Target profile and evidence for the assigned outcomes; the Reviewer makes the final decision.
 
 ## Repository structure
 
@@ -284,11 +322,13 @@ Set-Location ..
 ```powershell
 Set-Location web
 npm.cmd ci
-npm.cmd run typecheck -- --incremental false
-npm.cmd test
+npx.cmd tsc --noEmit --incremental false
+npm.cmd test -- --run
 npm.cmd run build
 Set-Location ..
 ```
+
+The design reference is maintained in [DESIGN.md](DESIGN.md), with the Impeccable sidecar at `.impeccable/design.json`.
 
 ### Docker health check
 
@@ -344,7 +384,7 @@ The intended workflow is:
 
 The selected user must be active, belong to the same Organization, and have role `org_admin` or `assessor`.
 
-## Not included in Version 1
+## Not included in the current local slice
 
 - Password reset
 - Real email notifications
