@@ -12,3 +12,8 @@ test("submits normalized login credentials", () => {
 
   expect(onSubmit).toHaveBeenCalledWith({ email: "admin@example.com", password: "secret-password" });
 });
+
+test("provides a password recovery link", () => {
+  render(<LoginForm loading={false} error="" onSubmit={vi.fn()} />);
+  expect(screen.getByRole("link", { name: /forgot password/i }).getAttribute("href")).toBe("/forgot-password");
+});

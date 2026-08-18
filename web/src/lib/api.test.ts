@@ -28,6 +28,37 @@ test("restores the current authenticated user", async () => {
   expect(fetchMock).toHaveBeenCalledWith("/api/auth/me", expect.any(Object));
 });
 
+test("requests a password reset without exposing the email flow to the caller", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 202, json: async () => ({ message: "If an active account exists" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.requestPasswordReset("person@example.com");
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/auth/password-reset/request",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ email: "person@example.com" }) }),
+  );
+});
+
+test("confirms a password reset and changes an authenticated password", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.confirmPasswordReset("reset-token", "new-password");
+  await api.changePassword("old-password", "new-password");
+
+  expect(fetchMock).toHaveBeenNthCalledWith(
+    1,
+    "/api/auth/password-reset/confirm",
+    expect.objectContaining({ method: "POST", body: JSON.stringify({ token: "reset-token", password: "new-password" }) }),
+  );
+  expect(fetchMock).toHaveBeenNthCalledWith(
+    2,
+    "/api/auth/password",
+    expect.objectContaining({ method: "PUT", body: JSON.stringify({ currentPassword: "old-password", newPassword: "new-password" }) }),
+  );
+});
+
 test("creates a project inside an existing organization", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201, json: async () => ({ id: "project-1" }) });
   vi.stubGlobal("fetch", fetchMock);

@@ -102,6 +102,7 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
         <div className="identity-block">
           <span className="role-chip">{user.role.replaceAll("_", " ")}</span>
           <strong>{user.name}</strong>
+          <a className="auth-link" href="/account/password">Change password</a>
           <button className="text-button" onClick={onLogout}>Sign out</button>
         </div>
       </header>
