@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type dataStore interface {
@@ -42,6 +43,11 @@ type responseStore interface {
 	SubmitResponse(context.Context, string, string, string) (store.StakeholderResponse, error)
 	ReviewResponse(context.Context, string, string, string, string, string) (store.StakeholderResponse, error)
 }
+type passwordService interface {
+	Request(context.Context, string) (store.User, string, bool, error)
+	Confirm(context.Context, string, string) error
+	Change(context.Context, string, string, string) error
+}
 type documentStore interface {
 	CreateResponseDocument(context.Context, string, string, string, string, string, string, int64) (store.ResponseDocument, error)
 	GetResponseDocument(context.Context, string, string, string) (store.ResponseDocument, error)
@@ -67,6 +73,7 @@ type Handler struct {
 	AppOrigin     string
 	Invitations   *authservice.InvitationService
 	EmailSender   notifications.EmailSender
+	Passwords     passwordService
 }
 type errorBody struct {
 	Error struct {
@@ -76,7 +83,7 @@ type errorBody struct {
 }
 
 func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, emailSender notifications.EmailSender, secureCookies bool, appOrigin string) http.Handler {
-	return &Handler{Store: s, Responses: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
+	return &Handler{Store: s, Responses: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, Passwords: authservice.NewPasswordService(s, time.Now), SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
@@ -109,6 +116,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.me(w, r)
 		return
 	}
+	if r.URL.Path == "/api/auth/password-reset/request" && r.Method == http.MethodPost {
+		h.requestPasswordReset(w, r)
+		return
+	}
+	if r.URL.Path == "/api/auth/password-reset/confirm" && r.Method == http.MethodPost {
+		h.confirmPasswordReset(w, r)
+		return
+	}
 	invitePath := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(invitePath) == 4 && invitePath[0] == "api" && invitePath[1] == "invitations" && invitePath[3] == "accept" && r.Method == http.MethodPost {
 		h.acceptInvitation(w, r, invitePath[2])
@@ -117,6 +132,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var authenticated bool
 	r, authenticated = h.authenticate(w, r)
 	if !authenticated {
+		return
+	}
+	if r.URL.Path == "/api/auth/password" && r.Method == http.MethodPut {
+		if h.Auth == nil {
+			writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required")
+			return
+		}
+		h.changePassword(w, r)
 		return
 	}
 	path := strings.Trim(r.URL.Path, "/")
