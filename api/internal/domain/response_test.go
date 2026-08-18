@@ -27,3 +27,21 @@ func TestCanTransitionResponse(t *testing.T) {
 		}
 	}
 }
+
+func TestResponseEditability(t *testing.T) {
+	cases := []struct {
+		status domain.ResponseStatus
+		want   bool
+	}{
+		{domain.ResponseDraft, true},
+		{domain.ResponseNeedsMoreInfo, true},
+		{domain.ResponseSubmitted, false},
+		{domain.ResponseReviewed, false},
+	}
+
+	for _, testCase := range cases {
+		if got := domain.CanEditResponse(testCase.status); got != testCase.want {
+			t.Errorf("%s editable: got %v, want %v", testCase.status, got, testCase.want)
+		}
+	}
+}

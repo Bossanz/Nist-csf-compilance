@@ -134,7 +134,7 @@ func (s *Store) SaveResponseDraft(ctx context.Context, projectID, subcategoryID,
 	if err != nil {
 		return StakeholderResponse{}, err
 	}
-	if currentStatus != string(domain.ResponseDraft) && currentStatus != string(domain.ResponseNeedsMoreInfo) {
+	if !domain.CanEditResponse(domain.ResponseStatus(currentStatus)) {
 		return StakeholderResponse{}, domain.ErrInvalidResponseTransition
 	}
 

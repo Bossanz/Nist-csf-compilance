@@ -5,8 +5,8 @@ import type { EvidencePreview, ResponseDocument, ResponseStatus, Role, Stakehold
 
 const statusLabels: Record<ResponseStatus, string> = {
   draft: "Draft",
-  submitted: "Submitted",
-  reviewed: "Reviewed",
+  submitted: "Reviewing",
+  reviewed: "Approved",
   needs_more_info: "Needs more information",
 };
 

@@ -25,7 +25,7 @@ test("shows role-relevant progress beside each Function", () => {
     />,
   );
 
-  expect(screen.getByRole("button", { name: /gv govern.*2 submitted/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /gv govern.*2 reviewing/i })).toBeTruthy();
 });
 
 test("exposes the active role mode alongside the Function index", () => {

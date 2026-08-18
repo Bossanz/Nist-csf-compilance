@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"compliance/api/internal/domain"
 	"compliance/api/internal/store"
 )
 
@@ -26,6 +27,7 @@ const (
 	actionDeleteOrganization action = "delete_organization"
 	actionCreateProject      action = "create_project"
 	actionDeleteProject      action = "delete_project"
+	actionSubmitScope        action = "submit_scope"
 	actionUpdateProfile      action = "update_profile"
 	actionSaveResponse       action = "save_response"
 	actionSubmitResponse     action = "submit_response"
@@ -38,7 +40,7 @@ func can(user store.User, requested action) bool {
 	switch requested {
 	case actionCreateOrganization, actionDeleteOrganization, actionManageCounselor:
 		return user.Role == "counselor_admin"
-	case actionCreateProject, actionDeleteProject:
+	case actionCreateProject, actionDeleteProject, actionSubmitScope:
 		return user.Role == "counselor_admin" || user.Role == "counselor"
 	case actionUpdateProfile:
 		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "org_admin" || user.Role == "assessor"
@@ -132,6 +134,10 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 		return true
 	}
 	project, err := h.Store.GetProject(r.Context(), projectID)
+	if currentUser(r).UserType == "stakeholder" && project.Status == "setup" {
+		writeError(w, http.StatusNotFound, "not_found", "project not found")
+		return false
+	}
 	if err != nil || !canAccessOrganization(currentUser(r), project.OrganizationID) {
 		writeError(w, http.StatusNotFound, "not_found", "project not found")
 		return false
@@ -154,6 +160,24 @@ func (h *Handler) profileOutcome(ctx context.Context, projectID, subcategoryID s
 		}
 	}
 	return store.ProfileRow{}, false, nil
+}
+
+func (h *Handler) ensureOutcomeEditable(w http.ResponseWriter, r *http.Request, projectID, subcategoryID string) bool {
+	if h.Responses == nil {
+		return true
+	}
+	responses, err := h.Responses.ListResponses(r.Context(), projectID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal_error", "could not check response access")
+		return false
+	}
+	for _, response := range responses {
+		if response.SubcategoryID == subcategoryID && !domain.CanEditResponse(domain.ResponseStatus(response.Status)) {
+			writeError(w, http.StatusConflict, "invalid_transition", "response cannot be changed after it is sent for review")
+			return false
+		}
+	}
+	return true
 }
 
 func outcomeMutation(requested *action) bool {
@@ -187,6 +211,9 @@ func (h *Handler) authorizeProjectOutcome(w http.ResponseWriter, r *http.Request
 	}
 	if !stakeholderCanReadProfile(user, row) {
 		writeError(w, http.StatusNotFound, "not_found", "outcome not found")
+		return false
+	}
+	if outcomeMutation(requested) && !h.ensureOutcomeEditable(w, r, projectID, subcategoryID) {
 		return false
 	}
 	return true

@@ -37,6 +37,9 @@ type fakeStore struct {
 	updatedPatch                 *store.ProfilePatch
 	profileUpdateResult          store.ProfileRow
 	profileUpdateErr             error
+	submittedScopeProjectID      *string
+	submitScopeResult            store.Project
+	submitScopeErr               error
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -72,6 +75,12 @@ func (f fakeStore) UpdateProfile(_ context.Context, _, _ string, patch store.Pro
 		*f.updatedPatch = patch
 	}
 	return f.profileUpdateResult, f.profileUpdateErr
+}
+func (f fakeStore) SubmitProjectScope(_ context.Context, id string) (store.Project, error) {
+	if f.submittedScopeProjectID != nil {
+		*f.submittedScopeProjectID = id
+	}
+	return f.submitScopeResult, f.submitScopeErr
 }
 func (f fakeStore) DeleteProject(_ context.Context, id string) error {
 	if f.deletedID != nil {
@@ -326,5 +335,95 @@ func TestUnassignedAssessorCannotUpdateProfile(t *testing.T) {
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "assigned") || patch.CurrentPriority != nil {
 		t.Fatalf("expected unassigned profile denial, got %d patch=%#v body=%s", response.Code, patch, response.Body.String())
+	}
+}
+
+func TestAssessorCannotUpdateProfileAfterResponseIsSubmitted(t *testing.T) {
+	organizationID := "org-1"
+	assessorID := "assessor-1"
+	var patch store.ProfilePatch
+	handler := authenticatedHandler(store.User{ID: assessorID, OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project:      store.Project{ID: "project-1", OrganizationID: organizationID},
+		profiles:     []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &assessorID}},
+		updatedPatch: &patch,
+	})
+	handler.Responses = &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", SubcategoryID: "subcategory-1", Status: "submitted"}}
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/profile/subcategory-1", "{\"currentPriority\":\"High\"}")
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusConflict || patch.CurrentPriority != nil || !strings.Contains(response.Body.String(), "\"code\":\"invalid_transition\"") {
+		t.Fatalf("expected submitted profile lock, got %d patch=%#v body=%s", response.Code, patch, response.Body.String())
+	}
+}
+
+func TestAssessorCannotUpdateProfileAfterResponseIsApproved(t *testing.T) {
+	organizationID := "org-1"
+	assessorID := "assessor-1"
+	var patch store.ProfilePatch
+	handler := authenticatedHandler(store.User{ID: assessorID, OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project:      store.Project{ID: "project-1", OrganizationID: organizationID},
+		profiles:     []store.ProfileRow{{SubcategoryID: "subcategory-1", Included: true, AssignedUserID: &assessorID}},
+		updatedPatch: &patch,
+	})
+	handler.Responses = &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", SubcategoryID: "subcategory-1", Status: "reviewed"}}
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/profile/subcategory-1", "{\"currentPriority\":\"High\"}")
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusConflict || patch.CurrentPriority != nil || !strings.Contains(response.Body.String(), "\"code\":\"invalid_transition\"") {
+		t.Fatalf("expected approved profile lock, got %d patch=%#v body=%s", response.Code, patch, response.Body.String())
+	}
+}
+func TestCounselorCanSubmitProjectScope(t *testing.T) {
+	var submittedID string
+	project := store.Project{ID: "project-1", OrganizationID: "org-1", Status: "setup"}
+	result := project
+	result.Status = "in_review"
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{
+		project:                 project,
+		submittedScopeProjectID: &submittedID,
+		submitScopeResult:       result,
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/projects/project-1/scope/submit", ""))
+
+	if response.Code != http.StatusOK || submittedID != "project-1" || !strings.Contains(response.Body.String(), "in_review") {
+		t.Fatalf("unexpected scope submission: %d %s id=%s", response.Code, response.Body.String(), submittedID)
+	}
+}
+
+func TestStakeholderCannotSubmitProjectScope(t *testing.T) {
+	organizationID := "org-1"
+	var submittedID string
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{
+		project:                 store.Project{ID: "project-1", OrganizationID: organizationID, Status: "setup"},
+		submittedScopeProjectID: &submittedID,
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodPost, "/api/projects/project-1/scope/submit", ""))
+
+	if response.Code != http.StatusNotFound || submittedID != "" {
+		t.Fatalf("expected stakeholder scope submission to be denied: %d %s id=%s", response.Code, response.Body.String(), submittedID)
+	}
+}
+
+func TestStakeholderCannotReadSetupProject(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{
+		project: store.Project{ID: "project-1", OrganizationID: organizationID, Status: "setup"},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/projects/project-1", ""))
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("expected setup Project to be hidden from Stakeholder: %d %s", response.Code, response.Body.String())
 	}
 }

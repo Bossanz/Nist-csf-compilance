@@ -34,6 +34,7 @@ type Props = {
   previewError?: string;
   onCloseEvidencePreview?: () => void;
   onSetFunctionIncluded?: (functionCode: string, included: boolean) => Promise<void>;
+  onSubmitScope: () => Promise<void>;
 };
 
 function formatProjectDate(value: string) {
@@ -70,8 +71,10 @@ export function ProjectAssessmentWorkspace({
   previewError,
   onCloseEvidencePreview,
   onSetFunctionIncluded,
+  onSubmitScope,
 }: Props) {
   const isCounselor = user.userType === "counselor";
+  const scopeSubmitted = project.status !== "setup";
   const canEditScope = isCounselor;
   const canEditProfile = user.role === "org_admin" || user.role === "assessor";
   const workspaceMode: WorkspaceMode = isCounselor
@@ -83,14 +86,18 @@ export function ProjectAssessmentWorkspace({
         : "My Work";
   const selectedFunction = functions.find((fn) => fn.code === selectedCode);
   const taskHint = isCounselor
-    ? "Set project scope and read stakeholder progress."
+    ? scopeSubmitted
+      ? "Read stakeholder progress and final results."
+      : "Select outcomes, add rationale, and assign an Assessor before submitting the scope."
     : user.role === "reviewer"
-      ? "Review submitted stakeholder responses and record a final decision."
+      ? "Review outcomes in Reviewing status and record a final decision."
       : user.role === "viewer"
         ? "Read included outcomes, responses, and evidence."
         : "Complete your assigned outcomes and attach supporting evidence.";
   const [bulkState, setBulkState] = useState<"idle" | "saving" | "error">("idle");
   const [bulkError, setBulkError] = useState("");
+  const [scopeSubmitState, setScopeSubmitState] = useState<"idle" | "submitting" | "error">("idle");
+  const [scopeSubmitError, setScopeSubmitError] = useState("");
   const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
   const responseBySubcategoryID = useMemo(
     () => new Map(responses.map((response) => [response.subcategoryID, response] as const)),
@@ -98,7 +105,7 @@ export function ProjectAssessmentWorkspace({
   );
   const functionProgress = useMemo<Record<string, FunctionProgress>>(
     () => Object.fromEntries(functions.map((fn) => {
-      const includedRows = profile.filter((row) => row.functionCode === fn.code && row.included);
+      const includedRows = profile.filter((row) => row.functionCode === fn.code && row.included && (isCounselor || scopeSubmitted));
       const attention = includedRows.filter((row) => {
         const response = responseBySubcategoryID.get(row.subcategoryID);
         if (isCounselor) return row.assignedUserID === null;
@@ -109,7 +116,7 @@ export function ProjectAssessmentWorkspace({
       const attentionLabel = isCounselor ? "unassigned" : user.role === "reviewer" ? "to review" : user.role === "viewer" ? undefined : "open";
       return [fn.code, { value: includedRows.length, label: "included", attention, attentionLabel }];
     })),
-    [functions, isCounselor, profile, responseBySubcategoryID, user.role],
+    [functions, isCounselor, profile, responseBySubcategoryID, scopeSubmitted, user.role],
   );
   const allIncluded = functionRows.length > 0 && functionRows.every((row) => row.included);
   const assignmentProgress = useMemo(() => {
@@ -121,11 +128,12 @@ export function ProjectAssessmentWorkspace({
     () => profile.filter((row) => {
       if (row.functionCode !== selectedCode) return false;
       if (isCounselor) return true;
+      if (!scopeSubmitted) return false;
       if (!row.included) return false;
       if (user.role === "reviewer" || user.role === "viewer") return true;
       return canEditProfile && row.assignedUserID === user.id;
     }),
-    [canEditProfile, isCounselor, profile, selectedCode, user.id, user.role],
+    [canEditProfile, isCounselor, profile, scopeSubmitted, selectedCode, user.id, user.role],
   );
   const activeFunctionIncludedCount = isCounselor ? functionRows.filter((row) => row.included).length : visibleProfile.filter((row) => row.included).length;
   const activeFunctionLabel = selectedFunction ? `${selectedCode} — ${selectedFunction.name}` : selectedCode;
@@ -141,9 +149,11 @@ export function ProjectAssessmentWorkspace({
     ? ""
     : isCounselor
       ? "No outcomes found in this Function."
-      : user.role === "reviewer"
+      : !scopeSubmitted
+        ? "The Counselor has not submitted the Project scope yet."
+        : user.role === "reviewer"
         ? functionRows.some((row) => row.included)
-          ? "No submitted review work is available in this Function."
+          ? "No outcomes awaiting review are available in this Function."
           : "No included outcomes are available in this Function."
         : user.role === "viewer"
           ? "No included outcomes are available in this Function."
@@ -159,6 +169,17 @@ export function ProjectAssessmentWorkspace({
     } catch (cause) {
       setBulkState("error");
       setBulkError(cause instanceof Error ? cause.message : "Could not update outcomes");
+    }
+  }
+  async function submitScope() {
+    setScopeSubmitState("submitting");
+    setScopeSubmitError("");
+    try {
+      await onSubmitScope();
+      setScopeSubmitState("idle");
+    } catch (cause) {
+      setScopeSubmitState("error");
+      setScopeSubmitError(cause instanceof Error ? cause.message : "Could not submit project scope");
     }
   }
 
@@ -209,6 +230,18 @@ export function ProjectAssessmentWorkspace({
               <strong>{summary.coveragePct}%</strong>
             </div>
           </section>
+          {isCounselor && !scopeSubmitted && (
+            <section className="scope-submit-panel" aria-label="Scope submission">
+              <div className="scope-submit-copy">
+                <strong>Scope draft</strong>
+                <p>Stakeholder response fields stay hidden until you submit the selected scope.</p>
+              </div>
+              <button className="primary" type="button" disabled={scopeSubmitState === "submitting"} onClick={() => void submitScope()}>
+                {scopeSubmitState === "submitting" ? "Submitting…" : "Submit scope"}
+              </button>
+              {scopeSubmitError && <p className="error scope-submit-error" role="alert">{scopeSubmitError}</p>}
+            </section>
+          )}
         </header>
         {error && <div className="error" role="alert">{error}</div>}
         <div className="project-layout">
@@ -240,6 +273,7 @@ export function ProjectAssessmentWorkspace({
                   onSave={onSaveProfile}
                   canEditScope={canEditScope}
                   canEditProfile={canEditProfile}
+                  scopeSubmitted={scopeSubmitted}
                   assigneeOptions={organizationUsers}
                   role={user.role}
                   responses={responses}

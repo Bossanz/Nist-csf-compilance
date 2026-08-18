@@ -26,6 +26,7 @@ export const api = {
   createProject: (input: { name: string; organizationName: string }) => request<Project>("/api/projects", { method: "POST", body: JSON.stringify(input) }),
   deleteProject: (id: string) => request<void>(`/api/projects/${id}`, { method: "DELETE" }),
   getProject: (id: string) => request<Project>(`/api/projects/${id}`),
+  submitProjectScope: (id: string) => request<Project>("/api/projects/" + id + "/scope/submit", { method: "POST" }),
   getProfile: (id: string) => request<ProfileRow[]>(`/api/projects/${id}/profile`),
   updateProfile: (projectID: string, subcategoryID: string, patch: ProfilePatch) => request<ProfileRow>(`/api/projects/${projectID}/profile/${subcategoryID}`, { method: "PUT", body: JSON.stringify(patch) }),
   getResponses: (id: string) => request<StakeholderResponse[]>(`/api/projects/${id}/responses`),

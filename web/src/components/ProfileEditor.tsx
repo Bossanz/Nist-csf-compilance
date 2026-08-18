@@ -7,6 +7,7 @@ export function ProfileEditor({
   onSave,
   canEditScope,
   canEditProfile,
+  scopeSubmitted = true,
   assigneeOptions,
   role,
   responses = [],
@@ -28,6 +29,7 @@ export function ProfileEditor({
   canEditScope: boolean;
   canEditProfile: boolean;
   assigneeOptions: User[];
+  scopeSubmitted?: boolean;
   role?: Role;
   responses?: StakeholderResponse[];
   onSaveResponse?: (id: string, responseText: string) => Promise<void>;
@@ -65,6 +67,7 @@ export function ProfileEditor({
         onSave={onSave}
         canEditScope={canEditScope}
         canEditProfile={canEditProfile}
+        scopeSubmitted={scopeSubmitted}
         assigneeOptions={assigneeOptions}
         role={role}
         response={responseBySubcategoryID.get(row.subcategoryID) ?? emptyResponse(row)}

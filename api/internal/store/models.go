@@ -6,6 +6,7 @@ import (
 )
 
 var ErrInvalidProfileAssignment = errors.New("invalid profile assignment")
+var ErrInvalidProjectTransition = errors.New("invalid project transition")
 
 type AuditEvent struct {
 	ActorUserID    string

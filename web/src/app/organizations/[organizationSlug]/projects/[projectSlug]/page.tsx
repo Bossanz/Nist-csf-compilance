@@ -104,6 +104,11 @@ export default function ProjectPage() {
     }
     setSummary(await api.getSummary(project.id));
   }
+  async function submitScope() {
+    if (!project) return;
+    setProject(await api.submitProjectScope(project.id));
+  }
+
 
   function replaceResponse(next: StakeholderResponse) {
     setResponses((rows) => {
@@ -241,6 +246,7 @@ export default function ProjectPage() {
       onBack={() => router.push(organizationPath(organization))}
       onSelectFunction={setSelectedCode}
       onSaveProfile={saveProfile}
+      onSubmitScope={submitScope}
       onSaveResponse={saveResponse}
       onSubmitResponse={submitResponse}
       onReviewResponse={reviewResponse}

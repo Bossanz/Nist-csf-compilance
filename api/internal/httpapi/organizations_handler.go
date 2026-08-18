@@ -123,6 +123,15 @@ func (h *Handler) organizationProjects(w http.ResponseWriter, r *http.Request, i
 		writeError(w, 500, "internal_error", "could not load projects")
 		return
 	}
+	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
+		scoped := projects[:0]
+		for _, project := range projects {
+			if project.Status != "setup" {
+				scoped = append(scoped, project)
+			}
+		}
+		projects = scoped
+	}
 	writeJSON(w, 200, projects)
 }
 
@@ -133,6 +142,10 @@ func (h *Handler) organizationProjectBySlug(w http.ResponseWriter, r *http.Reque
 	}
 	project, err := data.GetProjectBySlug(r.Context(), organizationID, slug)
 	if err != nil || project.ID == "" {
+		writeError(w, 404, "not_found", "project not found")
+		return
+	}
+	if h.Auth != nil && currentUser(r).UserType == "stakeholder" && project.Status == "setup" {
 		writeError(w, 404, "not_found", "project not found")
 		return
 	}

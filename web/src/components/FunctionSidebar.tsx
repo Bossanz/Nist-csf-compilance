@@ -9,6 +9,12 @@ export type FunctionProgress = {
 
 export type WorkspaceMode = "Scope & Assignment" | "My Work" | "Review Queue" | "Read-only";
 
+function displayProgressLabel(label: string) {
+  if (label === "submitted") return "Reviewing";
+  if (label === "reviewed") return "Approved";
+  return label;
+}
+
 type Props = {
   functions: FunctionNode[];
   selectedCode: string;
@@ -31,7 +37,7 @@ export function FunctionSidebar({ functions, selectedCode, onSelect, progressByF
                 className="nav-meta"
               >
                 <strong>{progressByFunction[fn.code]!.value}</strong>
-                <small>{progressByFunction[fn.code]!.label}</small>
+                <small>{displayProgressLabel(progressByFunction[fn.code]!.label)}</small>
                 {progressByFunction[fn.code]!.attention !== undefined && progressByFunction[fn.code]!.attention! > 0 && (
                   <em>{progressByFunction[fn.code]!.attention} {progressByFunction[fn.code]!.attentionLabel}</em>
                 )}

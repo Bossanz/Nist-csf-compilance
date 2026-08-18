@@ -73,6 +73,22 @@ test("shows unsaved, saving, and saved assessment states", async () => {
   await waitFor(() => expect(screen.getByText("Saved")).toBeTruthy());
 });
 
+test("uses controlled dropdowns for Current and Target priority", () => {
+  render(<AssessmentCard row={row} onSave={vi.fn()} canEditScope={false} canEditProfile assigneeOptions={[]} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  for (const label of ["Current priority", "Target priority"]) {
+    const select = screen.getByRole("combobox", { name: label }) as HTMLSelectElement;
+    expect(Array.from(select.options).map((option) => option.textContent)).toEqual([
+      "Select priority",
+      "Low",
+      "Medium",
+      "High",
+    ]);
+  }
+});
+
 test("shows response status and assignee in the collapsed outcome summary", () => {
   render(
     <AssessmentCard
@@ -85,7 +101,7 @@ test("shows response status and assignee in the collapsed outcome summary", () =
     />,
   );
 
-  expect(screen.getByText("Submitted")).toBeTruthy();
+  expect(screen.getByText("Reviewing")).toBeTruthy();
   expect(screen.getByText("Assigned to Ari Assessor")).toBeTruthy();
 });
 
@@ -135,4 +151,74 @@ test("Counselor can read an empty stakeholder response without seeing stakeholde
   expect(screen.queryByRole("textbox", { name: /client response/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /save response/i })).toBeNull();
   expect(screen.queryByLabelText(/upload evidence/i)).toBeNull();
+});
+
+test("locks Current and Target profile fields while an outcome is under review", () => {
+  render(
+    <AssessmentCard
+      row={{ ...row, assignedUserID: "assessor-1" }}
+      onSave={vi.fn()}
+      canEditScope={false}
+      canEditProfile
+      assigneeOptions={[]}
+      role="assessor"
+      response={submittedResponse}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  expect(screen.getByRole("heading", { name: /assessment profile/i })).toBeTruthy();
+  expect(screen.queryByLabelText("Current priority")).toBeNull();
+  expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+});
+
+test("shows Counselor rationale to an Assessor as read-only context", () => {
+  const rationale = "This outcome is in scope because the application handles regulated registration data.";
+
+  render(
+    <AssessmentCard
+      row={{ ...row, rationale, assignedUserID: "assessor-1" }}
+      onSave={vi.fn()}
+      canEditScope={false}
+      canEditProfile
+      assigneeOptions={[]}
+      role="assessor"
+      scopeSubmitted
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  const rationaleRegion = screen.getByRole("region", { name: /counselor rationale/i });
+  expect(rationaleRegion.textContent).toContain(rationale);
+  expect(screen.queryByRole("textbox", { name: /counselor rationale/i })).toBeNull();
+});
+
+test("Counselor draft hides profile and response work while scope is not submitted", () => {
+  render(
+    <AssessmentCard
+      row={row}
+      onSave={vi.fn()}
+      canEditScope
+      canEditProfile={false}
+      assigneeOptions={[]}
+      role="counselor"
+      scopeSubmitted={false}
+      response={submittedResponse}
+      onSaveResponse={vi.fn().mockResolvedValue(undefined)}
+      onSubmitResponse={vi.fn().mockResolvedValue(undefined)}
+      onReviewResponse={vi.fn().mockResolvedValue(undefined)}
+      onUploadEvidence={vi.fn().mockResolvedValue(undefined)}
+      onDeleteEvidence={vi.fn().mockResolvedValue(undefined)}
+      onDownloadEvidence={vi.fn().mockResolvedValue(undefined)}
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  expect(screen.getByText("Rationale")).toBeTruthy();
+  expect(screen.getByLabelText("Responsible stakeholder for GV.OC-01")).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: /assessment profile/i })).toBeNull();
+  expect(screen.queryByRole("heading", { name: /stakeholder response/i })).toBeNull();
 });

@@ -25,6 +25,9 @@ type dataStore interface {
 	ListProfile(context.Context, string) ([]store.ProfileRow, error)
 	UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error)
 }
+type scopeStore interface {
+	SubmitProjectScope(context.Context, string) (store.Project, error)
+}
 type responseStore interface {
 	ListResponses(context.Context, string) ([]store.StakeholderResponse, error)
 	SaveResponseDraft(context.Context, string, string, string, string) (store.StakeholderResponse, error)
@@ -194,6 +197,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "projects" {
 		id := parts[2]
+		if len(parts) == 5 && parts[3] == "scope" && parts[4] == "submit" && r.Method == http.MethodPost {
+			action := actionSubmitScope
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.submitProjectScope(w, r, id)
+			return
+		}
 		if len(parts) == 3 && r.Method == http.MethodDelete {
 			action := actionDeleteProject
 			if !h.authorizeProject(w, r, id, &action) {
@@ -306,7 +317,7 @@ func (h *Handler) projects(w http.ResponseWriter, r *http.Request) {
 	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
 		scoped := data[:0]
 		for _, project := range data {
-			if canAccessOrganization(currentUser(r), project.OrganizationID) {
+			if project.Status != "setup" && canAccessOrganization(currentUser(r), project.OrganizationID) {
 				scoped = append(scoped, project)
 			}
 		}
@@ -391,6 +402,27 @@ func (h *Handler) project(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	writeJSON(w, 200, p)
 }
+func (h *Handler) submitProjectScope(w http.ResponseWriter, r *http.Request, projectID string) {
+	data, ok := h.Store.(scopeStore)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "internal_error", "scope store unavailable")
+		return
+	}
+	project, err := data.SubmitProjectScope(r.Context(), projectID)
+	switch {
+	case errors.Is(err, store.ErrInvalidProjectTransition):
+		writeError(w, http.StatusConflict, "invalid_transition", "Project scope cannot be submitted in its current state")
+		return
+	case errors.Is(err, pgx.ErrNoRows):
+		writeError(w, http.StatusNotFound, "not_found", "project not found")
+		return
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "internal_error", "could not submit project scope")
+		return
+	}
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: &project.OrganizationID, ProjectID: &project.ID, Action: "project.scope_submitted", EntityType: "project", EntityID: &project.ID})
+	writeJSON(w, http.StatusOK, project)
+}
 func (h *Handler) profile(w http.ResponseWriter, r *http.Request, id string) {
 	p, err := h.Store.ListProfile(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -447,6 +479,9 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, projectI
 			}
 			if !stakeholderCanEditProfile(user, *target) {
 				writeError(w, http.StatusForbidden, "forbidden", "Outcome is not assigned to this user")
+				return
+			}
+			if !h.ensureOutcomeEditable(w, r, projectID, subcategoryID) {
 				return
 			}
 		}

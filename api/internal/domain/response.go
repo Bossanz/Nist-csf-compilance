@@ -19,3 +19,7 @@ func CanTransitionResponse(from, to ResponseStatus) bool {
 	}
 	return from == ResponseSubmitted && (to == ResponseReviewed || to == ResponseNeedsMoreInfo)
 }
+
+func CanEditResponse(status ResponseStatus) bool {
+	return status == ResponseDraft || status == ResponseNeedsMoreInfo
+}

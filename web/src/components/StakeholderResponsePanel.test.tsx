@@ -133,3 +133,12 @@ test("scopes reviewer field labels to the outcome", () => {
 
   expect(screen.getByLabelText("Review comment for subcategory-1")).toBeTruthy();
 });
+
+test("uses reader-friendly labels for responses under review and approved responses", () => {
+  const { rerender } = render(<StakeholderResponsePanel role="viewer" response={{ ...response, status: "submitted" }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
+
+  expect(screen.getByText("Reviewing")).toBeTruthy();
+  rerender(<StakeholderResponsePanel role="viewer" response={{ ...response, status: "reviewed" }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} />);
+
+  expect(screen.getByText("Approved")).toBeTruthy();
+});

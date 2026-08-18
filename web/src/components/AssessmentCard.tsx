@@ -10,6 +10,7 @@ const coverageLevels: Array<{ value: CoverageLevel; label: string }> = [
   { value: "substantial", label: "Substantial" },
   { value: "full", label: "Full" },
 ];
+const priorityLevels = ["Low", "Medium", "High"] as const;
 
 type Draft = {
   included: boolean;
@@ -47,8 +48,8 @@ function createDraft(row: ProfileRow): Draft {
 
 const responseStatusLabels: Record<StakeholderResponse["status"], string> = {
   draft: "Draft",
-  submitted: "Submitted",
-  reviewed: "Reviewed",
+  submitted: "Reviewing",
+  reviewed: "Approved",
   needs_more_info: "Needs more information",
 };
 
@@ -111,11 +112,27 @@ function ProfileReference({ draft, id }: { draft: Draft; id: string }) {
   );
 }
 
+function CounselorRationale({ rationale }: { rationale: string }) {
+  return (
+    <section className="counselor-rationale" aria-label="Counselor rationale">
+      <div className="counselor-rationale-heading">
+        <div>
+          <p className="section-context">Scope context</p>
+          <h3>Why this outcome is included</h3>
+        </div>
+        <span className="status-chip">Read only</span>
+      </div>
+      <p className="counselor-rationale-text">{rationale}</p>
+    </section>
+  );
+}
+
 export function AssessmentCard({
   row,
   onSave,
   canEditScope,
   canEditProfile,
+  scopeSubmitted = true,
   assigneeOptions,
   role,
   response,
@@ -136,6 +153,7 @@ export function AssessmentCard({
   onSave: (id: string, patch: ProfilePatch) => Promise<void>;
   canEditScope: boolean;
   canEditProfile: boolean;
+  scopeSubmitted?: boolean;
   assigneeOptions: User[];
   role?: Role;
   response?: StakeholderResponse;
@@ -159,13 +177,14 @@ export function AssessmentCard({
   const eligibleAssignees = assigneeOptions.filter((user) => user.status === "active" && (user.role === "org_admin" || user.role === "assessor"));
   const detailID = `assessment-body-${row.id}`;
   const responseSummary = getResponseSummary(response);
+  const canEditAssessment = canEditProfile && (!response || response.status === "draft" || response.status === "needs_more_info");
   const assignmentLabel = row.assignedUserID
     ? row.assignedUserName
       ? "Assigned to " + row.assignedUserName
       : "Assigned stakeholder"
     : "Unassigned";
   const isReadOnlyWorkspaceRole = role === "counselor" || role === "counselor_admin" || role === "reviewer" || role === "viewer";
-  const showResponsePanel = Boolean(response && (canEditProfile || isReadOnlyWorkspaceRole || responseSummary.hasActivity));
+  const showResponsePanel = scopeSubmitted && Boolean(response && (canEditAssessment || isReadOnlyWorkspaceRole || responseSummary.hasActivity));
   const currentCoverageLabel = coverageLabel(draft.currentCoverageLevel);
   const targetCoverageLabel = coverageLabel(draft.targetCoverageLevel);
   const evidenceCount = response?.documents.length ?? 0;
@@ -276,7 +295,9 @@ export function AssessmentCard({
             </div>
           </fieldset>}
 
-          {canEditProfile ? <fieldset className="profile-fields">
+          {!canEditScope && scopeSubmitted && draft.rationale.trim() && <CounselorRationale rationale={draft.rationale} />}
+
+          {canEditAssessment ? <fieldset className="profile-fields">
             <div className="profile-columns">
             <section className="profile-column current-column" aria-labelledby={`current-${row.id}`}>
               <div className="column-heading">
@@ -286,7 +307,10 @@ export function AssessmentCard({
               <div className="field-grid">
                 <label className="field">
                   <span>Current priority</span>
-                  <input value={draft.currentPriority} onChange={(event) => update("currentPriority", event.target.value)} placeholder="Low, Medium, High" />
+                  <select value={draft.currentPriority} onChange={(event) => update("currentPriority", event.target.value)}>
+                    <option value="">Select priority</option>
+                    {priorityLevels.map((level) => <option key={level} value={level}>{level}</option>)}
+                  </select>
                 </label>
                 <label className="field">
                   <span>Current coverage</span>
@@ -313,7 +337,10 @@ export function AssessmentCard({
               <div className="field-grid">
                 <label className="field">
                   <span>Target priority</span>
-                  <input value={draft.targetPriority} onChange={(event) => update("targetPriority", event.target.value)} placeholder="Low, Medium, High" />
+                  <select value={draft.targetPriority} onChange={(event) => update("targetPriority", event.target.value)}>
+                    <option value="">Select priority</option>
+                    {priorityLevels.map((level) => <option key={level} value={level}>{level}</option>)}
+                  </select>
                 </label>
                 <label className="field">
                   <span>Target coverage</span>
@@ -339,13 +366,13 @@ export function AssessmentCard({
               <textarea rows={2} value={draft.considerations} onChange={(event) => update("considerations", event.target.value)} />
             </label>
             </div>
-          </fieldset> : <ProfileReference draft={draft} id={row.id} />}
+          </fieldset> : scopeSubmitted ? <ProfileReference draft={draft} id={row.id} /> : null}
 
           <div className="assessment-actions">
             <span className={"save-state " + state} role="status">
               {state === "saved" ? "Saved" : state === "dirty" ? "Unsaved changes" : state === "saving" ? "Saving…" : error}
             </span>
-            {(canEditScope || canEditProfile) && <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
+            {(canEditScope || canEditAssessment) && <button className="primary" type="button" disabled={state === "saving"} onClick={save}>
               {state === "saving" ? "Saving…" : "Save assessment"}
             </button>}
           </div>

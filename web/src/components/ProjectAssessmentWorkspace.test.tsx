@@ -62,7 +62,7 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
@@ -85,6 +85,7 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows =
       onDeleteEvidence={noop}
       onDownloadEvidence={noop}
       onSetFunctionIncluded={onSetFunctionIncluded}
+      onSubmitScope={onSubmitScope}
     />,
   );
 }
@@ -208,4 +209,35 @@ test("names the scope assignee control for its outcome", () => {
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
 
   expect(screen.getByLabelText("Responsible stakeholder for GV.OC-01")).toBeTruthy();
+});
+test("Counselor draft shows scope controls but hides stakeholder work", () => {
+  const onSubmitScope = vi.fn().mockResolvedValue(undefined);
+  renderWorkspace(counselor, noop, profile, [submittedResponse], { ...project, status: "setup" }, onSubmitScope);
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  expect(screen.getByText("Rationale")).toBeTruthy();
+  expect(screen.getByLabelText("Responsible stakeholder for GV.OC-01")).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: /assessment profile/i })).toBeNull();
+  expect(screen.queryByRole("heading", { name: /stakeholder response/i })).toBeNull();
+  expect(screen.getByRole("button", { name: /submit scope/i })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: /submit scope/i }));
+  expect(onSubmitScope).toHaveBeenCalledOnce();
+});
+
+test("Assessor sees no outcomes before Counselor submits the scope", () => {
+  renderWorkspace(assessor, noop, profile, [], { ...project, status: "setup" });
+
+  expect(visibleOutcomeCount()).toBe("0");
+  expect(screen.queryByRole("button", { name: /GV\.OC-01/i })).toBeNull();
+});
+
+test("Counselor can read stakeholder work after scope submission", () => {
+  renderWorkspace(counselor, noop, profile, [submittedResponse], { ...project, status: "in_review" });
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+
+  expect(screen.getByRole("heading", { name: /stakeholder response/i })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /submit scope/i })).toBeNull();
 });

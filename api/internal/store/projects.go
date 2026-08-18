@@ -47,6 +47,42 @@ func (s *Store) CreateScopedProjectWithMetadata(ctx context.Context, organizatio
 	return p, nil
 }
 
+func (s *Store) SubmitProjectScope(ctx context.Context, projectID string) (Project, error) {
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return Project{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var status string
+	if err := tx.QueryRow(ctx, "SELECT status FROM projects WHERE id=$1 FOR UPDATE", projectID).Scan(&status); err != nil {
+		return Project{}, err
+	}
+	if status != "setup" && status != "in_review" {
+		return Project{}, ErrInvalidProjectTransition
+	}
+	if status == "setup" {
+		var includedCount, invalidAssignmentCount int
+		if err := tx.QueryRow(ctx, "SELECT count(*) FILTER (WHERE p.included), count(*) FILTER (WHERE p.included AND (u.id IS NULL OR u.user_type <> 'stakeholder' OR u.role NOT IN ('org_admin','assessor') OR u.status <> 'active')) FROM project_subcategory_profiles p LEFT JOIN users u ON u.id=p.assigned_user_id WHERE p.project_id=$1", projectID).Scan(&includedCount, &invalidAssignmentCount); err != nil {
+			return Project{}, err
+		}
+		if includedCount == 0 || invalidAssignmentCount > 0 {
+			return Project{}, ErrInvalidProjectTransition
+		}
+		if _, err := tx.Exec(ctx, "UPDATE projects SET status='in_review' WHERE id=$1", projectID); err != nil {
+			return Project{}, err
+		}
+	}
+
+	var project Project
+	if err := tx.QueryRow(ctx, projectSelect+" WHERE p.id=$1", projectID).Scan(projectArgs(&project)...); err != nil {
+		return Project{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Project{}, err
+	}
+	return project, nil
+}
 func (s *Store) GetProject(ctx context.Context, id string) (Project, error) {
 	var p Project
 	err := s.DB.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, id).Scan(projectArgs(&p)...)

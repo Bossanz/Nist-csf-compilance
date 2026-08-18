@@ -24,7 +24,7 @@ const stakeholderRoles: StakeholderRole[] = ["org_admin", "assessor", "reviewer"
 const stakeholderRoleLabels: Record<StakeholderRole, string> = {
   org_admin: "Organization admin: manage access and responses",
   assessor: "Assessor: complete assigned outcomes and evidence",
-  reviewer: "Reviewer: review submitted responses",
+  reviewer: "Reviewer: review responses awaiting decision",
   viewer: "Viewer: read only",
 };
 type StakeholderAccess = { role: Role; status: "active" | "disabled" };

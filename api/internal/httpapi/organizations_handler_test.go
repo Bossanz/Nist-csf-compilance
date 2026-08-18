@@ -163,3 +163,51 @@ func TestStateChangingRequestRejectsForeignOrigin(t *testing.T) {
 		t.Fatalf("expected 403, got %d: %s", response.Code, response.Body.String())
 	}
 }
+func TestStakeholderCannotResolveSetupProjectSlug(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{
+		organization:  store.Organization{ID: organizationID, Name: "Acme"},
+		projectBySlug: store.Project{ID: "project-1", OrganizationID: organizationID, Slug: "readiness", Status: "setup"},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/organizations/org-1/projects/by-slug/readiness", ""))
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("expected setup Project slug to be hidden from Stakeholder: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestCounselorListsSetupProjectsInOrganization(t *testing.T) {
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{
+		organization: store.Organization{ID: "org-1", Name: "Acme"},
+		projects: []store.Project{{
+			ID: "project-1", OrganizationID: "org-1", Name: "Draft readiness", Status: "setup",
+		}},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/organizations/org-1/projects", ""))
+
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "\"name\":\"Draft readiness\"") {
+		t.Fatalf("expected Counselor to see setup project: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestStakeholderOrganizationProjectsHideSetupProjects(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{
+		organization: store.Organization{ID: organizationID, Name: "Acme"},
+		projects: []store.Project{
+			{ID: "project-1", OrganizationID: organizationID, Name: "Draft readiness", Status: "setup"},
+			{ID: "project-2", OrganizationID: organizationID, Name: "Published readiness", Status: "in_review"},
+		},
+	})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/organizations/org-1/projects", ""))
+
+	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), "\"name\":\"Draft readiness\"") || !strings.Contains(response.Body.String(), "\"name\":\"Published readiness\"") {
+		t.Fatalf("expected Stakeholder to see only submitted projects: %d %s", response.Code, response.Body.String())
+	}
+}

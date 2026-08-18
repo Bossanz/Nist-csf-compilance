@@ -91,6 +91,7 @@ test("back navigation returns to the organization slug route", async () => {
 });
 
 test("loads and closes a supported evidence preview", async () => {
+  vi.mocked(api.getOrganizationProjectBySlug).mockResolvedValue({ ...project, status: "in_review" });
   const createObjectURL = vi.fn().mockReturnValue("blob:evidence-preview");
   const revokeObjectURL = vi.fn();
   vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });

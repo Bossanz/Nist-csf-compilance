@@ -117,11 +117,11 @@ Stakeholder
   -> Activate the invited account
   -> Complete Current and Target profile fields
   -> Add the response and supporting evidence
-  -> Submit the outcome
+  -> Submit the outcome for review (status: Reviewing)
 
 Reviewer
-  -> Read the submitted response and evidence
-  -> Mark Reviewed or Needs more information
+  -> Read the Reviewing response and evidence
+  -> Mark Approved or Needs more information
 
 Counselor
   -> Read progress and final assessment results
@@ -146,6 +146,7 @@ Important rules:
 - Included but unassigned outcomes remain hidden from Stakeholder users.
 - Stakeholders cannot change scope, rationale, or assignments.
 - Reviewer is the only final review gate.
+- Outcomes in Reviewing or Approved status lock Stakeholder profile and evidence edits.
 
 ## Implemented features
 
@@ -181,7 +182,7 @@ Important rules:
 - Inline preview for PDF and PNG/JPG/JPEG
 - Download fallback for DOCX/XLSX
 - Reviewer decisions:
-  - Reviewed
+  - Approved
   - Needs more information
 - Coverage summary
 - Audit log

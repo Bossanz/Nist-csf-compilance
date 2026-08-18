@@ -178,3 +178,27 @@ func TestResponseStoreFailureIsInternalError(t *testing.T) {
 		t.Fatalf("unexpected response: %d %s", response.Code, response.Body.String())
 	}
 }
+
+func TestAssessorCannotSaveSubmittedResponse(t *testing.T) {
+	responses := &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", SubcategoryID: "subcategory-1", Status: string(domain.ResponseSubmitted)}}
+	handler := responseHandler(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, responseRequest(http.MethodPut, "/api/projects/project-1/responses/subcategory-1", "{\"responseText\":\"Should remain locked\"}"))
+
+	if response.Code != http.StatusConflict || responses.savedActor != "" || !strings.Contains(response.Body.String(), "\"code\":\"invalid_transition\"") {
+		t.Fatalf("expected submitted response lock, got %d actor=%s body=%s", response.Code, responses.savedActor, response.Body.String())
+	}
+}
+
+func TestAssessorCannotSaveApprovedResponse(t *testing.T) {
+	responses := &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", SubcategoryID: "subcategory-1", Status: string(domain.ResponseReviewed)}}
+	handler := responseHandler(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, responses)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, responseRequest(http.MethodPut, "/api/projects/project-1/responses/subcategory-1", "{\"responseText\":\"Should remain locked\"}"))
+
+	if response.Code != http.StatusConflict || responses.savedActor != "" || !strings.Contains(response.Body.String(), "\"code\":\"invalid_transition\"") {
+		t.Fatalf("expected approved response lock, got %d actor=%s body=%s", response.Code, responses.savedActor, response.Body.String())
+	}
+}

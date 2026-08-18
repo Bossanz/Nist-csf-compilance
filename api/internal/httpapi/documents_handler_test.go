@@ -214,3 +214,33 @@ func TestUnassignedAssessorCannotDeleteEvidence(t *testing.T) {
 		t.Fatalf("expected unassigned delete denial, got %d deleted=%s body=%s", response.Code, documents.deletedID, response.Body.String())
 	}
 }
+
+func TestAssessorCannotUploadEvidenceAfterResponseIsApproved(t *testing.T) {
+	documents := &fakeDocumentStore{document: store.ResponseDocument{ID: "doc-1", OriginalName: "evidence.pdf"}}
+	evidence := &fakeEvidenceStorage{storageKey: "opaque-key", size: 12}
+	handler := documentHandler(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, documents, evidence)
+	handler.Responses = &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", SubcategoryID: "subcategory-1", Status: "reviewed"}}
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, multipartRequest(t, "/api/projects/project-1/responses/subcategory-1/documents", "evidence.pdf", "application/pdf", []byte("%PDF-1.7")))
+
+	if response.Code != http.StatusConflict || documents.createdActor != "" || evidence.storageKey == evidence.removedKey || !strings.Contains(response.Body.String(), "\"code\":\"invalid_transition\"") {
+		t.Fatalf("expected approved evidence upload lock, got %d actor=%s removed=%s body=%s", response.Code, documents.createdActor, evidence.removedKey, response.Body.String())
+	}
+}
+
+func TestAssessorCannotDeleteEvidenceAfterResponseIsApproved(t *testing.T) {
+	documents := &fakeDocumentStore{document: store.ResponseDocument{ID: "doc-1", StorageKey: "opaque-key", CreatedAt: time.Now()}}
+	evidence := &fakeEvidenceStorage{}
+	handler := documentHandler(store.User{ID: "assessor-1", OrganizationID: stringPtr("org-1"), UserType: "stakeholder", Role: "assessor", Status: "active"}, documents, evidence)
+	handler.Responses = &fakeResponseStore{response: store.StakeholderResponse{ID: "response-1", SubcategoryID: "subcategory-1", Status: "reviewed"}}
+	response := httptest.NewRecorder()
+
+	request := httptest.NewRequest(http.MethodDelete, "/api/projects/project-1/responses/subcategory-1/documents/doc-1", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "raw-token"})
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusConflict || documents.deletedID != "" || evidence.removedKey != "" || !strings.Contains(response.Body.String(), "\"code\":\"invalid_transition\"") {
+		t.Fatalf("expected approved evidence delete lock, got %d deleted=%s removed=%s body=%s", response.Code, documents.deletedID, evidence.removedKey, response.Body.String())
+	}
+}
