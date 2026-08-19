@@ -232,4 +232,3 @@ Add these routes:
 4. Connect invitation and assessment events to notifications.
 5. Update README with local log instructions and SMTP configuration.
 6. Run Go tests, frontend tests, TypeScript, production build, and Docker health checks.
-
