@@ -98,3 +98,26 @@ test("forwards an abort signal when downloading evidence", async () => {
     { signal: controller.signal },
   );
 });
+
+test("serializes the remediation action lifecycle", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "action-1" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.createRemediationAction("project-1", {
+    subcategoryID: "outcome-1",
+    title: "Centralize logs",
+    description: "Forward application logs.",
+    desiredResult: "Security events are searchable.",
+    priority: "high",
+    ownerUserID: "assessor-1",
+    dueDate: "2026-09-30",
+  });
+  await api.updateRemediationProgress("project-1", "action-1", "SIEM forwarding is enabled.");
+  await api.submitRemediationAction("project-1", "action-1");
+  await api.reviewRemediationAction("project-1", "action-1", { decision: "return", comment: "Attach the deployment record." });
+
+  expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/projects/project-1/remediation-actions", expect.objectContaining({ method: "POST" }));
+  expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/projects/project-1/remediation-actions/action-1/progress", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ progressNote: "SIEM forwarding is enabled." }) }));
+  expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/projects/project-1/remediation-actions/action-1/submit", expect.objectContaining({ method: "POST" }));
+  expect(fetchMock).toHaveBeenNthCalledWith(4, "/api/projects/project-1/remediation-actions/action-1/review", expect.objectContaining({ method: "POST", body: JSON.stringify({ decision: "return", comment: "Attach the deployment record." }) }));
+});
