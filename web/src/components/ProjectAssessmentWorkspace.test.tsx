@@ -140,6 +140,13 @@ test("shows the shared project context and active Function progress", () => {
   expect(summaryRegion.textContent).toContain("0%");
 });
 
+test("finalized projects keep the Action Plan workspace available", () => {
+  renderWorkspace(counselor, noop, profile, [], { ...project, status: "closed" });
+  fireEvent.click(screen.getByRole("button", { name: "Action Plan" }));
+  expect(screen.getByRole("heading", { name: "Action Plan" })).toBeTruthy();
+  expect(screen.getByText(/without changing the finalized assessment/i)).toBeTruthy();
+});
+
 test("does not render empty optional project metadata", () => {
   const projectWithoutMetadata: Project = { ...project, objective: undefined, assessmentPeriod: undefined, targetCompletionDate: undefined, scopeBoundary: undefined, complianceDriver: undefined };
   renderWorkspace(assessor, noop, profile, [], projectWithoutMetadata);

@@ -15,6 +15,9 @@ vi.mock("../../../../../lib/api", () => ({
     getProfile: vi.fn(), getSummary: vi.fn(), getResponses: vi.fn(), updateProfile: vi.fn(), saveResponse: vi.fn(),
     submitResponse: vi.fn(), reviewResponse: vi.fn(), uploadResponseDocument: vi.fn(), deleteResponseDocument: vi.fn(),
     downloadResponseDocument: vi.fn(), getOrganizationUsers: vi.fn(),
+    getRemediationActions: vi.fn(), createRemediationAction: vi.fn(), updateRemediationAction: vi.fn(),
+    updateRemediationProgress: vi.fn(), submitRemediationAction: vi.fn(), reviewRemediationAction: vi.fn(),
+    uploadRemediationEvidence: vi.fn(), downloadRemediationEvidence: vi.fn(), deleteRemediationEvidence: vi.fn(),
   },
 }));
 
@@ -48,6 +51,7 @@ beforeEach(() => {
   vi.mocked(api.getSummary).mockResolvedValue(summary);
   vi.mocked(api.getResponses).mockResolvedValue([]);
   vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);
+  vi.mocked(api.getRemediationActions).mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -110,6 +114,14 @@ test("loads and closes a supported evidence preview", async () => {
   expect(screen.getByTitle("evidence.pdf preview").getAttribute("src")).toBe("blob:evidence-preview");
   fireEvent.click(screen.getByRole("button", { name: /close preview/i }));
   expect(revokeObjectURL).toHaveBeenCalledWith("blob:evidence-preview");
+});
+
+test("loads remediation actions and opens the Action Plan workspace", async () => {
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+  expect(api.getRemediationActions).toHaveBeenCalledWith("project-1");
+  fireEvent.click(screen.getByRole("button", { name: "Action Plan" }));
+  expect(screen.getByRole("heading", { name: "Action Plan" })).toBeTruthy();
 });
 
 test("cancels a stale evidence preview request before starting another", async () => {

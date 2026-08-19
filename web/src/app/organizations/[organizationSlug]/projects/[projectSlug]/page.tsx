@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIError, api } from "../../../../../lib/api";
-import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
+import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
 import { organizationPath, projectPath } from "../../../../../lib/routes";
 import { ProjectAssessmentWorkspace } from "../../../../../components/ProjectAssessmentWorkspace";
 
@@ -21,6 +21,7 @@ export default function ProjectPage() {
   const [organizationUsers, setOrganizationUsers] = useState<User[]>([]);
   const [profile, setProfile] = useState<ProfileRow[]>([]);
   const [responses, setResponses] = useState<StakeholderResponse[]>([]);
+  const [remediationActions, setRemediationActions] = useState<RemediationAction[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [selectedCode, setSelectedCode] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
@@ -57,11 +58,12 @@ export default function ProjectPage() {
       ]);
       const nextProject = await api.getOrganizationProjectBySlug(nextOrganization.id, projectSlug);
       const usersPromise = currentUser.userType === "counselor" ? api.getOrganizationUsers(nextOrganization.id) : Promise.resolve<User[]>([]);
-      const [functionRows, nextProfile, nextSummary, nextResponses] = await Promise.all([
+      const [functionRows, nextProfile, nextSummary, nextResponses, nextRemediationActions] = await Promise.all([
         api.getFunctions(),
         api.getProfile(nextProject.id),
         api.getSummary(nextProject.id),
         api.getResponses(nextProject.id),
+        api.getRemediationActions(nextProject.id),
       ]);
       const nextOrganizationUsers = await usersPromise;
       if (!active) return;
@@ -74,6 +76,7 @@ export default function ProjectPage() {
       setProfile(nextProfile);
       setSummary(nextSummary);
       setResponses(nextResponses);
+      setRemediationActions(nextRemediationActions);
     } catch (cause) {
       if (cause instanceof APIError && cause.status === 401) {
         router.replace("/login");
@@ -114,6 +117,58 @@ export default function ProjectPage() {
   async function finalizeProject() {
     if (!project) return;
     setProject(await api.finalizeProject(project.id));
+  }
+
+  function replaceRemediationAction(next: RemediationAction) {
+    setRemediationActions((rows) => rows.some((row) => row.id === next.id) ? rows.map((row) => row.id === next.id ? next : row) : [...rows, next]);
+  }
+
+  async function createRemediation(input: RemediationCreateInput) {
+    if (!project) return;
+    replaceRemediationAction(await api.createRemediationAction(project.id, input));
+  }
+
+  async function updateRemediation(actionID: string, patch: RemediationPatchInput) {
+    if (!project) return;
+    replaceRemediationAction(await api.updateRemediationAction(project.id, actionID, patch));
+  }
+
+  async function saveRemediationProgress(actionID: string, progressNote: string) {
+    if (!project) return;
+    replaceRemediationAction(await api.updateRemediationProgress(project.id, actionID, progressNote));
+  }
+
+  async function submitRemediation(actionID: string) {
+    if (!project) return;
+    replaceRemediationAction(await api.submitRemediationAction(project.id, actionID));
+  }
+
+  async function reviewRemediation(actionID: string, decision: "close" | "return", comment: string) {
+    if (!project) return;
+    replaceRemediationAction(await api.reviewRemediationAction(project.id, actionID, { decision, comment }));
+  }
+
+  async function uploadRemediationEvidence(actionID: string, file: File) {
+    if (!project) return;
+    const evidence = await api.uploadRemediationEvidence(project.id, actionID, file);
+    setRemediationActions((rows) => rows.map((action) => action.id === actionID ? { ...action, evidence: [...action.evidence, evidence] } : action));
+  }
+
+  async function deleteRemediationEvidence(actionID: string, evidenceID: string) {
+    if (!project) return;
+    await api.deleteRemediationEvidence(project.id, actionID, evidenceID);
+    setRemediationActions((rows) => rows.map((action) => action.id === actionID ? { ...action, evidence: action.evidence.filter((item) => item.id !== evidenceID) } : action));
+  }
+
+  async function downloadRemediationEvidence(actionID: string, evidenceID: string, originalName: string) {
+    if (!project) return;
+    const blob = await api.downloadRemediationEvidence(project.id, actionID, evidenceID);
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = originalName;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
 
@@ -215,6 +270,7 @@ export default function ProjectPage() {
     setOrganizationUsers([]);
     setProfile([]);
     setResponses([]);
+    setRemediationActions([]);
     setSummary(emptySummary);
     setError("");
     setNotFound(false);
@@ -278,6 +334,15 @@ export default function ProjectPage() {
       onFinalizeProject={finalizeProject}
       onOpenFinalReport={() => router.push(`${projectPath(organization, project)}/report`)}
       onOpenAuditPackage={() => router.push(`${projectPath(organization, project)}/audit`)}
+      remediationActions={remediationActions}
+      onCreateRemediation={createRemediation}
+      onUpdateRemediation={updateRemediation}
+      onSaveRemediationProgress={saveRemediationProgress}
+      onSubmitRemediation={submitRemediation}
+      onReviewRemediation={reviewRemediation}
+      onUploadRemediationEvidence={uploadRemediationEvidence}
+      onDeleteRemediationEvidence={deleteRemediationEvidence}
+      onDownloadRemediationEvidence={downloadRemediationEvidence}
     />
   );
 }

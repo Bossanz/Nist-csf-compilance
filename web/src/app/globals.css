@@ -743,6 +743,10 @@ button.danger:disabled:hover { text-decoration: none; }
 .anchor-primary:active { transform: translateY(1px); }
 
 .action-plan { display: grid; gap: 24px; }
+.project-surface-switch { display: inline-flex; gap: 4px; margin: 0 0 24px; padding: 4px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); }
+.project-surface-switch button { min-height: 38px; padding: 8px 14px; color: var(--muted); font-weight: 750; background: transparent; border: 0; border-radius: 7px; cursor: pointer; }
+.project-surface-switch button:hover { color: var(--accent-dark); background: var(--accent-faint); }
+.project-surface-switch button.active { color: var(--accent-dark); background: var(--accent-soft); }
 .action-plan-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line-strong); }
 .action-plan-heading h2 { margin: 0 0 6px; }
 .action-plan-heading p { max-width: 68ch; margin: 0; color: var(--muted-strong); }

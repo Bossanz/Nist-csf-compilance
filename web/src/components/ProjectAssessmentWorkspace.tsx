@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
+import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
 import { FunctionSidebar, type FunctionProgress, type WorkspaceMode } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
 import { ProjectFinalizationPanel } from "./ProjectFinalizationPanel";
+import { ActionPlan } from "./ActionPlan";
 
 type Props = {
   user: User;
@@ -39,6 +40,15 @@ type Props = {
   onFinalizeProject?: () => Promise<void>;
   onOpenFinalReport?: () => void;
   onOpenAuditPackage?: () => void;
+  remediationActions?: RemediationAction[];
+  onCreateRemediation?: (input: RemediationCreateInput) => Promise<void>;
+  onUpdateRemediation?: (actionID: string, patch: RemediationPatchInput) => Promise<void>;
+  onSaveRemediationProgress?: (actionID: string, progressNote: string) => Promise<void>;
+  onSubmitRemediation?: (actionID: string) => Promise<void>;
+  onReviewRemediation?: (actionID: string, decision: "close" | "return", comment: string) => Promise<void>;
+  onUploadRemediationEvidence?: (actionID: string, file: File) => Promise<void>;
+  onDeleteRemediationEvidence?: (actionID: string, evidenceID: string) => Promise<void>;
+  onDownloadRemediationEvidence?: (actionID: string, evidenceID: string, originalName: string) => Promise<void>;
 };
 
 function formatProjectDate(value: string) {
@@ -79,6 +89,15 @@ export function ProjectAssessmentWorkspace({
   onFinalizeProject,
   onOpenFinalReport,
   onOpenAuditPackage,
+  remediationActions = [],
+  onCreateRemediation,
+  onUpdateRemediation,
+  onSaveRemediationProgress,
+  onSubmitRemediation,
+  onReviewRemediation,
+  onUploadRemediationEvidence,
+  onDeleteRemediationEvidence,
+  onDownloadRemediationEvidence,
 }: Props) {
   const isCounselor = user.userType === "counselor";
   const isFinalized = project.status === "closed";
@@ -110,6 +129,7 @@ export function ProjectAssessmentWorkspace({
   const [bulkError, setBulkError] = useState("");
   const [scopeSubmitState, setScopeSubmitState] = useState<"idle" | "submitting" | "error">("idle");
   const [scopeSubmitError, setScopeSubmitError] = useState("");
+  const [surface, setSurface] = useState<"assessment" | "actions">("assessment");
   const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
   const responseBySubcategoryID = useMemo(
     () => new Map(responses.map((response) => [response.subcategoryID, response] as const)),
@@ -280,9 +300,30 @@ export function ProjectAssessmentWorkspace({
             />
           )}
         </header>
+        <nav className="project-surface-switch" aria-label="Project workspace">
+          <button type="button" className={surface === "assessment" ? "active" : ""} aria-pressed={surface === "assessment"} onClick={() => setSurface("assessment")}>Assessment</button>
+          <button type="button" className={surface === "actions" ? "active" : ""} aria-pressed={surface === "actions"} onClick={() => setSurface("actions")}>Action Plan</button>
+        </nav>
         {error && <div className="error" role="alert">{error}</div>}
         <div className="project-layout">
           <div className="reading-column">
+            {surface === "actions" ? (
+              <ActionPlan
+                user={user}
+                profile={profile}
+                responses={responses}
+                actions={remediationActions}
+                assigneeOptions={organizationUsers}
+                onCreate={onCreateRemediation ?? (async () => undefined)}
+                onUpdate={onUpdateRemediation ?? (async () => undefined)}
+                onSaveProgress={onSaveRemediationProgress ?? (async () => undefined)}
+                onSubmit={onSubmitRemediation ?? (async () => undefined)}
+                onReview={onReviewRemediation ?? (async () => undefined)}
+                onUploadEvidence={onUploadRemediationEvidence ?? (async () => undefined)}
+                onDeleteEvidence={onDeleteRemediationEvidence ?? (async () => undefined)}
+                onDownloadEvidence={onDownloadRemediationEvidence ?? (async () => undefined)}
+              />
+            ) : <>
             <SummaryCards summary={summary} />
             {isCounselor && <AssignmentProgress {...assignmentProgress} />}
             <section className="assessment-region" aria-labelledby="outcome-assessments-heading">
@@ -329,6 +370,7 @@ export function ProjectAssessmentWorkspace({
                 />
               )}
             </section>
+            </>}
           </div>
         </div>
       </main>
