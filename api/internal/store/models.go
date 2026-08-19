@@ -126,6 +126,67 @@ type ResponseDocument struct {
 	UploadedBy   string    `json:"uploadedBy"`
 	CreatedAt    time.Time `json:"createdAt"`
 }
+type RemediationEvidence struct {
+	ID           string    `json:"id"`
+	ActionID     string    `json:"actionID"`
+	OriginalName string    `json:"originalName"`
+	StoragePath  string    `json:"-"`
+	MIMEType     string    `json:"mimeType"`
+	SizeBytes    int64     `json:"sizeBytes"`
+	UploadedBy   string    `json:"uploadedBy"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+type RemediationAction struct {
+	ID                   string                `json:"id"`
+	ProjectID            string                `json:"projectID"`
+	SubcategoryID        string                `json:"subcategoryID"`
+	OutcomeCode          string                `json:"outcomeCode"`
+	OutcomeDescription   string                `json:"outcomeDescription"`
+	CurrentCoverageLevel string                `json:"currentCoverageLevel"`
+	TargetCoverageLevel  string                `json:"targetCoverageLevel"`
+	Title                string                `json:"title"`
+	Description          string                `json:"description"`
+	DesiredResult        string                `json:"desiredResult"`
+	Priority             string                `json:"priority"`
+	OwnerUserID          string                `json:"ownerUserID"`
+	OwnerName            string                `json:"ownerName"`
+	OwnerEmail           string                `json:"ownerEmail"`
+	DueDate              time.Time             `json:"dueDate"`
+	Status               string                `json:"status"`
+	ProgressNote         string                `json:"progressNote"`
+	ReviewComment        string                `json:"reviewComment"`
+	CreatedBy            string                `json:"createdBy"`
+	SubmittedAt          *time.Time            `json:"submittedAt"`
+	ClosedBy             *string               `json:"closedBy"`
+	ClosedAt             *time.Time            `json:"closedAt"`
+	CreatedAt            time.Time             `json:"createdAt"`
+	UpdatedAt            time.Time             `json:"updatedAt"`
+	Evidence             []RemediationEvidence `json:"evidence"`
+}
+type RemediationCreate struct {
+	SubcategoryID string    `json:"subcategoryID"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	DesiredResult string    `json:"desiredResult"`
+	Priority      string    `json:"priority"`
+	OwnerUserID   string    `json:"ownerUserID"`
+	DueDate       time.Time `json:"dueDate"`
+}
+type RemediationPatch struct {
+	Title         *string    `json:"title,omitempty"`
+	Description   *string    `json:"description,omitempty"`
+	DesiredResult *string    `json:"desiredResult,omitempty"`
+	Priority      *string    `json:"priority,omitempty"`
+	OwnerUserID   *string    `json:"ownerUserID,omitempty"`
+	DueDate       *time.Time `json:"dueDate,omitempty"`
+}
+type RemediationSummary struct {
+	OpenCount           int `json:"openCount"`
+	InProgressCount     int `json:"inProgressCount"`
+	AwaitingReviewCount int `json:"awaitingReviewCount"`
+	OverdueCount        int `json:"overdueCount"`
+	ClosedCount         int `json:"closedCount"`
+}
 type ProjectFunction struct {
 	ID         string `json:"id"`
 	FunctionID string `json:"functionId"`
