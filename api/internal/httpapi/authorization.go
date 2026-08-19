@@ -23,18 +23,20 @@ func (h *Handler) validMutationRequest(r *http.Request) bool {
 type action string
 
 const (
-	actionCreateOrganization action = "create_organization"
-	actionDeleteOrganization action = "delete_organization"
-	actionCreateProject      action = "create_project"
-	actionDeleteProject      action = "delete_project"
-	actionSubmitScope        action = "submit_scope"
-	actionFinalizeProject    action = "finalize_project"
-	actionUpdateProfile      action = "update_profile"
-	actionSaveResponse       action = "save_response"
-	actionSubmitResponse     action = "submit_response"
-	actionReviewResponse     action = "review_response"
-	actionInviteStakeholder  action = "invite_stakeholder"
-	actionManageCounselor    action = "manage_counselor"
+	actionCreateOrganization  action = "create_organization"
+	actionDeleteOrganization  action = "delete_organization"
+	actionCreateProject       action = "create_project"
+	actionDeleteProject       action = "delete_project"
+	actionSubmitScope         action = "submit_scope"
+	actionFinalizeProject     action = "finalize_project"
+	actionUpdateProfile       action = "update_profile"
+	actionSaveResponse        action = "save_response"
+	actionSubmitResponse      action = "submit_response"
+	actionReviewResponse      action = "review_response"
+	actionManageRemediation   action = "manage_remediation"
+	actionProgressRemediation action = "progress_remediation"
+	actionInviteStakeholder   action = "invite_stakeholder"
+	actionManageCounselor     action = "manage_counselor"
 )
 
 func can(user store.User, requested action) bool {
@@ -43,6 +45,10 @@ func can(user store.User, requested action) bool {
 		return user.Role == "counselor_admin"
 	case actionCreateProject, actionDeleteProject, actionSubmitScope, actionFinalizeProject:
 		return user.Role == "counselor_admin" || user.Role == "counselor"
+	case actionManageRemediation:
+		return user.Role == "counselor_admin" || user.Role == "counselor"
+	case actionProgressRemediation:
+		return user.Role == "org_admin" || user.Role == "assessor"
 	case actionUpdateProfile:
 		return user.Role == "counselor_admin" || user.Role == "counselor" || user.Role == "org_admin" || user.Role == "assessor"
 	case actionSaveResponse, actionSubmitResponse:
@@ -147,7 +153,7 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 		writeError(w, http.StatusForbidden, "forbidden", "Permission denied")
 		return false
 	}
-	if requested != nil && project.Status == "closed" && *requested != actionDeleteProject && *requested != actionFinalizeProject {
+	if requested != nil && project.Status == "closed" && *requested != actionDeleteProject && *requested != actionFinalizeProject && *requested != actionManageRemediation && *requested != actionProgressRemediation {
 		writeError(w, http.StatusConflict, "project_finalized", "Project is finalized and read-only")
 		return false
 	}

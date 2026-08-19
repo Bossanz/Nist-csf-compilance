@@ -43,6 +43,14 @@ type responseStore interface {
 	SubmitResponse(context.Context, string, string, string) (store.StakeholderResponse, error)
 	ReviewResponse(context.Context, string, string, string, string, string) (store.StakeholderResponse, error)
 }
+type remediationStore interface {
+	ListRemediationActions(context.Context, string) ([]store.RemediationAction, error)
+	CreateRemediationAction(context.Context, string, string, store.RemediationCreate) (store.RemediationAction, error)
+	UpdateRemediationAction(context.Context, string, string, string, store.RemediationPatch) (store.RemediationAction, error)
+	UpdateRemediationProgress(context.Context, string, string, string, string) (store.RemediationAction, error)
+	SubmitRemediationAction(context.Context, string, string, string) (store.RemediationAction, error)
+	ReviewRemediationAction(context.Context, string, string, string, string, string) (store.RemediationAction, error)
+}
 type passwordService interface {
 	Request(context.Context, string) (store.User, string, bool, error)
 	Confirm(context.Context, string, string) error
@@ -65,6 +73,7 @@ type evidenceKeyStore interface {
 type Handler struct {
 	Store         dataStore
 	Responses     responseStore
+	Remediations  remediationStore
 	Documents     documentStore
 	Evidence      evidenceStorage
 	Auth          *authservice.Service
@@ -83,7 +92,7 @@ type errorBody struct {
 }
 
 func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, emailSender notifications.EmailSender, secureCookies bool, appOrigin string) http.Handler {
-	return &Handler{Store: s, Responses: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, Passwords: authservice.NewPasswordService(s, time.Now), SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
+	return &Handler{Store: s, Responses: s, Remediations: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, Passwords: authservice.NewPasswordService(s, time.Now), SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
@@ -229,6 +238,55 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "projects" {
 		id := parts[2]
+		if len(parts) == 4 && parts[3] == "remediation-actions" {
+			if r.Method == http.MethodGet {
+				if !h.authorizeProject(w, r, id, nil) {
+					return
+				}
+				h.listRemediationActions(w, r, id)
+				return
+			}
+			if r.Method == http.MethodPost {
+				requested := actionManageRemediation
+				if !h.authorizeProject(w, r, id, &requested) {
+					return
+				}
+				h.createRemediationAction(w, r, id)
+				return
+			}
+		}
+		if len(parts) == 5 && parts[3] == "remediation-actions" && r.Method == http.MethodPatch {
+			requested := actionManageRemediation
+			if !h.authorizeProject(w, r, id, &requested) {
+				return
+			}
+			h.updateRemediationAction(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "remediation-actions" && parts[5] == "progress" && r.Method == http.MethodPatch {
+			requested := actionProgressRemediation
+			if !h.authorizeProject(w, r, id, &requested) {
+				return
+			}
+			h.updateRemediationProgress(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "remediation-actions" && parts[5] == "submit" && r.Method == http.MethodPost {
+			requested := actionProgressRemediation
+			if !h.authorizeProject(w, r, id, &requested) {
+				return
+			}
+			h.submitRemediationAction(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "remediation-actions" && parts[5] == "review" && r.Method == http.MethodPost {
+			requested := actionManageRemediation
+			if !h.authorizeProject(w, r, id, &requested) {
+				return
+			}
+			h.reviewRemediationAction(w, r, id, parts[4])
+			return
+		}
 		if len(parts) == 4 && parts[3] == "final-report" && r.Method == http.MethodGet {
 			if !h.authorizeProject(w, r, id, nil) {
 				return
