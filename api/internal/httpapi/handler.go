@@ -51,6 +51,11 @@ type remediationStore interface {
 	SubmitRemediationAction(context.Context, string, string, string) (store.RemediationAction, error)
 	ReviewRemediationAction(context.Context, string, string, string, string, string) (store.RemediationAction, error)
 }
+type remediationEvidenceStore interface {
+	CreateRemediationEvidence(context.Context, string, string, string, string, string, string, int64) (store.RemediationEvidence, error)
+	GetRemediationEvidence(context.Context, string, string, string) (store.RemediationEvidence, error)
+	DeleteRemediationEvidence(context.Context, string, string, string, string) (store.RemediationEvidence, error)
+}
 type passwordService interface {
 	Request(context.Context, string) (store.User, string, bool, error)
 	Confirm(context.Context, string, string) error
@@ -71,18 +76,19 @@ type evidenceKeyStore interface {
 	ListOrganizationEvidenceKeys(context.Context, string) ([]string, error)
 }
 type Handler struct {
-	Store         dataStore
-	Responses     responseStore
-	Remediations  remediationStore
-	Documents     documentStore
-	Evidence      evidenceStorage
-	Auth          *authservice.Service
-	SecureCookies bool
-	LoginThrottle *LoginThrottle
-	AppOrigin     string
-	Invitations   *authservice.InvitationService
-	EmailSender   notifications.EmailSender
-	Passwords     passwordService
+	Store               dataStore
+	Responses           responseStore
+	Remediations        remediationStore
+	RemediationEvidence remediationEvidenceStore
+	Documents           documentStore
+	Evidence            evidenceStorage
+	Auth                *authservice.Service
+	SecureCookies       bool
+	LoginThrottle       *LoginThrottle
+	AppOrigin           string
+	Invitations         *authservice.InvitationService
+	EmailSender         notifications.EmailSender
+	Passwords           passwordService
 }
 type errorBody struct {
 	Error struct {
@@ -92,7 +98,7 @@ type errorBody struct {
 }
 
 func New(s *store.Store, auth *authservice.Service, invitations *authservice.InvitationService, emailSender notifications.EmailSender, secureCookies bool, appOrigin string) http.Handler {
-	return &Handler{Store: s, Responses: s, Remediations: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, Passwords: authservice.NewPasswordService(s, time.Now), SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
+	return &Handler{Store: s, Responses: s, Remediations: s, RemediationEvidence: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, Passwords: authservice.NewPasswordService(s, time.Now), SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
@@ -285,6 +291,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			h.reviewRemediationAction(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "remediation-actions" && parts[5] == "evidence" && r.Method == http.MethodPost {
+			requested := actionProgressRemediation
+			if !h.authorizeProject(w, r, id, &requested) {
+				return
+			}
+			h.uploadRemediationEvidence(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 7 && parts[3] == "remediation-actions" && parts[5] == "evidence" {
+			if r.Method == http.MethodGet {
+				if !h.authorizeProject(w, r, id, nil) {
+					return
+				}
+				h.downloadRemediationEvidence(w, r, id, parts[4], parts[6], false)
+				return
+			}
+			if r.Method == http.MethodDelete {
+				requested := actionProgressRemediation
+				if !h.authorizeProject(w, r, id, &requested) {
+					return
+				}
+				h.deleteRemediationEvidence(w, r, id, parts[4], parts[6])
+				return
+			}
+		}
+		if len(parts) == 8 && parts[3] == "remediation-actions" && parts[5] == "evidence" && parts[7] == "preview" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.downloadRemediationEvidence(w, r, id, parts[4], parts[6], true)
 			return
 		}
 		if len(parts) == 4 && parts[3] == "final-report" && r.Method == http.MethodGet {

@@ -68,6 +68,18 @@ func TestRemediationLifecycleAndEligibility(t *testing.T) {
 	if err != nil || len(actions) != 1 || actions[0].ID != action.ID {
 		t.Fatalf("unexpected actions: %#v err=%v", actions, err)
 	}
+	evidence, err := data.CreateRemediationEvidence(ctx, projectID, action.ID, assessorID, "deployment.pdf", "remediation-"+suffix, "application/pdf", 12)
+	if err != nil {
+		t.Fatalf("create remediation evidence: %v", err)
+	}
+	actions, err = data.ListRemediationActions(ctx, projectID)
+	if err != nil || len(actions) != 1 || len(actions[0].Evidence) != 1 || actions[0].Evidence[0].ID != evidence.ID {
+		t.Fatalf("unexpected action evidence: %#v err=%v", actions, err)
+	}
+	deletedEvidence, err := data.DeleteRemediationEvidence(ctx, projectID, action.ID, evidence.ID, assessorID)
+	if err != nil || deletedEvidence.StoragePath != "remediation-"+suffix {
+		t.Fatalf("delete remediation evidence: %#v err=%v", deletedEvidence, err)
+	}
 
 	updatedTitle := "Deploy and verify centralized logging"
 	updated, err := data.UpdateRemediationAction(ctx, projectID, action.ID, counselorID, RemediationPatch{Title: &updatedTitle})

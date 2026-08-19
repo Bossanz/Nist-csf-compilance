@@ -47,6 +47,10 @@ func (s *Store) ListRemediationActions(ctx context.Context, projectID string) ([
 		if err != nil {
 			return nil, err
 		}
+		action.Evidence, err = s.listRemediationEvidence(ctx, action.ID)
+		if err != nil {
+			return nil, err
+		}
 		actions = append(actions, action)
 	}
 	return actions, rows.Err()
@@ -251,6 +255,90 @@ func (s *Store) ReviewRemediationAction(ctx context.Context, projectID, actionID
 	return s.getRemediationAction(ctx, projectID, actionID)
 }
 
+func (s *Store) CreateRemediationEvidence(ctx context.Context, projectID, actionID, actorID, originalName, storagePath, mimeType string, sizeBytes int64) (RemediationEvidence, error) {
+	var ownerID, status string
+	err := s.DB.QueryRow(ctx, `SELECT owner_user_id,status FROM remediation_actions WHERE project_id=$1 AND id=$2`, projectID, actionID).Scan(&ownerID, &status)
+	if err != nil {
+		return RemediationEvidence{}, err
+	}
+	if status == string(domain.RemediationClosed) {
+		return RemediationEvidence{}, ErrRemediationClosed
+	}
+	if ownerID != actorID {
+		return RemediationEvidence{}, ErrRemediationForbidden
+	}
+	if status != string(domain.RemediationOpen) && status != string(domain.RemediationInProgress) {
+		return RemediationEvidence{}, ErrInvalidRemediationTransition
+	}
+	var evidence RemediationEvidence
+	err = s.DB.QueryRow(ctx, `INSERT INTO remediation_evidence(action_id,original_name,storage_path,mime_type,size_bytes,uploaded_by)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		RETURNING id,action_id,original_name,storage_path,mime_type,size_bytes,uploaded_by,created_at`,
+		actionID, originalName, storagePath, mimeType, sizeBytes, actorID).Scan(remediationEvidenceArgs(&evidence)...)
+	return evidence, err
+}
+
+func (s *Store) GetRemediationEvidence(ctx context.Context, projectID, actionID, evidenceID string) (RemediationEvidence, error) {
+	var evidence RemediationEvidence
+	err := s.DB.QueryRow(ctx, `SELECT e.id,e.action_id,e.original_name,e.storage_path,e.mime_type,e.size_bytes,e.uploaded_by,e.created_at
+		FROM remediation_evidence e
+		JOIN remediation_actions a ON a.id=e.action_id
+		WHERE a.project_id=$1 AND a.id=$2 AND e.id=$3`, projectID, actionID, evidenceID).Scan(remediationEvidenceArgs(&evidence)...)
+	return evidence, err
+}
+
+func (s *Store) DeleteRemediationEvidence(ctx context.Context, projectID, actionID, evidenceID, actorID string) (RemediationEvidence, error) {
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return RemediationEvidence{}, err
+	}
+	defer tx.Rollback(ctx)
+	var ownerID, status string
+	if err := tx.QueryRow(ctx, `SELECT owner_user_id,status FROM remediation_actions WHERE project_id=$1 AND id=$2 FOR UPDATE`, projectID, actionID).Scan(&ownerID, &status); err != nil {
+		return RemediationEvidence{}, err
+	}
+	if status == string(domain.RemediationClosed) {
+		return RemediationEvidence{}, ErrRemediationClosed
+	}
+	if ownerID != actorID {
+		return RemediationEvidence{}, ErrRemediationForbidden
+	}
+	if status != string(domain.RemediationOpen) && status != string(domain.RemediationInProgress) {
+		return RemediationEvidence{}, ErrInvalidRemediationTransition
+	}
+	var evidence RemediationEvidence
+	if err := tx.QueryRow(ctx, `DELETE FROM remediation_evidence WHERE action_id=$1 AND id=$2
+		RETURNING id,action_id,original_name,storage_path,mime_type,size_bytes,uploaded_by,created_at`, actionID, evidenceID).Scan(remediationEvidenceArgs(&evidence)...); err != nil {
+		return RemediationEvidence{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return RemediationEvidence{}, err
+	}
+	return evidence, nil
+}
+
+func (s *Store) listRemediationEvidence(ctx context.Context, actionID string) ([]RemediationEvidence, error) {
+	rows, err := s.DB.Query(ctx, `SELECT id,action_id,original_name,storage_path,mime_type,size_bytes,uploaded_by,created_at
+		FROM remediation_evidence WHERE action_id=$1 ORDER BY created_at,id`, actionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	evidence := []RemediationEvidence{}
+	for rows.Next() {
+		var item RemediationEvidence
+		if err := rows.Scan(remediationEvidenceArgs(&item)...); err != nil {
+			return nil, err
+		}
+		evidence = append(evidence, item)
+	}
+	return evidence, rows.Err()
+}
+
+func remediationEvidenceArgs(evidence *RemediationEvidence) []any {
+	return []any{&evidence.ID, &evidence.ActionID, &evidence.OriginalName, &evidence.StoragePath, &evidence.MIMEType, &evidence.SizeBytes, &evidence.UploadedBy, &evidence.CreatedAt}
+}
+
 func (s *Store) getRemediationAction(ctx context.Context, projectID, actionID string) (RemediationAction, error) {
 	row := s.DB.QueryRow(ctx, `SELECT `+remediationColumns+`
 		FROM remediation_actions a
@@ -258,7 +346,12 @@ func (s *Store) getRemediationAction(ctx context.Context, projectID, actionID st
 		JOIN subcategories sc ON sc.id=a.subcategory_id
 		JOIN users u ON u.id=a.owner_user_id
 		WHERE a.project_id=$1 AND a.id=$2`, projectID, actionID)
-	return scanRemediationAction(row)
+	action, err := scanRemediationAction(row)
+	if err != nil {
+		return RemediationAction{}, err
+	}
+	action.Evidence, err = s.listRemediationEvidence(ctx, action.ID)
+	return action, err
 }
 
 type remediationRow interface {

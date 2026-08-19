@@ -182,7 +182,9 @@ func (s *Store) DeleteProject(ctx context.Context, id string) error {
 }
 
 func (s *Store) ListProjectEvidenceKeys(ctx context.Context, projectID string) ([]string, error) {
-	rows, err := s.DB.Query(ctx, `SELECT d.storage_key FROM response_documents d JOIN stakeholder_responses r ON r.id=d.response_id WHERE r.project_id=$1`, projectID)
+	rows, err := s.DB.Query(ctx, `SELECT d.storage_key FROM response_documents d JOIN stakeholder_responses r ON r.id=d.response_id WHERE r.project_id=$1
+		UNION ALL
+		SELECT e.storage_path FROM remediation_evidence e JOIN remediation_actions a ON a.id=e.action_id WHERE a.project_id=$1`, projectID)
 	if err != nil {
 		return nil, err
 	}

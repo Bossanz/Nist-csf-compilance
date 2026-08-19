@@ -97,6 +97,12 @@ func (s *Store) ListOrganizationEvidenceKeys(ctx context.Context, organizationID
 		FROM response_documents d
 		JOIN stakeholder_responses r ON r.id=d.response_id
 		JOIN projects p ON p.id=r.project_id
+		WHERE p.organization_id=$1
+		UNION ALL
+		SELECT e.storage_path
+		FROM remediation_evidence e
+		JOIN remediation_actions a ON a.id=e.action_id
+		JOIN projects p ON p.id=a.project_id
 		WHERE p.organization_id=$1`, organizationID)
 	if err != nil {
 		return nil, err
