@@ -1,4 +1,4 @@
-import type { AuditPackageData, FinalReportData, FunctionNode, Invitation, Organization, ProfilePatch, ProfileRow, Project, ProjectCreateInput, RemediationAction, RemediationCreateInput, RemediationEvidence, RemediationPatchInput, ResponseDocument, Role, StakeholderResponse, Summary, User } from "./types";
+import type { AuditPackageData, AuditTrailEntry, FinalReportData, FunctionNode, Invitation, Organization, ProfilePatch, ProfileRow, Project, ProjectCreateInput, RemediationAction, RemediationCreateInput, RemediationEvidence, RemediationPatchInput, ResponseDocument, Role, StakeholderResponse, Summary, User } from "./types";
 const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 export class APIError extends Error { constructor(message:string,public status:number){super(message)} }
 async function request<T>(path: string, init?: RequestInit): Promise<T> { const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData; const headers = isFormData ? { ...(init?.headers || {}) } : { "Content-Type": "application/json", ...(init?.headers || {}) }; const response = await fetch(`${base}${path}`, { ...init, headers }); if (!response.ok) { const body = await response.json().catch(() => null); throw new APIError(body?.error?.message || `Request failed (${response.status})`,response.status); } if(response.status===204)return undefined as T; return response.json() as Promise<T>; }
@@ -36,6 +36,7 @@ export const api = {
   finalizeProject: (id: string) => request<Project>(`/api/projects/${id}/finalize`, { method: "POST" }),
   getFinalReport: (id: string) => request<FinalReportData>(`/api/projects/${id}/final-report`),
   getAuditPackage: (id: string) => request<AuditPackageData>(`/api/projects/${id}/audit-package`),
+  getProjectAuditLogs: (id: string) => request<AuditTrailEntry[]>(`/api/projects/${id}/audit-logs`),
   downloadAuditPackageCSV: (id: string, signal?: AbortSignal) => download(`/api/projects/${id}/audit-package.csv`, signal),
   getProfile: (id: string) => request<ProfileRow[]>(`/api/projects/${id}/profile`),
   updateProfile: (projectID: string, subcategoryID: string, patch: ProfilePatch) => request<ProfileRow>(`/api/projects/${projectID}/profile/${subcategoryID}`, { method: "PUT", body: JSON.stringify(patch) }),

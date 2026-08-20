@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { ProjectAssessmentWorkspace } from "./ProjectAssessmentWorkspace";
-import type { FunctionNode, Organization, ProfileRow, Project, StakeholderResponse, Summary, User } from "../lib/types";
+import type { AuditTrailEntry, FunctionNode, Organization, ProfileRow, Project, StakeholderResponse, Summary, User } from "../lib/types";
 
 const organization: Organization = { id: "org-1", name: "Acme", slug: "acme", type: "client" };
 const project: Project = { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness", slug: "readiness", status: "in_progress", createdAt: "2026-08-10T00:00:00Z", objective: "Prepare the organization for registration.", assessmentPeriod: "Q3 2026", targetCompletionDate: "2026-09-30", scopeBoundary: "Thailand operations", complianceDriver: "Customer assurance" };
@@ -12,6 +12,7 @@ const otherAssessor: User = { ...assessor, id: "assessor-2", name: "Other Assess
 const counselor: User = { id: "counselor-1", organizationID: null, name: "Counselor", email: "counselor@example.com", userType: "counselor", role: "counselor", status: "active" };
 const reviewer: User = { ...assessor, id: "reviewer-1", name: "Reviewer", role: "reviewer" };
 const viewer: User = { ...assessor, id: "viewer-1", name: "Viewer", role: "viewer" };
+const auditor: User = { ...assessor, id: "auditor-1", name: "Auditor", role: "auditor" };
 const submittedResponse: StakeholderResponse = {
   id: "response-1",
   projectID: "project-1",
@@ -62,7 +63,7 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop, onFinalizeProject = noop, onOpenFinalReport = noop, onOpenAuditPackage = noop) {
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop, onFinalizeProject = noop, onOpenFinalReport = noop, onOpenAuditPackage = noop, auditTrail: AuditTrailEntry[] = []) {
   return render(
     <ProjectAssessmentWorkspace
       user={user}
@@ -89,6 +90,7 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows =
       onFinalizeProject={onFinalizeProject}
       onOpenFinalReport={onOpenFinalReport}
       onOpenAuditPackage={onOpenAuditPackage}
+      auditTrail={auditTrail}
     />,
   );
 }
@@ -185,6 +187,38 @@ test("Viewer sees included outcomes without an action count or mutation affordan
   expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
 });
 
+test("Auditor sees included outcomes and activity without mutation affordances", () => {
+  const auditTrail: AuditTrailEntry[] = [{
+    id: "event-1",
+    actorUserID: reviewer.id,
+    actorName: reviewer.name,
+    actorEmail: reviewer.email,
+    actorRole: reviewer.role,
+    result: "success",
+    requestID: "request-123",
+    ipAddress: "192.0.2.10",
+    userAgent: "audit-test/1.0",
+    projectID: project.id,
+    action: "response.reviewed",
+    entityType: "response",
+    entityID: submittedResponse.id,
+    metadata: {},
+    createdAt: "2026-08-10T00:00:00Z",
+  }];
+  renderWorkspace(auditor, noop, profile, [submittedResponse], project, noop, noop, noop, noop, auditTrail);
+
+  expect(visibleOutcomeCount()).toBe("2");
+  expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("Audit View");
+  expect(screen.getByText("Read the assigned Project, responses, evidence, and activity history.")).toBeTruthy();
+  expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  expect(screen.getAllByText("Read only").length).toBeGreaterThan(0);
+  expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+  expect(screen.getByRole("heading", { name: "Activity trail" })).toBeTruthy();
+  expect(screen.getByText("Response approved")).toBeTruthy();
+});
+
 test("explains when a stakeholder has no assigned queue", () => {
   renderWorkspace(assessor, noop, profile.map((item) => ({ ...item, assignedUserID: otherAssessor.id })));
 
@@ -253,6 +287,38 @@ test("Counselor can read stakeholder work after scope submission", () => {
 
   expect(screen.getByRole("heading", { name: /stakeholder response/i })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /submit scope/i })).toBeNull();
+});
+
+test("Auditor sees included outcomes and activity without mutation affordances", () => {
+  const auditTrail: AuditTrailEntry[] = [{
+    id: "event-1",
+    actorUserID: reviewer.id,
+    actorName: reviewer.name,
+    actorEmail: reviewer.email,
+    actorRole: reviewer.role,
+    result: "success",
+    requestID: "request-123",
+    ipAddress: "192.0.2.10",
+    userAgent: "audit-test/1.0",
+    projectID: project.id,
+    action: "response.reviewed",
+    entityType: "response",
+    entityID: submittedResponse.id,
+    metadata: {},
+    createdAt: "2026-08-10T00:00:00Z",
+  }];
+  renderWorkspace(auditor, noop, profile, [submittedResponse], project, noop, noop, noop, noop, auditTrail);
+
+  expect(visibleOutcomeCount()).toBe("2");
+  expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("Audit View");
+  expect(screen.getByText("Read the assigned Project, responses, evidence, and activity history.")).toBeTruthy();
+  expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
+  expect(screen.getAllByText("Read only").length).toBeGreaterThan(0);
+  expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+  expect(screen.getByRole("heading", { name: "Activity trail" })).toBeTruthy();
+  expect(screen.getByText("Response approved")).toBeTruthy();
 });
 
 test("Counselor can finalize when every included outcome is approved", async () => {

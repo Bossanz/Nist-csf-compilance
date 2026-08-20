@@ -77,5 +77,5 @@ export type ReportEvidence = { id: string; originalName: string; mimeType: strin
 export type ReportOutcome = { profile: ProfileRow; response: ReportResponse | null; evidence: ReportEvidence[] };
 export type FinalReportData = { project: Project; summary: ReportSummary; outcomes: ReportOutcome[]; remediationSummary: RemediationSummary; remediationActions: RemediationAction[] };
 export type ScopeRegisterEntry = { profile: ProfileRow };
-export type AuditTrailEntry = { id: string; actorUserID: string | null; actorName: string; actorEmail: string; action: string; entityType: string; entityID: string | null; metadata: Record<string, unknown>; createdAt: string };
+export type AuditTrailEntry = { id: string; actorUserID: string | null; actorName: string; actorEmail: string; actorRole?: string; result?: string; requestID?: string; ipAddress?: string; userAgent?: string; projectID?: string | null; action: string; entityType: string; entityID: string | null; metadata: Record<string, unknown>; createdAt: string };
 export type AuditPackageData = { project: Project; summary: ReportSummary; scope: ScopeRegisterEntry[]; outcomes: ReportOutcome[]; auditTrail: AuditTrailEntry[]; remediationSummary: RemediationSummary; remediationActions: RemediationAction[] };

@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
+import type { AuditTrailEntry, EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
 import { FunctionSidebar, type FunctionProgress, type WorkspaceMode } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
 import { ProjectFinalizationPanel } from "./ProjectFinalizationPanel";
 import { ActionPlan } from "./ActionPlan";
+import { AuditTimeline } from "./AuditTimeline";
 
 type Props = {
   user: User;
@@ -40,6 +41,7 @@ type Props = {
   onFinalizeProject?: () => Promise<void>;
   onOpenFinalReport?: () => void;
   onOpenAuditPackage?: () => void;
+  auditTrail?: AuditTrailEntry[];
   remediationActions?: RemediationAction[];
   onCreateRemediation?: (input: RemediationCreateInput) => Promise<void>;
   onUpdateRemediation?: (actionID: string, patch: RemediationPatchInput) => Promise<void>;
@@ -89,6 +91,7 @@ export function ProjectAssessmentWorkspace({
   onFinalizeProject,
   onOpenFinalReport,
   onOpenAuditPackage,
+  auditTrail = [],
   remediationActions = [],
   onCreateRemediation,
   onUpdateRemediation,
@@ -112,6 +115,8 @@ export function ProjectAssessmentWorkspace({
       ? "Review Queue"
       : user.role === "viewer"
         ? "Read-only"
+        : user.role === "auditor"
+          ? "Audit View"
         : "My Work";
   const selectedFunction = functions.find((fn) => fn.code === selectedCode);
   const taskHint = isFinalized
@@ -124,6 +129,8 @@ export function ProjectAssessmentWorkspace({
       ? "Review outcomes in Reviewing status and record a final decision."
       : user.role === "viewer"
         ? "Read included outcomes, responses, and evidence."
+        : user.role === "auditor"
+          ? "Read the assigned Project, responses, evidence, and activity history."
         : "Complete your assigned outcomes and attach supporting evidence.";
   const [bulkState, setBulkState] = useState<"idle" | "saving" | "error">("idle");
   const [bulkError, setBulkError] = useState("");
@@ -142,10 +149,10 @@ export function ProjectAssessmentWorkspace({
         const response = responseBySubcategoryID.get(row.subcategoryID);
         if (isCounselor) return row.assignedUserID === null;
         if (user.role === "reviewer") return response?.status === "submitted";
-        if (user.role === "viewer") return false;
+        if (user.role === "viewer" || user.role === "auditor") return false;
         return row.assignedUserID === user.id && (!response || response.status === "draft" || response.status === "needs_more_info");
       }).length;
-      const attentionLabel = isCounselor ? "unassigned" : user.role === "reviewer" ? "to review" : user.role === "viewer" ? undefined : "open";
+      const attentionLabel = isCounselor ? "unassigned" : user.role === "reviewer" ? "to review" : user.role === "viewer" || user.role === "auditor" ? undefined : "open";
       const functionSummary = summary.functions.find((item) => item.code === fn.code);
       return [fn.code, {
         value: includedRows.length,
@@ -180,7 +187,7 @@ export function ProjectAssessmentWorkspace({
       if (isCounselor) return true;
       if (!scopeSubmitted) return false;
       if (!row.included) return false;
-      if (user.role === "reviewer" || user.role === "viewer") return true;
+      if (user.role === "reviewer" || user.role === "viewer" || user.role === "auditor") return true;
       return canEditProfile && row.assignedUserID === user.id;
     }),
     [canEditProfile, isCounselor, profile, scopeSubmitted, selectedCode, user.id, user.role],
@@ -205,7 +212,7 @@ export function ProjectAssessmentWorkspace({
         ? functionRows.some((row) => row.included)
           ? "No outcomes awaiting review are available in this Function."
           : "No included outcomes are available in this Function."
-        : user.role === "viewer"
+        : user.role === "viewer" || user.role === "auditor"
           ? "No included outcomes are available in this Function."
           : "No included outcomes are assigned to you in this Function.";
 
@@ -371,6 +378,7 @@ export function ProjectAssessmentWorkspace({
               )}
             </section>
             </>}
+            <AuditTimeline events={auditTrail} />
           </div>
         </div>
       </main>

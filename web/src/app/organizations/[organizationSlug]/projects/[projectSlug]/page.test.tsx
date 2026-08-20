@@ -12,7 +12,7 @@ vi.mock("../../../../../lib/api", () => ({
   },
   api: {
     me: vi.fn(), getOrganizationBySlug: vi.fn(), getOrganizationProjectBySlug: vi.fn(), getFunctions: vi.fn(),
-    getProfile: vi.fn(), getSummary: vi.fn(), getResponses: vi.fn(), updateProfile: vi.fn(), saveResponse: vi.fn(),
+    getProfile: vi.fn(), getSummary: vi.fn(), getResponses: vi.fn(), getProjectAuditLogs: vi.fn(), updateProfile: vi.fn(), saveResponse: vi.fn(),
     submitResponse: vi.fn(), reviewResponse: vi.fn(), uploadResponseDocument: vi.fn(), deleteResponseDocument: vi.fn(),
     downloadResponseDocument: vi.fn(), getOrganizationUsers: vi.fn(),
     getRemediationActions: vi.fn(), createRemediationAction: vi.fn(), updateRemediationAction: vi.fn(),
@@ -50,6 +50,7 @@ beforeEach(() => {
   vi.mocked(api.getProfile).mockResolvedValue(profile);
   vi.mocked(api.getSummary).mockResolvedValue(summary);
   vi.mocked(api.getResponses).mockResolvedValue([]);
+  vi.mocked(api.getProjectAuditLogs).mockResolvedValue([]);
   vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);
   vi.mocked(api.getRemediationActions).mockResolvedValue([]);
 });

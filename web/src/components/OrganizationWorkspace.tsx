@@ -62,6 +62,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
   const counselor = user.role === "counselor_admin" || user.role === "counselor";
   const canInvite = counselor || user.role === "org_admin";
   const canManageUsers = counselor || user.role === "org_admin";
+  const invitationRoles = user.role === "org_admin" ? stakeholderRoles : stakeholderRoles.filter((item) => item !== "auditor");
 
   function closeDeleteConfirmation() {
     setPendingDelete(null);
@@ -283,7 +284,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
             </div>
             <form className="panel invite-form" aria-labelledby="invite-stakeholder-heading" onSubmit={(event) => { event.preventDefault(); void createInvitation(); }}>
             <label className="field"><span>Email</span><input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-            <label className="field"><span>Access role</span><select value={role} onChange={(event) => setRole(event.target.value as Role)}>{stakeholderRoles.map((item) => <option value={item} key={item}>{stakeholderRoleLabels[item]}</option>)}</select></label>
+            <label className="field"><span>Access role</span><select value={role} onChange={(event) => setRole(event.target.value as Role)}>{invitationRoles.map((item) => <option value={item} key={item}>{stakeholderRoleLabels[item]}</option>)}</select></label>
             {role === "auditor" && (
               <fieldset className="field project-access-fieldset">
                 <legend>Project access</legend>

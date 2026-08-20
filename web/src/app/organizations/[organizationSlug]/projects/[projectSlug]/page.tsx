@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { APIError, api } from "../../../../../lib/api";
-import type { EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
+import type { AuditTrailEntry, EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
 import { organizationPath, projectPath } from "../../../../../lib/routes";
 import { ProjectAssessmentWorkspace } from "../../../../../components/ProjectAssessmentWorkspace";
 
@@ -21,6 +21,7 @@ export default function ProjectPage() {
   const [organizationUsers, setOrganizationUsers] = useState<User[]>([]);
   const [profile, setProfile] = useState<ProfileRow[]>([]);
   const [responses, setResponses] = useState<StakeholderResponse[]>([]);
+  const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
   const [remediationActions, setRemediationActions] = useState<RemediationAction[]>([]);
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [selectedCode, setSelectedCode] = useState("");
@@ -58,12 +59,13 @@ export default function ProjectPage() {
       ]);
       const nextProject = await api.getOrganizationProjectBySlug(nextOrganization.id, projectSlug);
       const usersPromise = currentUser.userType === "counselor" ? api.getOrganizationUsers(nextOrganization.id) : Promise.resolve<User[]>([]);
-      const [functionRows, nextProfile, nextSummary, nextResponses, nextRemediationActions] = await Promise.all([
+      const [functionRows, nextProfile, nextSummary, nextResponses, nextRemediationActions, nextAuditTrail] = await Promise.all([
         api.getFunctions(),
         api.getProfile(nextProject.id),
         api.getSummary(nextProject.id),
         api.getResponses(nextProject.id),
         api.getRemediationActions(nextProject.id),
+        api.getProjectAuditLogs(nextProject.id),
       ]);
       const nextOrganizationUsers = await usersPromise;
       if (!active) return;
@@ -77,6 +79,7 @@ export default function ProjectPage() {
       setSummary(nextSummary);
       setResponses(nextResponses);
       setRemediationActions(nextRemediationActions);
+      setAuditTrail(nextAuditTrail);
     } catch (cause) {
       if (cause instanceof APIError && cause.status === 401) {
         router.replace("/login");
@@ -271,6 +274,7 @@ export default function ProjectPage() {
     setProfile([]);
     setResponses([]);
     setRemediationActions([]);
+    setAuditTrail([]);
     setSummary(emptySummary);
     setError("");
     setNotFound(false);
@@ -334,6 +338,7 @@ export default function ProjectPage() {
       onFinalizeProject={finalizeProject}
       onOpenFinalReport={() => router.push(`${projectPath(organization, project)}/report`)}
       onOpenAuditPackage={() => router.push(`${projectPath(organization, project)}/audit`)}
+      auditTrail={auditTrail}
       remediationActions={remediationActions}
       onCreateRemediation={createRemediation}
       onUpdateRemediation={updateRemediation}

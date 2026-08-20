@@ -184,7 +184,7 @@ export function AssessmentCard({
       ? "Assigned to " + row.assignedUserName
       : "Assigned stakeholder"
     : "Unassigned";
-  const isReadOnlyWorkspaceRole = role === "counselor" || role === "counselor_admin" || role === "reviewer" || role === "viewer";
+  const isReadOnlyWorkspaceRole = role === "counselor" || role === "counselor_admin" || role === "reviewer" || role === "viewer" || role === "auditor";
   const showResponsePanel = scopeSubmitted && Boolean(response && (canEditAssessment || isReadOnlyWorkspaceRole || responseSummary.hasActivity));
   const currentCoverageLabel = coverageLabel(draft.currentCoverageLevel);
   const targetCoverageLabel = coverageLabel(draft.targetCoverageLevel);

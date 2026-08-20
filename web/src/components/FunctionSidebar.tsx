@@ -10,7 +10,7 @@ export type FunctionProgress = {
   attentionLabel?: string;
 };
 
-export type WorkspaceMode = "Scope & Assignment" | "My Work" | "Review Queue" | "Read-only";
+export type WorkspaceMode = "Scope & Assignment" | "My Work" | "Review Queue" | "Read-only" | "Audit View";
 
 function displayProgressLabel(label: string) {
   if (label === "submitted") return "Reviewing";

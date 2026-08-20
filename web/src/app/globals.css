@@ -657,6 +657,8 @@ button.danger:disabled:hover { text-decoration: none; }
 .bulk-scope-toggle { padding: 7px 10px; color: var(--accent-dark); background: var(--accent-faint); border: 1px solid var(--accent-line-faint); border-radius: var(--radius-sm); }
 .bulk-scope-toggle:has(input:disabled) { opacity: 0.65; }
 .bulk-scope-error { flex-basis: 100%; text-align: right; }
+.audit-activity { margin-top: 28px; }
+.workspace-audit-timeline { margin-top: 0; box-shadow: none; }
 
 .assessment-list { display: grid; gap: 10px; }
 .assessment-card { min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); content-visibility: auto; contain-intrinsic-size: 0 92px; }
