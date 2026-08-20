@@ -26,6 +26,12 @@ function statusLabel(status: string | undefined) {
   return status || "Pending";
 }
 
+function remediationStatusLabel(status: string) {
+  if (status === "in_progress") return "In progress";
+  if (status === "awaiting_review") return "Awaiting review";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 function OutcomeResult({ outcome }: { outcome: ReportOutcome }) {
   const profile = outcome.profile;
   return (
@@ -121,6 +127,20 @@ export function FinalReport({ report, onBack, onOpenAudit }: Props) {
         <div className="report-outcome-list">
           {report.outcomes.length > 0 ? report.outcomes.map((outcome) => <OutcomeResult key={outcome.profile.subcategoryID} outcome={outcome} />) : <div className="empty-state">No included outcomes are available in this report.</div>}
         </div>
+      </section>
+      <section className="report-section">
+        <div className="report-section-heading"><div><h2>Remediation progress</h2></div><span className="muted">Live action status; finalized assessment results remain unchanged</span></div>
+        <div className="report-summary-grid remediation-report-summary" aria-label="Remediation summary">
+          <div className="report-metric"><span>Open</span><strong>{report.remediationSummary.openCount}</strong></div>
+          <div className="report-metric"><span>In progress</span><strong>{report.remediationSummary.inProgressCount}</strong></div>
+          <div className="report-metric"><span>Awaiting review</span><strong>{report.remediationSummary.awaitingReviewCount}</strong></div>
+          <div className="report-metric"><span>Overdue</span><strong>{report.remediationSummary.overdueCount}</strong></div>
+          <div className="report-metric"><span>Closed</span><strong>{report.remediationSummary.closedCount}</strong></div>
+        </div>
+        <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Outcome / action</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Closed</th></tr></thead><tbody>
+          {report.remediationActions.map((action) => <tr key={action.id}><th scope="row">{action.outcomeCode}<small>{action.title}</small></th><td>{action.ownerName}</td><td>{action.priority}</td><td>{formatDate(action.dueDate)}</td><td>{remediationStatusLabel(action.status)}</td><td>{formatDate(action.closedAt)}</td></tr>)}
+          {report.remediationActions.length === 0 && <tr><td colSpan={6}>No remediation actions recorded.</td></tr>}
+        </tbody></table></div>
       </section>
       <footer className="report-footer"><span>Generated from the finalized assessment workspace.</span><span>{formatDate(new Date().toISOString())}</span></footer>
     </main>

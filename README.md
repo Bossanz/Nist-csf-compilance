@@ -13,6 +13,7 @@ Current status: Version 3 local-development workflow slice. The core flow covers
 - Authentication: Email/password with server-side sessions
 - Email delivery: local log mode by default, optional plain-text SMTP
 - Evidence storage: Local Docker volume
+- Local workflow verification: authenticated PowerShell smoke test
 
 ## Quick start
 
@@ -110,6 +111,17 @@ docker compose logs -f api
 
 Use the `Forgot password?` link on the login page to request a reset. The API returns the same acknowledgement whether the email belongs to an active account or not. Only active accounts receive a reset link, and a successful reset or password change revokes all existing sessions.
 
+To reset a local account when its password is out of sync with the current PostgreSQL volume, run the local-only CLI from `api`:
+
+```powershell
+go run ./cmd/local-password `
+  --database-url "postgres://compliance:compliance@localhost:5432/compliance?sslmode=disable" `
+  --email admin@example.com `
+  --password LocalAdmin!2026
+```
+
+The command updates only an active local account and revokes that account's existing sessions. It is a development tool, not a production HTTP endpoint.
+
 For real email delivery, copy `.env.example` to `.env` and set `EMAIL_MODE=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`. Invitation, response-review, and project-finalization notifications use the same sender. Delivery is best-effort: a mail failure is logged and does not roll back a successful assessment mutation.
 
 The related API endpoints are:
@@ -151,7 +163,16 @@ Reviewer
 Counselor
   -> Read progress and reviewer decisions
   -> Finalize the Project after every included outcome is Approved
+  -> Create remediation Actions for Approved outcomes whose Current coverage is below Target
+  -> Assign each Action to an Organization Admin or Assessor
   -> Open the Final Report and Audit Package
+
+Assigned Stakeholder
+  -> Update remediation progress and attach evidence
+  -> Send the Action to the Counselor for review
+
+Counselor
+  -> Close the Action or return it with a comment
 ```
 
 Project setup starts in `setup`. The Project moves to `in_review` only after the Counselor submits a valid scope. Every included outcome must have one active Stakeholder assessor before submission. An included but unassigned outcome remains hidden from Stakeholder users.
@@ -184,18 +205,34 @@ Scope decision + rationale
   -> Evidence metadata
   -> Reviewer decision and comment
   -> Project finalization
+  -> Remediation Action, owner, due date, progress, and closure evidence
 ```
+
+### Action Plan and remediation
+
+The Action Plan turns approved assessment gaps into trackable follow-up work without changing finalized assessment results. An Action is eligible only when its Outcome is **Approved** and its Current coverage is lower than its Target coverage. One Outcome can have multiple Actions.
+
+The Counselor creates the Action, chooses a priority and due date, and assigns an active `org_admin` or `assessor`. The assignee updates progress, uploads supporting evidence, and sends the Action for review. The Counselor either closes it or returns it with a comment. The lifecycle is:
+
+```text
+Open -> In progress -> Awaiting review -> Closed
+                         |
+                         +-> Returned to In progress
+```
+
+Open Actions past their due date are shown as overdue. Remediation remains editable after Project finalization; scope, assessment responses, reviewer decisions, and assessment evidence remain locked. Reviewers and Viewers have read-only access to the Action Plan.
 
 ### Final Report and Audit Package
 
-The Final Report is the human-readable, print-friendly result for a finalized assessment. It contains project context, finalization metadata, overall and per-Function coverage, every included outcome, Current/Target profiles, stakeholder responses, reviewer decisions, and evidence metadata. Use the browser's **Print / Save as PDF** action to produce a PDF without adding a server-side PDF service.
+The Final Report is the human-readable, print-friendly result for a finalized assessment. It contains project context, finalization metadata, overall and per-Function coverage, every included outcome, Current/Target profiles, stakeholder responses, reviewer decisions, evidence metadata, and the live remediation summary and register. Use the browser's **Print / Save as PDF** action to produce a PDF without adding a server-side PDF service.
 
 The Audit Package is the auditor-facing traceability view. It contains:
 
 - Scope register with inclusion, rationale, and assignment.
 - Included outcome register with response, review, and evidence metadata.
+- Remediation register with owner, priority, due date, status, review comment, and evidence metadata.
 - Reviewer history and chronological audit trail.
-- A CSV evidence register containing stable outcome fields, response/review status, evidence names, and MIME types.
+- A CSV register containing stable assessment and remediation records, response/review status, action status, evidence names, and MIME types.
 
 The package deliberately excludes private evidence storage keys. Binary evidence remains accessible through the existing authorized preview/download endpoints.
 
@@ -215,11 +252,11 @@ The JSON report endpoints use the same project-level authorization as the worksp
 | Role | Main permissions |
 | --- | --- |
 | `counselor_admin` | Create/delete Organizations and manage Counselors |
-| `counselor` | Create/delete Projects, configure scope, add rationale, assign Stakeholders, and read all results |
-| `org_admin` | Manage users inside one Organization and complete assigned outcomes |
-| `assessor` | Complete assigned Current/Target fields, responses, and evidence |
-| `reviewer` | Read included outcomes and perform the final review gate |
-| `viewer` | Read included outcomes without editing assessment data |
+| `counselor` | Create/delete Projects, configure scope, assign Stakeholders, read results, and manage remediation Actions |
+| `org_admin` | Manage users inside one Organization; complete assigned outcomes and assigned remediation Actions |
+| `assessor` | Complete assigned Current/Target fields, responses, evidence, and assigned remediation Actions |
+| `reviewer` | Read included outcomes, perform the assessment review gate, and read the Action Plan |
+| `viewer` | Read included outcomes and the Action Plan without editing data |
 
 Important rules:
 
@@ -232,6 +269,8 @@ Important rules:
 - Stakeholders cannot change scope, rationale, or assignments.
 - Reviewer is the only final review gate.
 - Outcomes in Reviewing or Approved status lock Stakeholder profile and evidence edits.
+- Only Counselors create, assign, return, and close remediation Actions.
+- Assigned Organization Admins and Assessors update progress, evidence, and submit Actions for closure review.
 
 ## Coverage calculation
 
@@ -290,9 +329,12 @@ The workspace shows the overall percentage in the assessment summary and a separ
   - Needs more information
 - Project finalization gate after all included outcomes are Approved
 - Read-only lock after finalization
+- Remediation Action Plan with multiple Actions per approved gap
+- Action owner, priority, due date, overdue indicator, progress, evidence, submit, return, and close workflow
+- Continued remediation updates after assessment finalization
 - Print-friendly Final Report with browser PDF export
-- Auditor-ready Audit Package with scope, assignment, response, evidence, review, and audit trail
-- CSV evidence register export without private storage keys
+- Auditor-ready Audit Package with scope, assignment, response, evidence, review, remediation, and audit trail
+- CSV assessment and remediation register export without private storage keys
 - Coverage summary
 - Audit log
 - Invitation-based account activation
@@ -352,7 +394,9 @@ For a project such as `RU Registration Readiness`, the Counselor can include `GV
 |       |-- domain/              # Business rules and calculations
 |       |-- httpapi/             # HTTP handlers and authorization
 |       `-- store/               # PostgreSQL queries and models
-|-- db/init/                     # Schema, seed data, and migrations
+|-- db/init/                     # Fresh-database schema and seed data
+|-- db/migrations/               # Pending migrations applied by Compose
+|-- scripts/                     # Runtime, migration, and workflow checks
 |-- web/
 |   `-- src/
 |       |-- app/                 # Next.js routes
@@ -377,6 +421,7 @@ Fresh databases run the files in `db/init` in filename order:
 007_project_metadata.sql
 008_project_finalization.sql
 009_password_reset_tokens.sql
+010_remediation_actions.sql
 ```
 
 Docker volumes:
@@ -384,15 +429,20 @@ Docker volumes:
 - `pgdata` stores PostgreSQL data.
 - `evidence_data` stores uploaded evidence files.
 
-For an existing database volume, apply any migration that was added after the volume was created, then restart the API. For example:
+When Compose starts, the one-shot `migrate` service waits for PostgreSQL, applies pending files from `db/migrations`, records them in `schema_migrations`, and only then allows the API to start. This also handles an existing `pgdata` volume without deleting it. Check the completed migration container with:
 
 ```powershell
-docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/006_outcome_assignments.sql
-docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/007_project_metadata.sql
-docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/008_project_finalization.sql
-docker compose exec -T postgres psql -U compliance -d compliance -f /docker-entrypoint-initdb.d/009_password_reset_tokens.sql
-docker compose restart api
+docker compose ps --all
+docker compose logs migrate
 ```
+
+If the migration service needs to be run manually during recovery, use:
+
+```powershell
+docker compose run --rm migrate
+```
+
+The migration files are idempotent. Do not run `docker compose down -v` unless you intentionally want to delete local data.
 
 ## Verify before committing
 
@@ -430,6 +480,48 @@ Expected results:
 - API health check returns HTTP `200`.
 - Web returns HTTP `200`.
 - PostgreSQL and API are healthy.
+
+### Authenticated workflow smoke test
+
+The smoke test exercises the real API across the main roles: Counselor Admin, invited Assessor, and invited Reviewer. It creates a temporary Organization, runs Scope → Assessment → Review → Finalize → Remediation → Report/Audit, and removes the temporary Organization when it finishes:
+
+```powershell
+.\scripts\smoke-test.ps1 `
+  -CounselorAdminEmail admin@example.com `
+  -CounselorAdminPassword LocalAdmin!2026
+```
+
+To keep a complete sample Project for demo or audit review, add `-KeepData`. The script prints the Project URL:
+
+```powershell
+.\scripts\smoke-test.ps1 `
+  -CounselorAdminEmail admin@example.com `
+  -CounselorAdminPassword LocalAdmin!2026 `
+  -KeepData
+```
+
+The smoke test intentionally does not upload a binary file; evidence upload, preview, deletion, and authorization are covered by the Go integration tests and web component tests.
+
+### Authenticated workflow smoke test
+
+The smoke test exercises the real API across the main roles: Counselor Admin, invited Assessor, and invited Reviewer. It creates a temporary Organization, runs Scope → Assessment → Review → Finalize → Remediation → Report/Audit, and removes the temporary Organization when it finishes:
+
+```powershell
+.\scripts\smoke-test.ps1 `
+  -CounselorAdminEmail admin@example.com `
+  -CounselorAdminPassword LocalAdmin!2026
+```
+
+To keep a complete sample Project for demo or audit review, add `-KeepData`. The script prints the Project URL:
+
+```powershell
+.\scripts\smoke-test.ps1 `
+  -CounselorAdminEmail admin@example.com `
+  -CounselorAdminPassword LocalAdmin!2026 `
+  -KeepData
+```
+
+The smoke test intentionally does not upload a binary file; evidence upload, preview, deletion, and authorization are covered by the Go integration tests and web component tests.
 
 ## Troubleshooting
 
@@ -474,7 +566,6 @@ The selected user must be active, belong to the same Organization, and have role
 ## Not included in the current local slice
 
 - Server-side PDF report export (use browser Print / Save as PDF)
-- Full action planning
 - Production deployment configuration, HTTPS, secrets management, and PostgreSQL backup
 - Inline DOCX/XLSX preview
 

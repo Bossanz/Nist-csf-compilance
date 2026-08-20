@@ -116,6 +116,12 @@ func setupScopeSubmissionFixture(t *testing.T, data *Store) (projectID, organiza
 		[]any{organizationID, "scope-assessor-" + suffix + "@example.com"}, &assessorID)
 	mustScan("INSERT INTO projects(organization_id,counselor_id,name) VALUES ($1,$2,'Scope Submission Test Project') RETURNING id",
 		[]any{organizationID, counselorID}, &projectID)
+	if _, err := data.DB.Exec(ctx, "INSERT INTO project_functions(project_id,function_id) SELECT $1,id FROM functions", projectID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := data.DB.Exec(ctx, "INSERT INTO project_subcategory_profiles(project_id,subcategory_id) SELECT $1,id FROM subcategories", projectID); err != nil {
+		t.Fatal(err)
+	}
 	mustScan("SELECT id FROM subcategories ORDER BY code LIMIT 1", nil, &subcategoryID)
 	t.Cleanup(func() {
 		_, _ = data.DB.Exec(ctx, "DELETE FROM projects WHERE id=$1", projectID)

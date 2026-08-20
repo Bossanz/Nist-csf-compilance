@@ -67,9 +67,10 @@ func (h *Handler) auditPackageCSV(w http.ResponseWriter, r *http.Request, projec
 	w.Header().Set("Content-Disposition", `attachment; filename="audit-package.csv"`)
 	writer := csv.NewWriter(w)
 	_ = writer.Write([]string{
-		"function", "category", "subcategory", "description", "included", "rationale",
+		"record_type", "function", "category", "subcategory", "description", "included", "rationale",
 		"assignee", "assignee_email", "response_status", "response_submitted_at", "reviewer",
 		"reviewed_at", "review_comment", "evidence_count", "evidence_names", "evidence_types",
+		"action_id", "action_title", "action_owner", "action_priority", "action_due_date", "action_status", "action_submitted_at", "action_closed_at", "action_review_comment",
 	})
 	for _, outcome := range packageData.Outcomes {
 		profile := outcome.Profile
@@ -88,10 +89,25 @@ func (h *Handler) auditPackageCSV(w http.ResponseWriter, r *http.Request, projec
 			types = append(types, evidence.MIMEType)
 		}
 		_ = writer.Write([]string{
-			profile.FunctionCode, profile.CategoryCode, profile.SubcategoryCode, profile.Description,
+			"assessment_outcome", profile.FunctionCode, profile.CategoryCode, profile.SubcategoryCode, profile.Description,
 			strconv.FormatBool(profile.Included), profile.Rationale, profile.AssignedUserName,
 			profile.AssignedUserEmail, responseStatus, submittedAt, reviewer, reviewedAt, reviewComment,
 			strconv.Itoa(len(outcome.Evidence)), strings.Join(names, "; "), strings.Join(types, "; "),
+			"", "", "", "", "", "", "", "", "",
+		})
+	}
+	for _, action := range packageData.RemediationActions {
+		names := make([]string, 0, len(action.Evidence))
+		types := make([]string, 0, len(action.Evidence))
+		for _, evidence := range action.Evidence {
+			names = append(names, evidence.OriginalName)
+			types = append(types, evidence.MIMEType)
+		}
+		_ = writer.Write([]string{
+			"remediation_action", "", "", action.OutcomeCode, action.OutcomeDescription, "", "",
+			action.OwnerName, action.OwnerEmail, "", "", "", "", "", strconv.Itoa(len(action.Evidence)), strings.Join(names, "; "), strings.Join(types, "; "),
+			action.ID, action.Title, action.OwnerName, action.Priority, action.DueDate.UTC().Format("2006-01-02"), action.Status,
+			formatReportTime(action.SubmittedAt), formatReportTime(action.ClosedAt), action.ReviewComment,
 		})
 	}
 	writer.Flush()

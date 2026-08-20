@@ -4,7 +4,24 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 )
+
+func TestCalculateRemediationSummaryCountsLifecycleAndOverdueActions(t *testing.T) {
+	now := time.Date(2026, time.August, 19, 12, 0, 0, 0, time.FixedZone("ICT", 7*60*60))
+	actions := []RemediationAction{
+		{Status: "open", DueDate: time.Date(2026, time.August, 18, 0, 0, 0, 0, time.UTC)},
+		{Status: "in_progress", DueDate: time.Date(2026, time.August, 19, 0, 0, 0, 0, time.UTC)},
+		{Status: "awaiting_review", DueDate: time.Date(2026, time.August, 20, 0, 0, 0, 0, time.UTC)},
+		{Status: "closed", DueDate: time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)},
+	}
+
+	summary := calculateRemediationSummary(actions, now)
+
+	if summary.OpenCount != 1 || summary.InProgressCount != 1 || summary.AwaitingReviewCount != 1 || summary.ClosedCount != 1 || summary.OverdueCount != 1 {
+		t.Fatalf("unexpected remediation summary: %#v", summary)
+	}
+}
 
 func TestGetFinalReportIncludesIncludedOutcomeAndSummary(t *testing.T) {
 	databaseURL := os.Getenv("TEST_DATABASE_URL")

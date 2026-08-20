@@ -833,6 +833,8 @@ button.danger:disabled:hover { text-decoration: none; }
 .report-meta span, .report-metric span { color: var(--muted); font-size: 0.72rem; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; }
 .report-meta strong { color: var(--ink); font-size: 0.9rem; font-weight: 600; overflow-wrap: anywhere; }
 .report-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 14px 0 34px; overflow: hidden; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.remediation-report-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 14px; }
+.report-evidence-name { display: block; overflow-wrap: anywhere; }
 .report-metric { display: grid; min-height: 112px; align-content: center; gap: 8px; padding: 20px; background: var(--surface); }
 .report-metric-accent { background: var(--accent-soft); }
 .report-metric strong { color: var(--accent-dark); font-size: 2.2rem; letter-spacing: -0.06em; line-height: 1; }

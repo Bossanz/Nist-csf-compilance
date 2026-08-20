@@ -159,7 +159,7 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	return out, rows.Err()
 }
 
-const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,p.slug,p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver,p.finalized_at,p.finalized_by FROM projects p JOIN organizations o ON o.id=p.organization_id`
+const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,COALESCE(p.slug,''),p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver,p.finalized_at,p.finalized_by FROM projects p JOIN organizations o ON o.id=p.organization_id`
 
 func projectArgs(p *Project) []any {
 	return []any{&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt, &p.Objective, &p.AssessmentPeriod, &p.TargetCompletionDate, &p.ScopeBoundary, &p.ComplianceDriver, &p.FinalizedAt, &p.FinalizedBy}

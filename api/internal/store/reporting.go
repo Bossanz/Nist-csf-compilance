@@ -73,17 +73,21 @@ type AuditTrailEntry struct {
 }
 
 type FinalReport struct {
-	Project  Project         `json:"project"`
-	Summary  ReportSummary   `json:"summary"`
-	Outcomes []ReportOutcome `json:"outcomes"`
+	Project            Project             `json:"project"`
+	Summary            ReportSummary       `json:"summary"`
+	Outcomes           []ReportOutcome     `json:"outcomes"`
+	RemediationSummary RemediationSummary  `json:"remediationSummary"`
+	RemediationActions []RemediationAction `json:"remediationActions"`
 }
 
 type AuditPackage struct {
-	Project    Project              `json:"project"`
-	Summary    ReportSummary        `json:"summary"`
-	Scope      []ScopeRegisterEntry `json:"scope"`
-	Outcomes   []ReportOutcome      `json:"outcomes"`
-	AuditTrail []AuditTrailEntry    `json:"auditTrail"`
+	Project            Project              `json:"project"`
+	Summary            ReportSummary        `json:"summary"`
+	Scope              []ScopeRegisterEntry `json:"scope"`
+	Outcomes           []ReportOutcome      `json:"outcomes"`
+	AuditTrail         []AuditTrailEntry    `json:"auditTrail"`
+	RemediationSummary RemediationSummary   `json:"remediationSummary"`
+	RemediationActions []RemediationAction  `json:"remediationActions"`
 }
 
 func (s *Store) GetFinalReport(ctx context.Context, projectID string) (FinalReport, error) {
@@ -99,12 +103,16 @@ func (s *Store) GetFinalReport(ctx context.Context, projectID string) (FinalRepo
 	if err != nil {
 		return FinalReport{}, err
 	}
+	remediationActions, err := s.ListRemediationActions(ctx, projectID)
+	if err != nil {
+		return FinalReport{}, err
+	}
 	responseBySubcategory := make(map[string]StakeholderResponse, len(responses))
 	for _, response := range responses {
 		responseBySubcategory[response.SubcategoryID] = response
 	}
 
-	report := FinalReport{Project: project, Outcomes: []ReportOutcome{}}
+	report := FinalReport{Project: project, Outcomes: []ReportOutcome{}, RemediationActions: remediationActions, RemediationSummary: calculateRemediationSummary(remediationActions, time.Now())}
 	report.Summary = calculateReportSummary(profiles, responseBySubcategory)
 	for _, profile := range profiles {
 		if !profile.Included {
@@ -147,7 +155,28 @@ func (s *Store) GetAuditPackage(ctx context.Context, projectID string) (AuditPac
 	for _, profile := range profiles {
 		scope = append(scope, ScopeRegisterEntry{Profile: profile})
 	}
-	return AuditPackage{Project: report.Project, Summary: report.Summary, Scope: scope, Outcomes: report.Outcomes, AuditTrail: auditTrail}, nil
+	return AuditPackage{Project: report.Project, Summary: report.Summary, Scope: scope, Outcomes: report.Outcomes, AuditTrail: auditTrail, RemediationSummary: report.RemediationSummary, RemediationActions: report.RemediationActions}, nil
+}
+
+func calculateRemediationSummary(actions []RemediationAction, now time.Time) RemediationSummary {
+	var summary RemediationSummary
+	today := now.UTC().Format("2006-01-02")
+	for _, action := range actions {
+		switch action.Status {
+		case "open":
+			summary.OpenCount++
+		case "in_progress":
+			summary.InProgressCount++
+		case "awaiting_review":
+			summary.AwaitingReviewCount++
+		case "closed":
+			summary.ClosedCount++
+		}
+		if action.Status != "closed" && action.DueDate.UTC().Format("2006-01-02") < today {
+			summary.OverdueCount++
+		}
+	}
+	return summary
 }
 
 func (s *Store) ListProjectAuditEvents(ctx context.Context, projectID string) ([]AuditTrailEntry, error) {

@@ -16,6 +16,19 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: compliance
+      POSTGRES_DB: compliance
+      PGPASSWORD: compliance
+    volumes:
+      - ./db/migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "/migrations/run.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build: ./api
     environment:
@@ -39,6 +52,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
       interval: 5s

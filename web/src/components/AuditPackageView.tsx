@@ -22,6 +22,12 @@ function statusLabel(status?: string) {
   return status || "Pending";
 }
 
+function remediationStatusLabel(status: string) {
+  if (status === "in_progress") return "In progress";
+  if (status === "awaiting_review") return "Awaiting review";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 export function AuditPackageView({ auditPackage, onBack, onDownloadCSV }: Props) {
   const { project, summary } = auditPackage;
   return (
@@ -63,13 +69,20 @@ export function AuditPackageView({ auditPackage, onBack, onDownloadCSV }: Props)
         </tbody></table></div>
       </section>
       <section className="report-section">
-        <div className="report-section-heading"><div><span className="eyebrow">04</span><h2>Audit trail</h2></div><span className="muted">Chronological activity</span></div>
+        <div className="report-section-heading"><div><span className="eyebrow">05</span><h2>Audit trail</h2></div><span className="muted">Chronological activity</span></div>
         <ol className="audit-timeline">
           {auditPackage.auditTrail.map((event) => <li key={event.id}><div><strong>{event.action}</strong><span>{event.entityType}{event.entityID ? ` · ${event.entityID}` : ""}</span></div><div><span>{event.actorName || event.actorEmail || "System"}</span><time dateTime={event.createdAt}>{formatDate(event.createdAt)}</time></div></li>)}
           {auditPackage.auditTrail.length === 0 && <li className="muted">No audit events have been recorded.</li>}
         </ol>
       </section>
-      <footer className="report-footer"><span>Traceability chain: Scope → Assignment → Response → Evidence → Review → Finalization</span><span>Project {project.id}</span></footer>
+      <section className="report-section">
+        <div className="report-section-heading"><div><span className="eyebrow">04</span><h2>Remediation register</h2></div><span className="muted">{auditPackage.remediationActions.length} actions · {auditPackage.remediationSummary.overdueCount} overdue</span></div>
+        <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Outcome / action</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+          {auditPackage.remediationActions.map((action) => <tr key={action.id}><th scope="row">{action.outcomeCode}<small>{action.title}</small></th><td>{action.ownerName}</td><td>{action.priority}</td><td>{formatDate(action.dueDate)}</td><td>{remediationStatusLabel(action.status)}</td><td>{action.evidence.map((evidence) => <span key={evidence.id} className="report-evidence-name">{evidence.originalName}</span>)}</td></tr>)}
+          {auditPackage.remediationActions.length === 0 && <tr><td colSpan={6}>No remediation actions recorded.</td></tr>}
+        </tbody></table></div>
+      </section>
+      <footer className="report-footer"><span>Traceability chain: Scope → Assignment → Response → Evidence → Review → Finalization → Remediation</span><span>Project {project.id}</span></footer>
     </main>
   );
 }
