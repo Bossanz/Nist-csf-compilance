@@ -54,6 +54,7 @@ type fakeStore struct {
 	auditEvent                   *store.AuditEvent
 	projectAuditEvents           []store.AuditTrailEntry
 	organizationAuditEvents      []store.AuditTrailEntry
+	invitations                  []store.Invitation
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -158,6 +159,9 @@ func (f fakeStore) ListProjectAuditEvents(context.Context, string) ([]store.Audi
 }
 func (f fakeStore) ListOrganizationAuditEvents(context.Context, string, string) ([]store.AuditTrailEntry, error) {
 	return f.organizationAuditEvents, nil
+}
+func (f fakeStore) ListOrganizationInvitations(context.Context, string) ([]store.Invitation, error) {
+	return f.invitations, nil
 }
 func (f fakeStore) ListOrganizationUsers(context.Context, string) ([]store.User, error) {
 	return f.users, nil

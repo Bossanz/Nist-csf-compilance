@@ -43,6 +43,31 @@ func (s *Store) HasActiveOrPendingEmail(ctx context.Context, email string) (bool
 	return exists, err
 }
 
+func (s *Store) ListOrganizationInvitations(ctx context.Context, organizationID string) ([]Invitation, error) {
+	rows, err := s.DB.Query(ctx, `SELECT id,organization_id,email,user_type,role,invited_by,expires_at,
+		accepted_at,cancelled_at,cancelled_by,superseded_at,superseded_by,created_at
+		FROM invitations WHERE organization_id=$1 ORDER BY created_at DESC,id DESC`, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	invitations := []Invitation{}
+	now := time.Now()
+	for rows.Next() {
+		var invitation Invitation
+		if err := rows.Scan(&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.UserType, &invitation.Role, &invitation.InvitedBy, &invitation.ExpiresAt, &invitation.AcceptedAt, &invitation.CancelledAt, &invitation.CancelledBy, &invitation.SupersededAt, &invitation.SupersededBy, &invitation.CreatedAt); err != nil {
+			return nil, err
+		}
+		invitation.ProjectIDs, err = invitationProjectIDs(ctx, s.DB, invitation.ID)
+		if err != nil {
+			return nil, err
+		}
+		invitation.Status = InvitationStatus(invitation, now)
+		invitations = append(invitations, invitation)
+	}
+	return invitations, rows.Err()
+}
+
 func (s *Store) CreateInvitation(ctx context.Context, invitation Invitation) (Invitation, error) {
 	projectIDs := uniqueStrings(invitation.ProjectIDs)
 	if len(projectIDs) > 0 {

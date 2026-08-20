@@ -1,8 +1,8 @@
 export type CoverageLevel = "none" | "partial" | "substantial" | "full";
-export type Role = "counselor_admin" | "counselor" | "org_admin" | "assessor" | "reviewer" | "viewer";
+export type Role = "counselor_admin" | "counselor" | "org_admin" | "assessor" | "reviewer" | "viewer" | "auditor";
 export type User = { id: string; organizationID: string | null; name: string; email: string; userType: "counselor" | "stakeholder"; role: Role; status: "invited" | "active" | "disabled" };
 export type Organization = { id: string; name: string; slug: string; type: "client" | "counselor_firm" };
-export type Invitation = { id: string; organizationID: string | null; email: string; userType: "counselor" | "stakeholder"; role: Role; expiresAt: string; invitationURL: string };
+export type Invitation = { id: string; organizationID: string | null; email: string; userType: "counselor" | "stakeholder"; role: Role; expiresAt: string; acceptedAt: string | null; cancelledAt: string | null; supersededAt: string | null; status: "pending" | "accepted" | "cancelled" | "expired" | "superseded"; projectIDs: string[]; invitationURL?: string };
 export type FunctionNode = { id: string; code: string; name: string; description: string; categories: CategoryNode[] };
 export type CategoryNode = { id: string; code: string; name: string; description: string; subcategories: SubcategoryNode[] };
 export type SubcategoryNode = { id: string; code: string; description: string };

@@ -15,6 +15,7 @@ export default function OrganizationPage() {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<User[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [invitationURL, setInvitationURL] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -37,15 +38,22 @@ export default function OrganizationPage() {
         api.me(),
         api.getOrganizationBySlug(organizationSlug),
       ]);
-      const [projectRows, memberRows] = await Promise.all([
+      const canManageInvitations = currentUser.role === "counselor_admin"
+        || currentUser.role === "counselor"
+        || currentUser.role === "org_admin";
+      const [projectRows, memberRows, invitationRows] = await Promise.all([
         api.getOrganizationProjects(nextOrganization.id),
         api.getOrganizationUsers(nextOrganization.id),
+        canManageInvitations
+          ? api.getOrganizationInvitations(nextOrganization.id)
+          : Promise.resolve<Invitation[]>([]),
       ]);
       if (!active) return;
       setUser(currentUser);
       setOrganization(nextOrganization);
       setProjects(projectRows);
       setMembers(memberRows);
+      setInvitations(invitationRows);
     } catch (cause) {
       if (cause instanceof APIError && cause.status === 401) {
         router.replace("/login");
@@ -81,10 +89,24 @@ export default function OrganizationPage() {
     setProjects((rows) => rows.filter((row) => row.id !== project.id));
   }
 
-  async function invite(input: { email: string; role: Role }) {
+  async function invite(input: { email: string; role: Role; projectIDs?: string[] }) {
     if (!organization) return;
     const invitation: Invitation = await api.createInvitation(organization.id, input);
-    setInvitationURL(invitation.invitationURL);
+    setInvitationURL(invitation.invitationURL || "");
+    setInvitations(await api.getOrganizationInvitations(organization.id));
+  }
+
+  async function resendInvitation(invitation: Invitation) {
+    if (!organization) return;
+    const replacement = await api.resendInvitation(organization.id, invitation.id);
+    setInvitationURL(replacement.invitationURL || "");
+    setInvitations(await api.getOrganizationInvitations(organization.id));
+  }
+
+  async function cancelInvitation(invitation: Invitation) {
+    if (!organization) return;
+    const cancelled = await api.cancelInvitation(organization.id, invitation.id);
+    setInvitations((rows) => rows.map((row) => row.id === cancelled.id ? cancelled : row));
   }
 
   async function updateUser(userID: string, input: { role: Role; status: "active" | "disabled" }) {
@@ -98,6 +120,7 @@ export default function OrganizationPage() {
     setOrganization(null);
     setProjects([]);
     setMembers([]);
+    setInvitations([]);
     setError("");
     setNotFound(false);
     setAuthChecked(false);
@@ -135,6 +158,7 @@ export default function OrganizationPage() {
       organization={organization}
       projects={projects}
       users={members}
+      invitations={invitations}
       loading={loading}
       error={error}
       invitationURL={invitationURL}
@@ -143,6 +167,8 @@ export default function OrganizationPage() {
       onCreateProject={createProject}
       onDeleteProject={deleteProject}
       onInvite={invite}
+      onResendInvitation={resendInvitation}
+      onCancelInvitation={cancelInvitation}
       onUpdateUser={updateUser}
     />
   );

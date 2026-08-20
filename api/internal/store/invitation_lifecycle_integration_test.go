@@ -60,6 +60,10 @@ func TestInvitationLifecyclePersistsProjectAccessAndInvalidatesTokens(t *testing
 	if first.Status != "pending" || len(first.ProjectIDs) != 1 || first.ProjectIDs[0] != projectOneID {
 		t.Fatalf("unexpected first invitation: %#v", first)
 	}
+	listed, err := data.ListOrganizationInvitations(ctx, organizationID)
+	if err != nil || len(listed) != 1 || listed[0].Status != "pending" || listed[0].ProjectIDs[0] != projectOneID {
+		t.Fatalf("unexpected listed invitations: invitations=%#v err=%v", listed, err)
+	}
 
 	acceptedUser, err := data.AcceptInvitation(ctx, first.TokenHash, "Auditor One", "password-hash", time.Now())
 	if err != nil {

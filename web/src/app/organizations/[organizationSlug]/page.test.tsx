@@ -11,8 +11,8 @@ vi.mock("../../../lib/api", () => ({
     constructor(message: string, public status: number) { super(message); }
   },
   api: {
-    me: vi.fn(), getOrganizationBySlug: vi.fn(), getOrganizationProjects: vi.fn(), getOrganizationUsers: vi.fn(),
-    createOrganizationProject: vi.fn(), deleteProject: vi.fn(), createInvitation: vi.fn(), updateOrganizationUser: vi.fn(),
+    me: vi.fn(), getOrganizationBySlug: vi.fn(), getOrganizationProjects: vi.fn(), getOrganizationUsers: vi.fn(), getOrganizationInvitations: vi.fn(),
+    createOrganizationProject: vi.fn(), deleteProject: vi.fn(), createInvitation: vi.fn(), resendInvitation: vi.fn(), cancelInvitation: vi.fn(), updateOrganizationUser: vi.fn(),
   },
 }));
 
@@ -32,6 +32,7 @@ beforeEach(() => {
   vi.mocked(api.getOrganizationBySlug).mockResolvedValue(organization);
   vi.mocked(api.getOrganizationProjects).mockResolvedValue([project]);
   vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);
+  vi.mocked(api.getOrganizationInvitations).mockResolvedValue([]);
   vi.mocked(api.updateOrganizationUser).mockResolvedValue({} as User);
 });
 

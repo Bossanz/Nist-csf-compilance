@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Organization, Project, ProjectCreateInput, Role, User } from "../lib/types";
+import type { Invitation, Organization, Project, ProjectCreateInput, Role, User } from "../lib/types";
+import { InvitationList } from "./InvitationList";
 
 type Props = {
   user: User;
   organization: Organization;
   projects: Project[];
   users: User[];
+  invitations?: Invitation[];
   loading: boolean;
   error: string;
   invitationURL?: string;
@@ -15,17 +17,20 @@ type Props = {
   onOpen: (project: Project) => void;
   onCreateProject: (input: ProjectCreateInput) => void | Promise<void>;
   onDeleteProject: (project: Project) => Promise<void>;
-  onInvite: (input: { email: string; role: Role }) => void | Promise<void>;
+  onInvite: (input: { email: string; role: Role; projectIDs?: string[] }) => void | Promise<void>;
+  onResendInvitation?: (invitation: Invitation) => void | Promise<void>;
+  onCancelInvitation?: (invitation: Invitation) => void | Promise<void>;
   onUpdateUser?: (userID: string, input: { role: Role; status: "active" | "disabled" }) => void | Promise<void>;
 };
 
-type StakeholderRole = "org_admin" | "assessor" | "reviewer" | "viewer";
-const stakeholderRoles: StakeholderRole[] = ["org_admin", "assessor", "reviewer", "viewer"];
+type StakeholderRole = "org_admin" | "assessor" | "reviewer" | "viewer" | "auditor";
+const stakeholderRoles: StakeholderRole[] = ["org_admin", "assessor", "reviewer", "viewer", "auditor"];
 const stakeholderRoleLabels: Record<StakeholderRole, string> = {
   org_admin: "Organization admin: manage access and responses",
   assessor: "Assessor: complete assigned outcomes and evidence",
   reviewer: "Reviewer: review responses awaiting decision",
   viewer: "Viewer: read only",
+  auditor: "Auditor: read-only review of selected projects",
 };
 type StakeholderAccess = { role: Role; status: "active" | "disabled" };
 
@@ -33,7 +38,7 @@ function roleName(role: Role) {
   return role === "org_admin" ? "Organization admin" : role.replaceAll("_", " ");
 }
 
-export function OrganizationWorkspace({ user, organization, projects, users, loading, error, invitationURL, onBack, onOpen, onCreateProject, onDeleteProject, onInvite, onUpdateUser }: Props) {
+export function OrganizationWorkspace({ user, organization, projects, users, invitations = [], loading, error, invitationURL, onBack, onOpen, onCreateProject, onDeleteProject, onInvite, onResendInvitation = async () => {}, onCancelInvitation = async () => {}, onUpdateUser }: Props) {
   const [projectName, setProjectName] = useState("");
   const [projectObjective, setProjectObjective] = useState("");
   const [assessmentPeriod, setAssessmentPeriod] = useState("");
@@ -42,9 +47,11 @@ export function OrganizationWorkspace({ user, organization, projects, users, loa
   const [complianceDriver, setComplianceDriver] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("viewer");
+  const [selectedProjectIDs, setSelectedProjectIDs] = useState<string[]>([]);
   const [projectSaving, setProjectSaving] = useState(false);
   const [inviteSaving, setInviteSaving] = useState(false);
   const [inviteError, setInviteError] = useState("");
+  const [invitationBusyID, setInvitationBusyID] = useState("");
   const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
   const [confirmation, setConfirmation] = useState("");
   const [deleteError, setDeleteError] = useState("");
@@ -101,14 +108,44 @@ export function OrganizationWorkspace({ user, organization, projects, users, loa
   }
 
   async function createInvitation() {
+    if (role === "auditor" && selectedProjectIDs.length === 0) {
+      setInviteError("Select at least one Project for an Auditor invitation.");
+      return;
+    }
     setInviteSaving(true);
     setInviteError("");
     try {
-      await onInvite({ email: email.trim().toLowerCase(), role });
+      await onInvite({ email: email.trim().toLowerCase(), role, projectIDs: role === "auditor" ? selectedProjectIDs : undefined });
+      setEmail("");
+      setSelectedProjectIDs([]);
     } catch (cause) {
       setInviteError(cause instanceof Error ? cause.message : "Could not create invitation");
     } finally {
       setInviteSaving(false);
+    }
+  }
+
+  async function resendInvitation(invitation: Invitation) {
+    setInvitationBusyID(invitation.id);
+    setInviteError("");
+    try {
+      await onResendInvitation(invitation);
+    } catch (cause) {
+      setInviteError(cause instanceof Error ? cause.message : "Could not resend invitation");
+    } finally {
+      setInvitationBusyID("");
+    }
+  }
+
+  async function cancelInvitation(invitation: Invitation) {
+    setInvitationBusyID(invitation.id);
+    setInviteError("");
+    try {
+      await onCancelInvitation(invitation);
+    } catch (cause) {
+      setInviteError(cause instanceof Error ? cause.message : "Could not cancel invitation");
+    } finally {
+      setInvitationBusyID("");
     }
   }
 
@@ -239,6 +276,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, loa
         {inviteError && <div className="error account-error" role="alert">{inviteError}</div>}
         {canInvite && (
           <>
+            <InvitationList invitations={invitations} projects={projects} busyInvitationID={invitationBusyID} onResend={resendInvitation} onCancel={cancelInvitation} />
             <div className="section-heading invite-heading">
               <h3 id="invite-stakeholder-heading">Invite a stakeholder</h3>
               <p className="muted">They will receive a one-time link to set a password and join this organization.</p>
@@ -246,6 +284,18 @@ export function OrganizationWorkspace({ user, organization, projects, users, loa
             <form className="panel invite-form" aria-labelledby="invite-stakeholder-heading" onSubmit={(event) => { event.preventDefault(); void createInvitation(); }}>
             <label className="field"><span>Email</span><input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
             <label className="field"><span>Access role</span><select value={role} onChange={(event) => setRole(event.target.value as Role)}>{stakeholderRoles.map((item) => <option value={item} key={item}>{stakeholderRoleLabels[item]}</option>)}</select></label>
+            {role === "auditor" && (
+              <fieldset className="field project-access-fieldset">
+                <legend>Project access</legend>
+                <small className="field-help">Auditors can only read the Projects selected here.</small>
+                {projects.length === 0 ? <span className="muted">Create a Project before inviting an Auditor.</span> : projects.map((project) => (
+                  <label className="checkbox-row" key={project.id}>
+                    <input type="checkbox" checked={selectedProjectIDs.includes(project.id)} onChange={(event) => setSelectedProjectIDs((current) => event.target.checked ? [...current, project.id] : current.filter((id) => id !== project.id))} />
+                    <span>{project.name}<small>{project.status.replaceAll("_", " ")}</small></span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <button className="primary" type="submit" disabled={inviteSaving}>{inviteSaving ? "Creating invitation…" : "Create invitation"}</button>
             {invitationURL && <label className="field invitation-result"><span>One-time invite link (share with stakeholder)</span><input readOnly value={invitationURL} /></label>}
           </form>

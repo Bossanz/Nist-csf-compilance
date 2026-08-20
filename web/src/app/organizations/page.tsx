@@ -75,7 +75,7 @@ export default function OrganizationsPage() {
     setError("");
     try {
       const invitation: Invitation = await api.createCounselorInvitation(input);
-      setCounselorInvitationURL(invitation.invitationURL);
+      setCounselorInvitationURL(invitation.invitationURL || "");
     } catch (cause) {
       setError(messageOf(cause));
     }

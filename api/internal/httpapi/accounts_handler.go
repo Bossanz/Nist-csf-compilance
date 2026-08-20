@@ -22,7 +22,7 @@ func (h *Handler) accountStore() (accountDataStore, bool) {
 
 func validStatus(status string) bool { return status == "active" || status == "disabled" }
 func isStakeholderRole(role string) bool {
-	return role == "org_admin" || role == "assessor" || role == "reviewer" || role == "viewer"
+	return role == "org_admin" || role == "assessor" || role == "reviewer" || role == "viewer" || role == "auditor"
 }
 func isCounselorRole(role string) bool { return role == "counselor_admin" || role == "counselor" }
 

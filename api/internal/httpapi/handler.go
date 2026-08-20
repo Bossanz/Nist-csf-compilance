@@ -206,6 +206,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.inviteStakeholder(w, r, id)
 			return
 		}
+		if len(parts) == 4 && parts[3] == "invitations" && r.Method == http.MethodGet {
+			h.listInvitations(w, r, id)
+			return
+		}
+		if len(parts) == 6 && parts[3] == "invitations" && parts[5] == "resend" && r.Method == http.MethodPost {
+			h.resendInvitation(w, r, id, parts[4])
+			return
+		}
+		if len(parts) == 6 && parts[3] == "invitations" && parts[5] == "cancel" && r.Method == http.MethodPost {
+			h.cancelInvitation(w, r, id, parts[4])
+			return
+		}
 		if len(parts) == 4 && parts[3] == "audit-logs" && r.Method == http.MethodGet {
 			h.organizationAuditLogs(w, r, id)
 			return

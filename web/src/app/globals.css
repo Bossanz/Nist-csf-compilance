@@ -518,6 +518,36 @@ button.danger:disabled:hover { text-decoration: none; }
 .project-create-form .primary { justify-self: start; }
 .invite-form { grid-template-columns: minmax(0, 1fr) minmax(150px, 0.45fr) auto; }
 .invitation-result { grid-column: 1 / -1; }
+.invitation-list { margin-top: 22px; }
+.invitation-rows { display: grid; gap: 8px; }
+.invitation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.invitation-main { display: grid; min-width: 0; gap: 2px; }
+.invitation-main strong { overflow-wrap: anywhere; }
+.invitation-main .muted { overflow-wrap: anywhere; font-size: 0.78rem; }
+.invitation-meta { display: grid; justify-items: end; gap: 4px; color: var(--muted); font-size: 0.76rem; white-space: nowrap; }
+.invitation-status { color: var(--accent-dark); background: var(--accent-soft); }
+.invitation-status-accepted { color: var(--success); background: var(--success-soft); }
+.invitation-status-cancelled, .invitation-status-superseded { color: var(--muted-strong); background: var(--surface); }
+.invitation-status-expired { color: var(--error); background: var(--error-soft); }
+.invitation-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.invitation-actions button { min-height: 38px; padding: 8px 12px; font-size: 0.78rem; }
+.project-access-fieldset { grid-column: 1 / -1; display: grid; gap: 8px; align-self: stretch; padding: 14px 16px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.project-access-fieldset legend { padding: 0; color: var(--ink); font-size: 0.78rem; font-weight: 750; }
+.project-access-fieldset .field-help { margin-top: -3px; }
+.checkbox-row { display: flex; align-items: flex-start; gap: 9px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.checkbox-row:hover { border-color: var(--accent); background: var(--accent-faint); }
+.checkbox-row input { width: auto; margin-top: 4px; accent-color: var(--accent); }
+.checkbox-row > span { display: grid; gap: 1px; min-width: 0; }
+.checkbox-row small { color: var(--muted); font-size: 0.72rem; }
 
 .project-card {
   display: flex;
@@ -962,6 +992,11 @@ button.danger:disabled:hover { text-decoration: none; }
   .inline-creator .primary { grid-column: auto; justify-self: stretch; }
   .invite-form .primary { width: 100%; }
   .invitation-result { grid-column: auto; }
+  .invitation-row { grid-template-columns: 1fr; align-items: flex-start; gap: 10px; }
+  .invitation-meta { justify-items: start; }
+  .invitation-actions { width: 100%; justify-content: stretch; }
+  .invitation-actions button { flex: 1; }
+  .project-access-fieldset { grid-column: auto; }
   .person-row { align-items: flex-start; flex-direction: column; gap: 8px; }
   .account-row > div:first-child { width: 100%; }
   .account-controls { width: 100%; justify-content: stretch; }
