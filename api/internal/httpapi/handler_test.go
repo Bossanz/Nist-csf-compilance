@@ -51,6 +51,9 @@ type fakeStore struct {
 	reportingErr                 error
 	auditorProjectAccess         map[string]bool
 	auditorAccessErr             error
+	auditEvent                   *store.AuditEvent
+	projectAuditEvents           []store.AuditTrailEntry
+	organizationAuditEvents      []store.AuditTrailEntry
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -145,7 +148,16 @@ func (f fakeStore) WriteAudit(_ context.Context, event store.AuditEvent) error {
 	if f.auditAction != nil {
 		*f.auditAction = event.Action
 	}
+	if f.auditEvent != nil {
+		*f.auditEvent = event
+	}
 	return nil
+}
+func (f fakeStore) ListProjectAuditEvents(context.Context, string) ([]store.AuditTrailEntry, error) {
+	return f.projectAuditEvents, nil
+}
+func (f fakeStore) ListOrganizationAuditEvents(context.Context, string, string) ([]store.AuditTrailEntry, error) {
+	return f.organizationAuditEvents, nil
 }
 func (f fakeStore) ListOrganizationUsers(context.Context, string) ([]store.User, error) {
 	return f.users, nil

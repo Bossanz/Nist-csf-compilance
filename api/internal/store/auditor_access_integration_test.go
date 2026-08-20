@@ -64,6 +64,14 @@ func TestAuditorAccessSchemaSupportsRoleAndProjectGrant(t *testing.T) {
 	if err != nil || !allowed {
 		t.Fatalf("expected active Auditor access, allowed=%v err=%v", allowed, err)
 	}
+	events, err := data.ListProjectAuditEvents(ctx, projectID)
+	if err != nil || len(events) != 1 || events[0].ActorRole != "auditor" || events[0].Result != "success" || events[0].ProjectID == nil || *events[0].ProjectID != projectID {
+		t.Fatalf("unexpected project audit event: events=%#v err=%v", events, err)
+	}
+	organizationEvents, err := data.ListOrganizationAuditEvents(ctx, organizationID, auditorID)
+	if err != nil || len(organizationEvents) != 1 || organizationEvents[0].ID != events[0].ID {
+		t.Fatalf("unexpected scoped organization audit events: events=%#v err=%v", organizationEvents, err)
+	}
 	mustExec(`UPDATE project_auditor_access SET revoked_at=now() WHERE project_id=$1 AND user_id=$2`, projectID, auditorID)
 	allowed, err = data.HasActiveProjectAuditorAccess(ctx, projectID, auditorID)
 	if err != nil || allowed {

@@ -65,6 +65,12 @@ type AuditTrailEntry struct {
 	ActorUserID *string        `json:"actorUserID"`
 	ActorName   string         `json:"actorName"`
 	ActorEmail  string         `json:"actorEmail"`
+	ActorRole   string         `json:"actorRole"`
+	Result      string         `json:"result"`
+	RequestID   string         `json:"requestID"`
+	IPAddress   string         `json:"ipAddress"`
+	UserAgent   string         `json:"userAgent"`
+	ProjectID   *string        `json:"projectID"`
 	Action      string         `json:"action"`
 	EntityType  string         `json:"entityType"`
 	EntityID    *string        `json:"entityID"`
@@ -180,13 +186,35 @@ func calculateRemediationSummary(actions []RemediationAction, now time.Time) Rem
 }
 
 func (s *Store) ListProjectAuditEvents(ctx context.Context, projectID string) ([]AuditTrailEntry, error) {
-	rows, err := s.DB.Query(ctx, `
+	return s.listAuditEvents(ctx, `
 		SELECT a.id::text,a.actor_user_id::text,COALESCE(u.name,''),COALESCE(u.email,''),
+		       COALESCE(a.actor_role,''),COALESCE(a.result,'success'),COALESCE(a.request_id,''),
+		       COALESCE(a.ip_address::text,''),COALESCE(a.user_agent,''),a.project_id::text,
 		       a.action,a.entity_type,a.entity_id::text,a.metadata,a.created_at
 		FROM audit_logs a
 		LEFT JOIN users u ON u.id=a.actor_user_id
 		WHERE a.project_id=$1
 		ORDER BY a.created_at ASC,a.id ASC`, projectID)
+}
+
+func (s *Store) ListOrganizationAuditEvents(ctx context.Context, organizationID, auditorUserID string) ([]AuditTrailEntry, error) {
+	return s.listAuditEvents(ctx, `
+		SELECT a.id::text,a.actor_user_id::text,COALESCE(u.name,''),COALESCE(u.email,''),
+		       COALESCE(a.actor_role,''),COALESCE(a.result,'success'),COALESCE(a.request_id,''),
+		       COALESCE(a.ip_address::text,''),COALESCE(a.user_agent,''),a.project_id::text,
+		       a.action,a.entity_type,a.entity_id::text,a.metadata,a.created_at
+		FROM audit_logs a
+		LEFT JOIN users u ON u.id=a.actor_user_id
+		WHERE a.organization_id=$1
+		  AND ($2='' OR EXISTS(
+			SELECT 1 FROM project_auditor_access access
+			WHERE access.project_id=a.project_id AND access.user_id=$2 AND access.revoked_at IS NULL
+		  ))
+		ORDER BY a.created_at ASC,a.id ASC`, organizationID, auditorUserID)
+}
+
+func (s *Store) listAuditEvents(ctx context.Context, query string, args ...any) ([]AuditTrailEntry, error) {
+	rows, err := s.DB.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +224,7 @@ func (s *Store) ListProjectAuditEvents(ctx context.Context, projectID string) ([
 	for rows.Next() {
 		var event AuditTrailEntry
 		var metadata []byte
-		if err := rows.Scan(&event.ID, &event.ActorUserID, &event.ActorName, &event.ActorEmail, &event.Action, &event.EntityType, &event.EntityID, &metadata, &event.CreatedAt); err != nil {
+		if err := rows.Scan(&event.ID, &event.ActorUserID, &event.ActorName, &event.ActorEmail, &event.ActorRole, &event.Result, &event.RequestID, &event.IPAddress, &event.UserAgent, &event.ProjectID, &event.Action, &event.EntityType, &event.EntityID, &metadata, &event.CreatedAt); err != nil {
 			return nil, err
 		}
 		event.Metadata = map[string]any{}

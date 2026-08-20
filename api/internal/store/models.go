@@ -15,12 +15,17 @@ var ErrInvalidProjectAccess = errors.New("invalid project access")
 
 type AuditEvent struct {
 	ActorUserID    string
+	ActorRole      string
 	OrganizationID *string
 	ProjectID      *string
 	Action         string
 	EntityType     string
 	EntityID       *string
 	Metadata       map[string]any
+	Result         string
+	RequestID      string
+	IPAddress      string
+	UserAgent      string
 }
 
 type Function struct {

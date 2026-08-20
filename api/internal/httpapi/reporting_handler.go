@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"compliance/api/internal/store"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -26,6 +27,7 @@ func (h *Handler) finalReport(w http.ResponseWriter, r *http.Request, projectID 
 		writeError(w, http.StatusInternalServerError, "internal_error", "could not load final report")
 		return
 	}
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: &report.Project.OrganizationID, ProjectID: &projectID, Action: "report.viewed", EntityType: "final_report", EntityID: &projectID})
 	writeJSON(w, http.StatusOK, report)
 }
 
@@ -44,6 +46,7 @@ func (h *Handler) auditPackage(w http.ResponseWriter, r *http.Request, projectID
 		writeError(w, http.StatusInternalServerError, "internal_error", "could not load audit package")
 		return
 	}
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: &packageData.Project.OrganizationID, ProjectID: &projectID, Action: "audit_package.viewed", EntityType: "audit_package", EntityID: &projectID})
 	writeJSON(w, http.StatusOK, packageData)
 }
 
@@ -62,6 +65,7 @@ func (h *Handler) auditPackageCSV(w http.ResponseWriter, r *http.Request, projec
 		writeError(w, http.StatusInternalServerError, "internal_error", "could not load audit package")
 		return
 	}
+	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: &packageData.Project.OrganizationID, ProjectID: &projectID, Action: "audit_package.downloaded", EntityType: "audit_package", EntityID: &projectID})
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="audit-package.csv"`)

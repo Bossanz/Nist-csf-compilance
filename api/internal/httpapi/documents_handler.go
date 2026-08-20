@@ -91,6 +91,16 @@ func (h *Handler) downloadResponseDocument(w http.ResponseWriter, r *http.Reques
 	if document.SizeBytes >= 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(document.SizeBytes, 10))
 	}
+	if project, projectErr := h.Store.GetProject(r.Context(), projectID); projectErr == nil {
+		h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{
+			OrganizationID: &project.OrganizationID,
+			ProjectID:      &projectID,
+			Action:         "evidence.downloaded",
+			EntityType:     "evidence",
+			EntityID:       &document.ID,
+			Metadata:       map[string]any{"subcategoryID": subcategoryID, "originalName": document.OriginalName, "mimeType": document.MIMEType, "sizeBytes": document.SizeBytes},
+		})
+	}
 	if _, err := io.Copy(w, file); err != nil {
 		logStorageCleanupFailure(document.StorageKey, err)
 	}

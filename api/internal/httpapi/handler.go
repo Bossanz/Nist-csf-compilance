@@ -101,6 +101,7 @@ func New(s *store.Store, auth *authservice.Service, invitations *authservice.Inv
 	return &Handler{Store: s, Responses: s, Remediations: s, RemediationEvidence: s, Documents: s, Evidence: newLocalEvidenceStorage(""), Auth: auth, Invitations: invitations, EmailSender: emailSender, Passwords: authservice.NewPasswordService(s, time.Now), SecureCookies: secureCookies, LoginThrottle: NewLoginThrottle(), AppOrigin: appOrigin}
 }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r = withAuditRequestContext(r)
 	if h.AppOrigin != "" && r.Header.Get("Origin") == h.AppOrigin {
 		w.Header().Set("Access-Control-Allow-Origin", h.AppOrigin)
 		w.Header().Set("Vary", "Origin")
@@ -203,6 +204,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(parts) == 4 && parts[3] == "invitations" && r.Method == http.MethodPost {
 			h.inviteStakeholder(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "audit-logs" && r.Method == http.MethodGet {
+			h.organizationAuditLogs(w, r, id)
 			return
 		}
 		if len(parts) == 4 && parts[3] == "users" && r.Method == http.MethodGet {
@@ -344,6 +349,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			h.auditPackageCSV(w, r, id)
+			return
+		}
+		if len(parts) == 4 && parts[3] == "audit-logs" && r.Method == http.MethodGet {
+			if !h.authorizeProject(w, r, id, nil) {
+				return
+			}
+			h.projectAuditLogs(w, r, id)
 			return
 		}
 		if len(parts) == 4 && parts[3] == "finalize" && r.Method == http.MethodPost {

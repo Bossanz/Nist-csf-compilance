@@ -78,6 +78,11 @@ func (h *Handler) downloadRemediationEvidence(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": safeDownloadName(evidence.OriginalName)}))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Length", strconv.FormatInt(evidence.SizeBytes, 10))
+	readAction := "remediation.evidence_downloaded"
+	if inline {
+		readAction = "remediation.evidence_viewed"
+	}
+	h.writeRemediationEvidenceAudit(r, projectID, actionID, evidence, readAction)
 	if _, err := io.Copy(w, file); err != nil {
 		log.Printf("remediation evidence stream failed for %s: %v", evidence.StoragePath, err)
 	}
