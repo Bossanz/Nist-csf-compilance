@@ -100,5 +100,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	user := currentUser(r)
+	h.writeAudit(user, r.Context(), store.AuditEvent{OrganizationID: user.OrganizationID, Action: "auth.password_changed", EntityType: "user", EntityID: &user.ID})
 	w.WriteHeader(http.StatusNoContent)
 }

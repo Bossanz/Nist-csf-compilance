@@ -9,6 +9,7 @@ import (
 	"time"
 
 	authservice "compliance/api/internal/auth"
+	"compliance/api/internal/store"
 )
 
 const sessionCookieName = "compliance_session"
@@ -69,6 +70,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	key := authservice.NormalizeEmail(input.Email) + "|" + host
 	now := time.Now()
 	if h.LoginThrottle != nil && !h.LoginThrottle.Allow(key, now) {
+		h.writeAudit(store.User{}, r.Context(), store.AuditEvent{Action: "auth.login_throttled", EntityType: "session", Result: "failure", Metadata: map[string]any{"email": authservice.NormalizeEmail(input.Email)}})
 		writeError(w, http.StatusTooManyRequests, "too_many_attempts", "Too many login attempts")
 		return
 	}
@@ -77,10 +79,12 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		if h.LoginThrottle != nil {
 			h.LoginThrottle.Fail(key, now)
 		}
+		h.writeAudit(store.User{}, r.Context(), store.AuditEvent{Action: "auth.login_failed", EntityType: "session", Result: "failure", Metadata: map[string]any{"email": authservice.NormalizeEmail(input.Email)}})
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password")
 		return
 	}
 	if err != nil {
+		h.writeAudit(store.User{}, r.Context(), store.AuditEvent{Action: "auth.login_failed", EntityType: "session", Result: "failure"})
 		writeError(w, http.StatusInternalServerError, "internal_error", "Could not log in")
 		return
 	}
@@ -88,6 +92,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		h.LoginThrottle.Reset(key)
 	}
 	h.setSessionCookie(w, rawToken, 12*time.Hour)
+	h.writeAudit(user, r.Context(), store.AuditEvent{OrganizationID: user.OrganizationID, Action: "auth.login_succeeded", EntityType: "session", Result: "success", Metadata: map[string]any{"email": user.Email}})
 	writeJSON(w, http.StatusOK, user)
 }
 
@@ -106,8 +111,13 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	var user store.User
 	if cookie, err := r.Cookie(sessionCookieName); err == nil {
+		user, _ = h.Auth.Authenticate(r.Context(), cookie.Value)
 		_ = h.Auth.Logout(r.Context(), cookie.Value)
+	}
+	if user.ID != "" {
+		h.writeAudit(user, r.Context(), store.AuditEvent{OrganizationID: user.OrganizationID, Action: "auth.logout", EntityType: "session", Result: "success"})
 	}
 	h.setSessionCookie(w, "", -time.Hour)
 	w.WriteHeader(http.StatusNoContent)

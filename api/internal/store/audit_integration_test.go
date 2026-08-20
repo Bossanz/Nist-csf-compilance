@@ -41,3 +41,17 @@ func TestWriteAuditPersistsRequestMetadata(t *testing.T) {
 		t.Fatalf("unexpected persisted audit metadata: %#v", events)
 	}
 }
+
+func TestWriteAuditAllowsAnonymousActor(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+	data, err := New(context.Background(), databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := data.WriteAudit(context.Background(), AuditEvent{Action: "auth.login_failed", EntityType: "session", Result: "failure", RequestID: "request-anonymous", Metadata: map[string]any{"email": "unknown@example.com"}}); err != nil {
+		t.Fatal(err)
+	}
+}

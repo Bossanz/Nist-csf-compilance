@@ -64,6 +64,25 @@ func TestLoginSetsSecureSessionCookie(t *testing.T) {
 	}
 }
 
+func TestLoginWritesSuccessAuditEvent(t *testing.T) {
+
+	now := time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)
+	passwordHash, _ := authservice.HashPassword("secret-password")
+	auditEvent := store.AuditEvent{}
+	repo := &fakeAuthRepository{user: store.User{ID: "user-1", Email: "admin@example.com", Role: "counselor_admin", Status: "active", PasswordHash: passwordHash}}
+	handler := newAuthHandler(repo, now)
+	handler.Store = fakeStore{auditEvent: &auditEvent}
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"email":"admin@example.com","password":"secret-password"}`))
+	request.Header.Set("X-Request-ID", "login-request-1")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || auditEvent.Action != "auth.login_succeeded" || auditEvent.ActorUserID != "user-1" || auditEvent.ActorRole != "counselor_admin" || auditEvent.Result != "success" || auditEvent.RequestID != "login-request-1" {
+		t.Fatalf("unexpected login audit event: status=%d event=%#v", response.Code, auditEvent)
+	}
+}
+
 func TestLoginUsesGenericCredentialFailure(t *testing.T) {
 	repo := &fakeAuthRepository{findUserErr: pgx.ErrNoRows}
 	request := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"email":"missing@example.com","password":"wrong"}`))
@@ -73,6 +92,21 @@ func TestLoginUsesGenericCredentialFailure(t *testing.T) {
 
 	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), `"code":"invalid_credentials"`) || strings.Contains(response.Body.String(), "missing@example.com") {
 		t.Fatalf("unexpected failure response: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestLoginWritesFailureAuditEventWithoutAnActor(t *testing.T) {
+	auditEvent := store.AuditEvent{}
+	repo := &fakeAuthRepository{findUserErr: pgx.ErrNoRows}
+	handler := newAuthHandler(repo, time.Now())
+	handler.Store = fakeStore{auditEvent: &auditEvent}
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"email":"missing@example.com","password":"wrong"}`))
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusUnauthorized || auditEvent.Action != "auth.login_failed" || auditEvent.ActorUserID != "" || auditEvent.Result != "failure" {
+		t.Fatalf("unexpected failed login audit event: status=%d event=%#v", response.Code, auditEvent)
 	}
 }
 
@@ -103,6 +137,23 @@ func TestLogoutRevokesSessionAndClearsCookie(t *testing.T) {
 	}
 	if cookies := response.Result().Cookies(); len(cookies) != 1 || cookies[0].MaxAge != -1 {
 		t.Fatalf("session cookie was not cleared: %#v", cookies)
+	}
+}
+
+func TestLogoutWritesAuditEvent(t *testing.T) {
+	auditEvent := store.AuditEvent{}
+	repo := &fakeAuthRepository{user: store.User{ID: "user-1", Email: "admin@example.com", Role: "counselor_admin", Status: "active"}, session: store.Session{ExpiresAt: time.Now().Add(time.Hour)}}
+	handler := newAuthHandler(repo, time.Now())
+	handler.Store = fakeStore{auditEvent: &auditEvent}
+	request := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	request.Header.Set("X-Request-ID", "logout-request-1")
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "raw-token"})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNoContent || auditEvent.Action != "auth.logout" || auditEvent.ActorUserID != "user-1" || auditEvent.RequestID != "logout-request-1" {
+		t.Fatalf("unexpected logout audit event: status=%d event=%#v", response.Code, auditEvent)
 	}
 }
 

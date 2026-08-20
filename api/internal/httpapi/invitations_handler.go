@@ -202,5 +202,6 @@ func (h *Handler) acceptInvitation(w http.ResponseWriter, r *http.Request, rawTo
 		writeError(w, 500, "internal_error", "Could not accept invitation")
 		return
 	}
+	h.writeAudit(user, r.Context(), store.AuditEvent{OrganizationID: user.OrganizationID, Action: "user.invitation_accepted", EntityType: "user", EntityID: &user.ID, Metadata: map[string]any{"email": user.Email, "role": user.Role}})
 	writeJSON(w, 200, user)
 }
