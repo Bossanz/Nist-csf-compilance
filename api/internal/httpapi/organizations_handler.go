@@ -124,9 +124,18 @@ func (h *Handler) organizationProjects(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
-		scoped := projects[:0]
+		scoped := make([]store.Project, 0, len(projects))
 		for _, project := range projects {
-			if project.Status != "setup" {
+			if currentUser(r).Role == "auditor" {
+				allowed, accessErr := h.hasActiveProjectAuditorAccess(r.Context(), project.ID, currentUser(r).ID)
+				if accessErr != nil {
+					writeError(w, http.StatusInternalServerError, "internal_error", "could not check Auditor project access")
+					return
+				}
+				if allowed {
+					scoped = append(scoped, project)
+				}
+			} else if project.Status != "setup" {
 				scoped = append(scoped, project)
 			}
 		}
@@ -145,9 +154,21 @@ func (h *Handler) organizationProjectBySlug(w http.ResponseWriter, r *http.Reque
 		writeError(w, 404, "not_found", "project not found")
 		return
 	}
-	if h.Auth != nil && currentUser(r).UserType == "stakeholder" && project.Status == "setup" {
-		writeError(w, 404, "not_found", "project not found")
-		return
+	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
+		if currentUser(r).Role == "auditor" {
+			allowed, accessErr := h.hasActiveProjectAuditorAccess(r.Context(), project.ID, currentUser(r).ID)
+			if accessErr != nil {
+				writeError(w, http.StatusInternalServerError, "internal_error", "could not check Auditor project access")
+				return
+			}
+			if !allowed {
+				writeError(w, 404, "not_found", "project not found")
+				return
+			}
+		} else if project.Status == "setup" {
+			writeError(w, 404, "not_found", "project not found")
+			return
+		}
 	}
 	writeJSON(w, 200, project)
 }

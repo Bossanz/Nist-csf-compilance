@@ -67,7 +67,7 @@ func stakeholderCanReadProfile(user store.User, row store.ProfileRow) bool {
 		return false
 	}
 	switch user.Role {
-	case "reviewer", "viewer":
+	case "reviewer", "viewer", "auditor":
 		return true
 	case "org_admin", "assessor":
 		return row.AssignedUserID != nil && *row.AssignedUserID == user.ID
@@ -141,11 +141,22 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 		return true
 	}
 	project, err := h.Store.GetProject(r.Context(), projectID)
-	if currentUser(r).UserType == "stakeholder" && project.Status == "setup" {
+	if err != nil || !canAccessOrganization(currentUser(r), project.OrganizationID) {
 		writeError(w, http.StatusNotFound, "not_found", "project not found")
 		return false
 	}
-	if err != nil || !canAccessOrganization(currentUser(r), project.OrganizationID) {
+	user := currentUser(r)
+	if user.UserType == "stakeholder" && user.Role == "auditor" {
+		allowed, accessErr := h.hasActiveProjectAuditorAccess(r.Context(), projectID, user.ID)
+		if accessErr != nil {
+			writeError(w, http.StatusInternalServerError, "internal_error", "could not check Auditor project access")
+			return false
+		}
+		if !allowed {
+			writeError(w, http.StatusNotFound, "not_found", "project not found")
+			return false
+		}
+	} else if user.UserType == "stakeholder" && project.Status == "setup" {
 		writeError(w, http.StatusNotFound, "not_found", "project not found")
 		return false
 	}
@@ -158,6 +169,18 @@ func (h *Handler) authorizeProject(w http.ResponseWriter, r *http.Request, proje
 		return false
 	}
 	return true
+}
+
+type auditorProjectAccessStore interface {
+	HasActiveProjectAuditorAccess(context.Context, string, string) (bool, error)
+}
+
+func (h *Handler) hasActiveProjectAuditorAccess(ctx context.Context, projectID, userID string) (bool, error) {
+	data, ok := h.Store.(auditorProjectAccessStore)
+	if !ok {
+		return false, nil
+	}
+	return data.HasActiveProjectAuditorAccess(ctx, projectID, userID)
 }
 
 func (h *Handler) profileOutcome(ctx context.Context, projectID, subcategoryID string) (store.ProfileRow, bool, error) {

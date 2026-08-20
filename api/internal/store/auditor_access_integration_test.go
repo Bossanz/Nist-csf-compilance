@@ -60,4 +60,13 @@ func TestAuditorAccessSchemaSupportsRoleAndProjectGrant(t *testing.T) {
 	if grantCount != 1 || auditCount != 1 {
 		t.Fatalf("unexpected schema rows: grants=%d audit=%d", grantCount, auditCount)
 	}
+	allowed, err := data.HasActiveProjectAuditorAccess(ctx, projectID, auditorID)
+	if err != nil || !allowed {
+		t.Fatalf("expected active Auditor access, allowed=%v err=%v", allowed, err)
+	}
+	mustExec(`UPDATE project_auditor_access SET revoked_at=now() WHERE project_id=$1 AND user_id=$2`, projectID, auditorID)
+	allowed, err = data.HasActiveProjectAuditorAccess(ctx, projectID, auditorID)
+	if err != nil || allowed {
+		t.Fatalf("expected revoked Auditor access to be denied, allowed=%v err=%v", allowed, err)
+	}
 }

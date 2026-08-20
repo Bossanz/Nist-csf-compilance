@@ -49,6 +49,8 @@ type fakeStore struct {
 	finalReport                  store.FinalReport
 	auditPackage                 store.AuditPackage
 	reportingErr                 error
+	auditorProjectAccess         map[string]bool
+	auditorAccessErr             error
 }
 
 func (f fakeStore) ListProjects(context.Context) ([]store.Project, error) {
@@ -168,6 +170,12 @@ func (f fakeStore) UpdateCounselor(_ context.Context, _, role, status string) (s
 	return store.User{Role: role, Status: status}, nil
 }
 func (f fakeStore) RevokeUserSessions(context.Context, string) error { return nil }
+func (f fakeStore) HasActiveProjectAuditorAccess(_ context.Context, projectID, _ string) (bool, error) {
+	if f.auditorAccessErr != nil {
+		return false, f.auditorAccessErr
+	}
+	return f.auditorProjectAccess[projectID], nil
+}
 
 func TestHealthz(t *testing.T) {
 	r := httptest.NewRequest("GET", "/healthz", nil)

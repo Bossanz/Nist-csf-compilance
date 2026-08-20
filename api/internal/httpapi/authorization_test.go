@@ -28,6 +28,9 @@ func TestAuthorizationMatrix(t *testing.T) {
 		{"reviewer", actionReviewResponse, true},
 		{"reviewer", actionUpdateProfile, false},
 		{"viewer", actionUpdateProfile, false},
+		{"auditor", actionUpdateProfile, false},
+		{"auditor", actionSaveResponse, false},
+		{"auditor", actionReviewResponse, false},
 	}
 	for _, test := range cases {
 		if got := can(store.User{Role: test.role}, test.action); got != test.allowed {

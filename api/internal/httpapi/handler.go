@@ -505,9 +505,21 @@ func (h *Handler) projects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Auth != nil && currentUser(r).UserType == "stakeholder" {
-		scoped := data[:0]
+		scoped := make([]store.Project, 0, len(data))
 		for _, project := range data {
-			if project.Status != "setup" && canAccessOrganization(currentUser(r), project.OrganizationID) {
+			if !canAccessOrganization(currentUser(r), project.OrganizationID) {
+				continue
+			}
+			if currentUser(r).Role == "auditor" {
+				allowed, accessErr := h.hasActiveProjectAuditorAccess(r.Context(), project.ID, currentUser(r).ID)
+				if accessErr != nil {
+					writeError(w, http.StatusInternalServerError, "internal_error", "could not check Auditor project access")
+					return
+				}
+				if allowed {
+					scoped = append(scoped, project)
+				}
+			} else if project.Status != "setup" {
 				scoped = append(scoped, project)
 			}
 		}
