@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
-$marker = docker compose exec -T postgres psql -U compliance -d compliance -tAc "SELECT 1 FROM schema_migrations WHERE version='010_remediation_actions'" 2>$null
-if ($LASTEXITCODE -ne 0 -or $marker.Trim() -ne '1') { throw 'migration 010 is not recorded' }
+$markers = docker compose exec -T postgres psql -U compliance -d compliance -tAc "SELECT count(*) FROM schema_migrations WHERE version IN ('010_remediation_actions','011_auditor_invitation_audit')" 2>$null
+if ($LASTEXITCODE -ne 0 -or $markers.Trim() -ne '2') { throw 'remediation and auditor migrations are not recorded' }
 
-$tables = docker compose exec -T postgres psql -U compliance -d compliance -tAc "SELECT count(*) FROM pg_class WHERE relname IN ('remediation_actions','remediation_evidence')"
-if ([int]$tables.Trim() -ne 2) { throw 'remediation tables are missing' }
+$tables = docker compose exec -T postgres psql -U compliance -d compliance -tAc "SELECT count(*) FROM pg_class WHERE relname IN ('remediation_actions','remediation_evidence','invitation_project_access','project_auditor_access')"
+if ([int]$tables.Trim() -ne 4) { throw 'remediation or auditor access tables are missing' }
 
 Write-Output 'migration smoke test passed'
