@@ -2,7 +2,7 @@
 
 A lean NIST CSF 2.0 assessment workspace for Counselors and customer Stakeholders. The application is built with Next.js, Go, and PostgreSQL and is designed to keep the assessment workflow short and easy to follow.
 
-Current status: Version 3 local-development workflow slice. The core flow covers Counselor scope setup, Stakeholder assessment, Reviewer approval, evidence preview, project finalization, and audit handoff.
+Current status: Version 3 local-development workflow slice. The core flow covers Counselor scope setup, Stakeholder assessment, Reviewer approval, evidence preview, project finalization, Auditor access, and audit handoff.
 
 ## Stack
 
@@ -134,6 +134,23 @@ PUT  /api/auth/password
 
 Invitation creation still returns the one-time invitation URL in the API response for local/manual activation. In SMTP mode, the same URL is also sent to the invited email.
 
+### Auditor invitation and audit trail
+
+An Organization Admin creates an Auditor invitation and selects one or more Projects. The invited person activates a separate email/password account through the one-time link. The API grants access only to those Projects; the Auditor cannot change scope, profiles, responses, reviews, evidence, remediation, or membership.
+
+Invitation records expose their lifecycle so the organization can manage access safely:
+
+```text
+Pending -> Accepted
+Pending -> Expired
+Pending -> Cancelled
+Pending -> Superseded (after Resend)
+```
+
+Resend creates a new one-time token and marks the previous invitation as superseded. Cancel invalidates a pending invitation. Expired, cancelled, and superseded tokens cannot be accepted or reused.
+
+Assessment mutations and sensitive reads write structured audit events. Each event keeps the actor, role, action, result, request ID, IP address, user agent, related organization/project/entity, and timestamp. Authorized users can read the Project activity trail; an Auditor only receives events for Projects assigned to that Auditor.
+
 ## System workflow
 
 ```text
@@ -159,6 +176,14 @@ Stakeholder
 Reviewer
   -> Read the response and evidence
   -> Mark Approved or Needs more information
+
+Organization Admin
+  -> Invite an Auditor and select the Projects they may inspect
+  -> Resend or cancel pending invitations when needed
+
+Auditor
+  -> Activate a separate email/password account from the invitation
+  -> Read only the assigned Projects, included outcomes, evidence, remediation, and activity trail
 
 Counselor
   -> Read progress and reviewer decisions
@@ -243,6 +268,11 @@ POST /api/projects/{project-id}/finalize
 GET  /api/projects/{project-id}/final-report
 GET  /api/projects/{project-id}/audit-package
 GET  /api/projects/{project-id}/audit-package.csv
+GET  /api/projects/{project-id}/audit-logs
+GET  /api/organizations/{organization-id}/audit-logs
+GET  /api/organizations/{organization-id}/invitations
+POST /api/organizations/{organization-id}/invitations/{invitation-id}/resend
+POST /api/organizations/{organization-id}/invitations/{invitation-id}/cancel
 ```
 
 The JSON report endpoints use the same project-level authorization as the workspace. The CSV endpoint is intended for an evidence register and does not embed uploaded files.
@@ -257,6 +287,7 @@ The JSON report endpoints use the same project-level authorization as the worksp
 | `assessor` | Complete assigned Current/Target fields, responses, evidence, and assigned remediation Actions |
 | `reviewer` | Read included outcomes, perform the assessment review gate, and read the Action Plan |
 | `viewer` | Read included outcomes and the Action Plan without editing data |
+| `auditor` | Read only the specifically assigned Projects, evidence, remediation, and audit activity |
 
 Important rules:
 
@@ -268,6 +299,8 @@ Important rules:
 - Included but unassigned outcomes remain hidden from Stakeholder users.
 - Stakeholders cannot change scope, rationale, or assignments.
 - Reviewer is the only final review gate.
+- An Auditor is invited by an Organization Admin and receives access only to the selected Projects.
+- Auditor access is read-only and is enforced by the API, not only by the UI.
 - Outcomes in Reviewing or Approved status lock Stakeholder profile and evidence edits.
 - Only Counselors create, assign, return, and close remediation Actions.
 - Assigned Organization Admins and Assessors update progress, evidence, and submit Actions for closure review.
@@ -334,6 +367,10 @@ The workspace shows the overall percentage in the assessment summary and a separ
 - Continued remediation updates after assessment finalization
 - Print-friendly Final Report with browser PDF export
 - Auditor-ready Audit Package with scope, assignment, response, evidence, review, remediation, and audit trail
+- Auditor account activation with project-scoped read-only workspace access
+- Invitation lifecycle controls: pending, accepted, expired, superseded, cancelled, resend, and cancel
+- Structured audit events with actor role, result, request ID, IP address, and user agent
+- Project and Organization audit log endpoints with Auditor project scoping
 - CSV assessment and remediation register export without private storage keys
 - Coverage summary
 - Audit log
@@ -422,6 +459,7 @@ Fresh databases run the files in `db/init` in filename order:
 008_project_finalization.sql
 009_password_reset_tokens.sql
 010_remediation_actions.sql
+011_auditor_invitation_audit.sql
 ```
 
 Docker volumes:
@@ -483,28 +521,7 @@ Expected results:
 
 ### Authenticated workflow smoke test
 
-The smoke test exercises the real API across the main roles: Counselor Admin, invited Assessor, and invited Reviewer. It creates a temporary Organization, runs Scope → Assessment → Review → Finalize → Remediation → Report/Audit, and removes the temporary Organization when it finishes:
-
-```powershell
-.\scripts\smoke-test.ps1 `
-  -CounselorAdminEmail admin@example.com `
-  -CounselorAdminPassword LocalAdmin!2026
-```
-
-To keep a complete sample Project for demo or audit review, add `-KeepData`. The script prints the Project URL:
-
-```powershell
-.\scripts\smoke-test.ps1 `
-  -CounselorAdminEmail admin@example.com `
-  -CounselorAdminPassword LocalAdmin!2026 `
-  -KeepData
-```
-
-The smoke test intentionally does not upload a binary file; evidence upload, preview, deletion, and authorization are covered by the Go integration tests and web component tests.
-
-### Authenticated workflow smoke test
-
-The smoke test exercises the real API across the main roles: Counselor Admin, invited Assessor, and invited Reviewer. It creates a temporary Organization, runs Scope → Assessment → Review → Finalize → Remediation → Report/Audit, and removes the temporary Organization when it finishes:
+The smoke test exercises the real API across the main roles: Counselor Admin, Organization Admin, invited Assessor, invited Reviewer, and invited Auditor. It verifies invitation resend/cancel, project-scoped Auditor access, Scope → Assessment → Review → Finalize → Remediation → Report/Audit, and removes the temporary Organization when it finishes:
 
 ```powershell
 .\scripts\smoke-test.ps1 `
