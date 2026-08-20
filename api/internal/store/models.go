@@ -10,6 +10,8 @@ var ErrInvalidProjectTransition = errors.New("invalid project transition")
 var ErrProjectFinalized = errors.New("project is finalized")
 var ErrProjectNotReady = errors.New("project is not ready to finalize")
 var ErrInvalidPasswordResetToken = errors.New("invalid password reset token")
+var ErrInvitationNotPending = errors.New("invitation is not pending")
+var ErrInvalidProjectAccess = errors.New("invalid project access")
 
 type AuditEvent struct {
 	ActorUserID    string
@@ -99,6 +101,12 @@ type Invitation struct {
 	InvitedBy      string     `json:"invitedBy"`
 	ExpiresAt      time.Time  `json:"expiresAt"`
 	AcceptedAt     *time.Time `json:"acceptedAt"`
+	CancelledAt    *time.Time `json:"cancelledAt"`
+	CancelledBy    *string    `json:"cancelledBy"`
+	SupersededAt   *time.Time `json:"supersededAt"`
+	SupersededBy   *string    `json:"supersededBy"`
+	Status         string     `json:"status"`
+	ProjectIDs     []string   `json:"projectIDs,omitempty"`
 	CreatedAt      time.Time  `json:"createdAt"`
 }
 type StakeholderResponse struct {
