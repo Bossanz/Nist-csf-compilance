@@ -61,6 +61,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
   const [memberError, setMemberError] = useState("");
   const counselor = user.role === "counselor_admin" || user.role === "counselor";
   const canInvite = counselor || user.role === "org_admin";
+  const canManageInvitationLifecycle = user.role === "counselor_admin" || user.role === "org_admin";
   const canManageUsers = counselor || user.role === "org_admin";
   const invitationRoles = user.role === "org_admin" ? stakeholderRoles : stakeholderRoles.filter((item) => item !== "auditor");
 
@@ -277,7 +278,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
         {inviteError && <div className="error account-error" role="alert">{inviteError}</div>}
         {canInvite && (
           <>
-            <InvitationList invitations={invitations} projects={projects} busyInvitationID={invitationBusyID} onResend={resendInvitation} onCancel={cancelInvitation} />
+            <InvitationList invitations={invitations} projects={projects} busyInvitationID={invitationBusyID} canManageLifecycle={canManageInvitationLifecycle} onResend={resendInvitation} onCancel={cancelInvitation} />
             <div className="section-heading invite-heading">
               <h3 id="invite-stakeholder-heading">Invite a stakeholder</h3>
               <p className="muted">They will receive a one-time link to set a password and join this organization.</p>

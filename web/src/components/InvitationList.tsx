@@ -6,11 +6,12 @@ type Props = {
   invitations: Invitation[];
   projects: Project[];
   busyInvitationID: string;
+  canManageLifecycle: boolean;
   onResend: (invitation: Invitation) => void | Promise<void>;
   onCancel: (invitation: Invitation) => void | Promise<void>;
 };
 
-export function InvitationList({ invitations, projects, busyInvitationID, onResend, onCancel }: Props) {
+export function InvitationList({ invitations, projects, busyInvitationID, canManageLifecycle, onResend, onCancel }: Props) {
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
 
   return (
@@ -23,9 +24,9 @@ export function InvitationList({ invitations, projects, busyInvitationID, onRese
         <div className="invitation-rows">
           {invitations.map((invitation) => {
             const busy = busyInvitationID === invitation.id;
-            const scopedProjects = invitation.projectIDs.map((projectID) => projectNames.get(projectID) || projectID);
-            const canResend = invitation.status === "pending" || invitation.status === "expired";
-            const canCancel = invitation.status === "pending";
+            const scopedProjects = (invitation.projectIDs ?? []).map((projectID) => projectNames.get(projectID) || projectID);
+            const canResend = canManageLifecycle && (invitation.status === "pending" || invitation.status === "expired");
+            const canCancel = canManageLifecycle && invitation.status === "pending";
             return (
               <article className="invitation-row" key={invitation.id}>
                 <div className="invitation-main">

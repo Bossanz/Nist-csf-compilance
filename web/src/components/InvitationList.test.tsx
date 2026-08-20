@@ -11,7 +11,7 @@ const accepted: Invitation = { ...pending, id: "invite-3", email: "accepted@exam
 test("renders invitation lifecycle and project scope controls", () => {
   const onResend = vi.fn();
   const onCancel = vi.fn();
-  render(<InvitationList invitations={[pending, expired, accepted]} projects={[project]} busyInvitationID="" onResend={onResend} onCancel={onCancel} />);
+  render(<InvitationList invitations={[pending, expired, accepted]} projects={[project]} busyInvitationID="" canManageLifecycle={true} onResend={onResend} onCancel={onCancel} />);
 
   expect(screen.getByText("auditor@example.com")).toBeTruthy();
   expect(screen.getAllByText(/RU Registration/)).toHaveLength(2);
@@ -26,4 +26,23 @@ test("renders invitation lifecycle and project scope controls", () => {
   expect(onResend).toHaveBeenCalledWith(pending);
   expect(onResend).toHaveBeenCalledWith(expired);
   expect(onCancel).toHaveBeenCalledWith(pending);
+});
+
+test("renders a regular invitation when the API omits project scope", () => {
+  const invitationWithoutScope = {
+    ...pending,
+    email: "viewer@example.com",
+    role: "viewer",
+    projectIDs: undefined,
+  } as unknown as Invitation;
+
+  expect(() => render(<InvitationList invitations={[invitationWithoutScope]} projects={[project]} busyInvitationID="" canManageLifecycle={false} onResend={vi.fn()} onCancel={vi.fn()} />)).not.toThrow();
+  expect(screen.getByText("viewer@example.com")).toBeTruthy();
+});
+
+test("hides lifecycle controls when the user cannot manage invitations", () => {
+  render(<InvitationList invitations={[pending, expired]} projects={[project]} busyInvitationID="" canManageLifecycle={false} onResend={vi.fn()} onCancel={vi.fn()} />);
+
+  expect(screen.queryByRole("button", { name: /resend invitation/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /cancel invitation/i })).toBeNull();
 });

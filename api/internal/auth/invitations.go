@@ -43,6 +43,13 @@ func isStakeholderRole(role string) bool {
 	return role == "org_admin" || role == "assessor" || role == "reviewer" || role == "viewer" || role == "auditor"
 }
 
+func canManageInvitationLifecycle(actor store.User, organizationID string) bool {
+	if actor.UserType == "counselor" && actor.Role == "counselor_admin" {
+		return true
+	}
+	return actor.UserType == "stakeholder" && actor.Role == "org_admin" && actor.OrganizationID != nil && *actor.OrganizationID == organizationID
+}
+
 func (s *InvitationService) Invite(ctx context.Context, actor store.User, organizationID *string, email, role string, projectIDs ...string) (store.Invitation, string, error) {
 	email = NormalizeEmail(email)
 	userType := "stakeholder"
@@ -93,7 +100,7 @@ func (s *InvitationService) Invite(ctx context.Context, actor store.User, organi
 }
 
 func (s *InvitationService) Resend(ctx context.Context, actor store.User, organizationID, invitationID string) (store.Invitation, string, error) {
-	if actor.UserType != "stakeholder" || actor.Role != "org_admin" || actor.OrganizationID == nil || *actor.OrganizationID != organizationID {
+	if !canManageInvitationLifecycle(actor, organizationID) {
 		return store.Invitation{}, "", ErrForbidden
 	}
 	repository, ok := s.repository.(invitationLifecycleRepository)
@@ -115,7 +122,7 @@ func (s *InvitationService) Resend(ctx context.Context, actor store.User, organi
 }
 
 func (s *InvitationService) Cancel(ctx context.Context, actor store.User, organizationID, invitationID string) (store.Invitation, error) {
-	if actor.UserType != "stakeholder" || actor.Role != "org_admin" || actor.OrganizationID == nil || *actor.OrganizationID != organizationID {
+	if !canManageInvitationLifecycle(actor, organizationID) {
 		return store.Invitation{}, ErrForbidden
 	}
 	repository, ok := s.repository.(invitationLifecycleRepository)

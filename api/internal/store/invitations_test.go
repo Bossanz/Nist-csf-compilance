@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -30,5 +31,20 @@ func TestInvitationStatus(t *testing.T) {
 				t.Fatalf("InvitationStatus() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestInvitationJSONIncludesEmptyProjectScope(t *testing.T) {
+	payload, err := json.Marshal(Invitation{ProjectIDs: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var decoded map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if string(decoded["projectIDs"]) != "[]" {
+		t.Fatalf("projectIDs = %s, want []", decoded["projectIDs"])
 	}
 }

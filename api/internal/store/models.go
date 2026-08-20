@@ -111,7 +111,7 @@ type Invitation struct {
 	SupersededAt   *time.Time `json:"supersededAt"`
 	SupersededBy   *string    `json:"supersededBy"`
 	Status         string     `json:"status"`
-	ProjectIDs     []string   `json:"projectIDs,omitempty"`
+	ProjectIDs     []string   `json:"projectIDs"`
 	CreatedAt      time.Time  `json:"createdAt"`
 }
 type StakeholderResponse struct {
