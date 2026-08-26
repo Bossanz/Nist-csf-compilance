@@ -2,10 +2,14 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"strings"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func (s *Store) CreateProject(ctx context.Context, organizationID, name string) (Project, error) {
@@ -130,6 +134,127 @@ func (s *Store) FinalizeProject(ctx context.Context, projectID, actorID string) 
 	return project, approvedCount, includedCount, nil
 }
 
+func (s *Store) CreateNextProjectVersion(ctx context.Context, sourceProjectID, actorID string) (Project, error) {
+	_ = actorID
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return Project{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var versionGroupID string
+	if err := tx.QueryRow(ctx, `SELECT version_group_id FROM projects WHERE id=$1`, sourceProjectID).Scan(&versionGroupID); err != nil {
+		return Project{}, err
+	}
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, versionGroupID); err != nil {
+		return Project{}, err
+	}
+
+	var (
+		organizationID, counselorID, name, sourceSlug, status                              string
+		objective, assessmentPeriod, targetCompletionDate, scopeBoundary, complianceDriver string
+		versionNumber                                                                      int
+	)
+	var sourceCounselorID *string
+	if err := tx.QueryRow(ctx, `
+		SELECT organization_id,counselor_id,name,COALESCE(slug,''),status,
+			objective,assessment_period,COALESCE(target_completion_date::text,''),scope_boundary,
+			compliance_driver,version_group_id,version_number
+		FROM projects
+		WHERE id=$1
+		FOR UPDATE`, sourceProjectID).Scan(
+		&organizationID, &sourceCounselorID, &name, &sourceSlug, &status,
+		&objective, &assessmentPeriod, &targetCompletionDate, &scopeBoundary,
+		&complianceDriver, &versionGroupID, &versionNumber,
+	); err != nil {
+		return Project{}, err
+	}
+	if sourceCounselorID != nil {
+		counselorID = *sourceCounselorID
+	}
+	if status != "closed" {
+		return Project{}, ErrProjectVersionNotFinalized
+	}
+
+	var hasNewerVersion bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM projects WHERE version_group_id=$1 AND version_number>$2)`, versionGroupID, versionNumber).Scan(&hasNewerVersion); err != nil {
+		return Project{}, err
+	}
+	if hasNewerVersion {
+		return Project{}, ErrProjectVersionNotLatest
+	}
+
+	var nextVersionNumber int
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(version_number),0)+1 FROM projects WHERE version_group_id=$1`, versionGroupID).Scan(&nextVersionNumber); err != nil {
+		return Project{}, err
+	}
+	rootSlug := Slugify(sourceSlug)
+	if sourceSlug == "" {
+		rootSlug = Slugify(name)
+	}
+	versionSlug, err := nextProjectSlug(ctx, tx, organizationID, fmt.Sprintf("%s-v%s", rootSlug, strconv.Itoa(nextVersionNumber)))
+	if err != nil {
+		return Project{}, err
+	}
+
+	var projectID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO projects(
+			organization_id,counselor_id,name,slug,objective,assessment_period,
+			target_completion_date,scope_boundary,compliance_driver,version_group_id,
+		version_number,previous_version_id
+		) VALUES ($1,NULLIF($2,'')::uuid,$3,$4,$5,$6,NULLIF($7,'')::date,$8,$9,$10,$11,$12)
+		RETURNING id`, organizationID, counselorID, name, versionSlug, objective, assessmentPeriod,
+		targetCompletionDate, scopeBoundary, complianceDriver, versionGroupID, nextVersionNumber, sourceProjectID).Scan(&projectID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return Project{}, ErrProjectVersionConflict
+		}
+		return Project{}, err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO project_functions(project_id,function_id,applicable,reason)
+		SELECT $1,function_id,applicable,reason FROM project_functions WHERE project_id=$2`, projectID, sourceProjectID); err != nil {
+		return Project{}, err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO project_subcategory_profiles(project_id,subcategory_id,included,rationale,assigned_user_id)
+		SELECT $1,subcategory_id,included,rationale,assigned_user_id
+		FROM project_subcategory_profiles WHERE project_id=$2`, projectID, sourceProjectID); err != nil {
+		return Project{}, err
+	}
+
+	var project Project
+	if err := tx.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, projectID).Scan(projectArgs(&project)...); err != nil {
+		return Project{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Project{}, err
+	}
+	return project, nil
+}
+
+func (s *Store) ListProjectVersions(ctx context.Context, projectID string) ([]Project, error) {
+	var versionGroupID string
+	if err := s.DB.QueryRow(ctx, `SELECT version_group_id FROM projects WHERE id=$1`, projectID).Scan(&versionGroupID); err != nil {
+		return nil, err
+	}
+	rows, err := s.DB.Query(ctx, projectSelect+` WHERE p.version_group_id=$1 ORDER BY p.version_number DESC,p.id DESC`, versionGroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	versions := []Project{}
+	for rows.Next() {
+		var project Project
+		if err := rows.Scan(projectArgs(&project)...); err != nil {
+			return nil, err
+		}
+		versions = append(versions, project)
+	}
+	return versions, rows.Err()
+}
+
 func (s *Store) GetProject(ctx context.Context, id string) (Project, error) {
 	var p Project
 	err := s.DB.QueryRow(ctx, projectSelect+` WHERE p.id=$1`, id).Scan(projectArgs(&p)...)
@@ -159,10 +284,10 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	return out, rows.Err()
 }
 
-const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,COALESCE(p.slug,''),p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver,p.finalized_at,p.finalized_by FROM projects p JOIN organizations o ON o.id=p.organization_id`
+const projectSelect = `SELECT p.id,p.organization_id,o.name,p.name,COALESCE(p.slug,''),p.version_group_id,p.version_number,p.previous_version_id,NOT EXISTS (SELECT 1 FROM projects newer WHERE newer.version_group_id=p.version_group_id AND newer.version_number>p.version_number),p.status,p.created_at::text,p.objective,p.assessment_period,COALESCE(p.target_completion_date::text,''),p.scope_boundary,p.compliance_driver,p.finalized_at,p.finalized_by FROM projects p JOIN organizations o ON o.id=p.organization_id`
 
 func projectArgs(p *Project) []any {
-	return []any{&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.Status, &p.CreatedAt, &p.Objective, &p.AssessmentPeriod, &p.TargetCompletionDate, &p.ScopeBoundary, &p.ComplianceDriver, &p.FinalizedAt, &p.FinalizedBy}
+	return []any{&p.ID, &p.OrganizationID, &p.OrganizationName, &p.Name, &p.Slug, &p.VersionGroupID, &p.VersionNumber, &p.PreviousVersionID, &p.IsLatest, &p.Status, &p.CreatedAt, &p.Objective, &p.AssessmentPeriod, &p.TargetCompletionDate, &p.ScopeBoundary, &p.ComplianceDriver, &p.FinalizedAt, &p.FinalizedBy}
 }
 
 func (s *Store) DeleteProject(ctx context.Context, id string) error {
@@ -320,4 +445,68 @@ func (s *Store) UpdateProfile(ctx context.Context, projectID, subcategoryID stri
 		}
 	}
 	return ProfileRow{}, fmt.Errorf("profile not found")
+}
+
+func (s *Store) UpdateFunctionScope(ctx context.Context, projectID, functionCode string, included bool) ([]ProfileRow, error) {
+	if _, err := uuid.Parse(projectID); err != nil {
+		return nil, fmt.Errorf("invalid project id")
+	}
+	functionCode = strings.TrimSpace(functionCode)
+	if functionCode == "" {
+		return nil, ErrInvalidFunctionScope
+	}
+
+	tx, err := s.DB.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	var projectStatus string
+	if err := tx.QueryRow(ctx, `SELECT status FROM projects WHERE id=$1 FOR UPDATE`, projectID).Scan(&projectStatus); err != nil {
+		return nil, err
+	}
+	if projectStatus == "closed" {
+		return nil, ErrProjectFinalized
+	}
+
+	var functionExists bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM functions WHERE code=$1)`, functionCode).Scan(&functionExists); err != nil {
+		return nil, err
+	}
+	if !functionExists {
+		return nil, ErrInvalidFunctionScope
+	}
+
+	command, err := tx.Exec(ctx, `UPDATE project_subcategory_profiles p
+		SET included=$3,
+		    assigned_user_id=CASE WHEN $3 THEN p.assigned_user_id ELSE NULL END
+		FROM subcategories sc
+		JOIN categories c ON c.id=sc.category_id
+		JOIN functions f ON f.id=c.function_id
+		WHERE p.project_id=$1 AND p.subcategory_id=sc.id AND f.code=$2`, projectID, functionCode, included)
+	if err != nil {
+		return nil, err
+	}
+	if command.RowsAffected() == 0 {
+		return nil, ErrInvalidFunctionScope
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	rows, err := s.ListProfile(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	updated := make([]ProfileRow, 0, command.RowsAffected())
+	for _, row := range rows {
+		if row.FunctionCode == functionCode {
+			updated = append(updated, row)
+		}
+	}
+	if len(updated) == 0 {
+		return nil, ErrInvalidFunctionScope
+	}
+	return updated, nil
 }

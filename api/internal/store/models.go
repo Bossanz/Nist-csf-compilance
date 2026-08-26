@@ -6,9 +6,13 @@ import (
 )
 
 var ErrInvalidProfileAssignment = errors.New("invalid profile assignment")
+var ErrInvalidFunctionScope = errors.New("invalid function scope")
 var ErrInvalidProjectTransition = errors.New("invalid project transition")
 var ErrProjectFinalized = errors.New("project is finalized")
 var ErrProjectNotReady = errors.New("project is not ready to finalize")
+var ErrProjectVersionNotFinalized = errors.New("project is not finalized for versioning")
+var ErrProjectVersionNotLatest = errors.New("project is not the latest version")
+var ErrProjectVersionConflict = errors.New("project version could not be created")
 var ErrInvalidPasswordResetToken = errors.New("invalid password reset token")
 var ErrInvitationNotPending = errors.New("invitation is not pending")
 var ErrInvalidProjectAccess = errors.New("invalid project access")
@@ -55,6 +59,10 @@ type Project struct {
 	OrganizationName     string     `json:"organizationName"`
 	Name                 string     `json:"name"`
 	Slug                 string     `json:"slug"`
+	VersionGroupID       string     `json:"versionGroupID"`
+	VersionNumber        int        `json:"versionNumber"`
+	PreviousVersionID    *string    `json:"previousVersionID"`
+	IsLatest             bool       `json:"isLatest"`
 	Status               string     `json:"status"`
 	CreatedAt            string     `json:"createdAt"`
 	Objective            string     `json:"objective"`
