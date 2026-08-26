@@ -22,6 +22,12 @@ test("asks for confirmation and finalizes when all outcomes are approved", async
   await waitFor(() => expect(onFinalize).toHaveBeenCalledOnce());
 });
 
+test("explains that remediation does not block assessment finalization", () => {
+  render(<ProjectFinalizationPanel status="in_review" includedCount={1} approvedCount={1} remaining={[]} onFinalize={vi.fn()} onOpenReport={vi.fn()} onOpenAudit={vi.fn()} />);
+
+  expect(screen.getByText(/Action Plan work is separate and can continue after finalization/i)).toBeTruthy();
+});
+
 test("shows read-only links after the project is finalized", () => {
   const onOpenReport = vi.fn();
   const onOpenAudit = vi.fn();

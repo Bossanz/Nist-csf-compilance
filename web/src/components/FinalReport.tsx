@@ -82,6 +82,8 @@ function OutcomeResult({ outcome }: { outcome: ReportOutcome }) {
 
 export function FinalReport({ report, onBack, onOpenAudit }: Props) {
   const { project, summary } = report;
+  const assessmentVersion = project.versionNumber ?? 1;
+  const previousVersion = assessmentVersion > 1 ? assessmentVersion - 1 : null;
   return (
     <main className="report-page">
       <div className="report-toolbar no-print">
@@ -93,7 +95,7 @@ export function FinalReport({ report, onBack, onOpenAudit }: Props) {
       </div>
       <header className="report-header panel">
         <div>
-          <span className="eyebrow">Final assessment report</span>
+          <span className="eyebrow">Final assessment report · Assessment v{assessmentVersion}</span>
           <h1>{project.name}</h1>
           <p>{project.organizationName} · {project.assessmentPeriod || "Assessment period not specified"}</p>
         </div>
@@ -106,6 +108,8 @@ export function FinalReport({ report, onBack, onOpenAudit }: Props) {
         <div><span>Objective</span><strong>{project.objective || "—"}</strong></div>
         <div><span>Scope boundary</span><strong>{project.scopeBoundary || "—"}</strong></div>
         <div><span>Compliance driver</span><strong>{project.complianceDriver || "—"}</strong></div>
+        <div><span>Assessment version</span><strong>v{assessmentVersion}</strong></div>
+        {previousVersion && <div><span>Previous version</span><strong>v{previousVersion}</strong></div>}
         <div><span>Finalized by</span><strong>{project.finalizedBy || "—"}</strong></div>
       </section>
       <section className="report-summary-grid" aria-label="Final assessment summary">

@@ -32,6 +32,7 @@ test("assessor can save, send work for review, and upload evidence", async () =>
   fireEvent.change(screen.getByLabelText(/client response/i), { target: { value: "Updated answer" } });
   fireEvent.click(screen.getByRole("button", { name: /save response/i }));
   await waitFor(() => expect(onSave).toHaveBeenCalledWith("Updated answer"));
+  await waitFor(() => expect((screen.getByRole("button", { name: /send to reviewer/i }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole("button", { name: /send to reviewer/i }));
   await waitFor(() => expect(onSubmit).toHaveBeenCalled());
 
@@ -107,6 +108,12 @@ test("previews supported evidence without using the download action", async () =
   fireEvent.click(screen.getByRole("button", { name: /preview evidence\.pdf/i }));
   await waitFor(() => expect(onPreview).toHaveBeenCalledWith(pdfDocument));
   expect(onDownload).not.toHaveBeenCalled();
+});
+
+test("uses the shared ellipsis while evidence preview loads", () => {
+  render(<StakeholderResponsePanel role="viewer" response={{ ...response, documents: [pdfDocument] }} onSave={noop} onSubmit={noop} onReview={noop} onUpload={noop} onDelete={noop} onDownload={noop} onPreview={noop} previewLoading onClosePreview={noop} />);
+
+  expect(screen.getByText("Loading preview…").getAttribute("role")).toBe("status");
 });
 
 test("renders and closes an inline image preview", () => {

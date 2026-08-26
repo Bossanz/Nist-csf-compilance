@@ -14,6 +14,10 @@ type Props = {
   onDelete: (project: Project) => void;
 };
 
+function projectVersionLabel(project: Project) {
+  return `Assessment v${project.versionNumber ?? 1}`;
+}
+
 export function ProjectDashboard({ projects, loading, openingID, error, onOpen, onCreate, onDelete }: Props) {
   const [name, setName] = useState("");
   const [organizationName, setOrganizationName] = useState("");
@@ -32,10 +36,10 @@ export function ProjectDashboard({ projects, loading, openingID, error, onOpen, 
     {error && <div className="error" role="alert">{error}</div>}
     <section aria-labelledby="existing-projects">
       <div className="section-heading"><h2 id="existing-projects">Existing projects</h2><p className="muted">Your active assessment workspaces.</p></div>
-      {loading ? <div className="panel muted">Loading projects…</div> : projects.length === 0 ?
-        <div className="empty-state">No projects yet. Create one to begin an assessment.</div> :
+      {loading ? <div className="panel muted" role="status" aria-live="polite" aria-busy="true">Loading projects…</div> : projects.length === 0 ?
+        <div className="empty-state" role="status">No projects yet. Create one to begin an assessment.</div> :
         <div className="project-grid">{projects.map(project => <article className="project-card" key={project.id}>
-          <div className="project-card-top"><span className="status-chip">{project.status.replaceAll("_", " ")}</span><time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time></div>
+          <div className="project-card-top"><div className="project-card-labels"><span className="status-chip">{project.status.replaceAll("_", " ")}</span><span className="project-version-label">{projectVersionLabel(project)}</span></div><time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time></div>
           <div><h3>{project.name}</h3><p className="muted">{project.organizationName}</p></div>
           <div className="project-actions"><button className="secondary" disabled={Boolean(openingID)} onClick={() => onOpen(project)} aria-label={`Open ${project.name}`}>{openingID === project.id ? "Working…" : "Open project"}</button><button className="danger" disabled={Boolean(openingID)} onClick={() => {if(window.confirm(`Delete ${project.name}? Its assessment data will be permanently deleted.`))onDelete(project)}} aria-label={`Delete ${project.name}`}>Delete</button></div>
         </article>)}</div>}

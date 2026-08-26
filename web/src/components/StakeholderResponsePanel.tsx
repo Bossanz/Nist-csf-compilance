@@ -147,7 +147,7 @@ export function StakeholderResponsePanel({ role, response, onSave, onSubmit, onR
               )}
             </li>)}
           </ul>
-          {previewLoading && <span className="save-state" role="status">Loading preview...</span>}
+          {previewLoading && <span className="save-state" role="status">Loading preview…</span>}
           {previewError && <div className="error" role="alert">{previewError}</div>}
         </div>
       )}

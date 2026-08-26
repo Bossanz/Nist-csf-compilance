@@ -63,8 +63,8 @@ const profile: ProfileRow[] = [
 ];
 const noop = vi.fn().mockResolvedValue(undefined);
 
-function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop, onFinalizeProject = noop, onOpenFinalReport = noop, onOpenAuditPackage = noop, auditTrail: AuditTrailEntry[] = []) {
-  return render(
+function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows = profile, responseRows: StakeholderResponse[] = [], projectOverride: Project = project, onSubmitScope = noop, onFinalizeProject = noop, onOpenFinalReport = noop, onOpenAuditPackage = noop, auditTrail: AuditTrailEntry[] = [], initialSurface: "overview" | "assignment" = "assignment") {
+  const rendered = render(
     <ProjectAssessmentWorkspace
       user={user}
       organization={organization}
@@ -93,6 +93,12 @@ function renderWorkspace(user: User, onSetFunctionIncluded = noop, profileRows =
       auditTrail={auditTrail}
     />,
   );
+
+  if (initialSurface === "assignment") {
+    fireEvent.click(screen.getByRole("button", { name: /^GV Govern/i }));
+  }
+
+  return rendered;
 }
 
 function visibleOutcomeCount() {
@@ -123,8 +129,10 @@ test("explains the assigned Assessor next step and selected Function", () => {
   expect(screen.getByText("Function: GV — Govern")).toBeTruthy();
 });
 
-test("shows the shared project context and active Function progress", () => {
+test("shows project metadata and active Function progress", () => {
   renderWorkspace(assessor);
+
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
 
   const context = screen.getByRole("region", { name: "Project context" });
   expect(context.textContent).toContain("Prepare the organization for registration.");
@@ -132,20 +140,88 @@ test("shows the shared project context and active Function progress", () => {
   expect(context.textContent).toContain("2026");
   expect(context.textContent).toContain("Thailand operations");
   expect(context.textContent).toContain("Customer assurance");
-  expect(context.textContent).toContain("in progress");
   expect(context.textContent).not.toContain("Overall coverage");
-  expect(context.textContent).toContain("GV — Govern");
-  expect(context.textContent).toContain("1 included outcome");
+  expect(screen.queryByText("Project status", { exact: true })).toBeNull();
+  expect(screen.queryByText("Workspace mode", { exact: true })).toBeNull();
+  expect(screen.queryByText("Active Function", { exact: true })).toBeNull();
+  expect(screen.queryByText("Included outcomes", { exact: true })).toBeNull();
   expect(screen.getByRole("button", { name: /gv govern.*0% 2 included/i })).toBeTruthy();
   const summaryRegion = screen.getByRole("region", { name: /assessment workflow summary/i });
   expect(summaryRegion.textContent).toContain("Overall coverage");
   expect(summaryRegion.textContent).toContain("0%");
 });
 
-test("finalized projects keep the Action Plan workspace available", () => {
+test("keeps project summary cards and the final gate on Overview only", () => {
+  renderWorkspace(counselor, noop, profile, [], { ...project, status: "in_review" });
+
+  expect(screen.queryByRole("region", { name: "Project context" })).toBeNull();
+  expect(screen.queryByRole("region", { name: /assessment workflow summary/i })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Finalize project" })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+
+  expect(screen.getByRole("region", { name: "Project context" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: /assessment workflow summary/i })).toBeTruthy();
+  const overviewHeading = screen.getByRole("heading", { name: "Project overview" });
+  const finalizationHeading = screen.getByRole("heading", { name: "Finalize project" });
+  expect(overviewHeading.compareDocumentPosition(finalizationHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByText("Project status", { exact: true })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: /gv govern/i }));
+
+  expect(screen.queryByRole("region", { name: "Project context" })).toBeNull();
+  expect(screen.queryByRole("region", { name: /assessment workflow summary/i })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Finalize project" })).toBeNull();
+});
+
+test("opens the project overview from the workspace navigation", () => {
+  renderWorkspace(assessor);
+
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+
+  expect(screen.getByRole("heading", { name: "Project overview" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: /assessment workflow summary/i })).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Outcomes in this Function" })).toBeNull();
+});
+
+test("opens the project overview by default", () => {
+  renderWorkspace(assessor, noop, profile, [], project, noop, noop, noop, noop, [], "overview");
+
+  expect(screen.getByRole("heading", { name: "Project overview" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Overview" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.queryByRole("heading", { name: "Outcomes in this Function" })).toBeNull();
+});
+
+test("separates finalized assessment status from remediation status", () => {
+  const gapProfile = profile.map((item, index) => index === 0
+    ? { ...item, currentCoverageLevel: "partial" as const, targetCoverageLevel: "full" as const }
+    : item);
+  renderWorkspace(counselor, noop, gapProfile, [], { ...project, status: "closed" }, noop, noop, noop, noop, [], "overview");
+
+  expect(screen.getByRole("heading", { name: "Remediation status" })).toBeTruthy();
+  expect(screen.getByText(/Assessment finalized\./)).toBeTruthy();
+  expect(screen.getByText("Not started")).toBeTruthy();
+  expect(screen.getByText(/1 coverage gap/)).toBeTruthy();
+});
+
+test("gives an Assessor a clear overview of assigned work and next step", () => {
+  renderWorkspace(assessor, noop, profile, [submittedResponse]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+
+  expect(screen.getByRole("heading", { name: "Your assigned outcomes" })).toBeTruthy();
+  expect(screen.getByText("Assigned to you")).toBeTruthy();
+  expect(screen.getByText("Reviewing")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open Assignment" })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open Assignment" }));
+  expect(screen.getByRole("heading", { name: "Outcomes in this Function" })).toBeTruthy();
+});
+
+test("finalized projects keep the Action Plan workspace available", async () => {
   renderWorkspace(counselor, noop, profile, [], { ...project, status: "closed" });
   fireEvent.click(screen.getByRole("button", { name: "Action Plan" }));
-  expect(screen.getByRole("heading", { name: "Action Plan" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Action Plan" })).toBeTruthy();
   expect(screen.getByText(/without changing the finalized assessment/i)).toBeTruthy();
 });
 
@@ -153,12 +229,9 @@ test("does not render empty optional project metadata", () => {
   const projectWithoutMetadata: Project = { ...project, objective: undefined, assessmentPeriod: undefined, targetCompletionDate: undefined, scopeBoundary: undefined, complianceDriver: undefined };
   renderWorkspace(assessor, noop, profile, [], projectWithoutMetadata);
 
-  const context = screen.getByRole("region", { name: "Project context" });
-  expect(context.textContent).not.toContain("Objective");
-  expect(context.textContent).not.toContain("Assessment period");
-  expect(context.textContent).not.toContain("Target completion");
-  expect(context.textContent).not.toContain("Scope boundary");
-  expect(context.textContent).not.toContain("Compliance driver");
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+
+  expect(screen.queryByRole("region", { name: "Project context" })).toBeNull();
 });
 
 test("Reviewer sees every included outcome", () => {
@@ -211,10 +284,12 @@ test("Auditor sees included outcomes and activity without mutation affordances",
   expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("Audit View");
   expect(screen.getByText("Read the assigned Project, responses, evidence, and activity history.")).toBeTruthy();
   expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Activity trail" })).toBeNull();
 
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
   expect(screen.getAllByText("Read only").length).toBeGreaterThan(0);
   expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Log" }));
   expect(screen.getByRole("heading", { name: "Activity trail" })).toBeTruthy();
   expect(screen.getByText("Response approved")).toBeTruthy();
 });
@@ -238,6 +313,8 @@ test("Counselor can include all outcomes in the selected Function", async () => 
 
 test("Counselor sees assignment progress for included outcomes", () => {
   renderWorkspace(counselor, noop, [...profile, row("GV.OC-04", true, null)]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
 
   const progress = screen.getByRole("region", { name: /assignment progress/i });
   expect(progress.textContent).toContain("3");
@@ -267,6 +344,8 @@ test("Counselor draft shows scope controls but hides stakeholder work", () => {
   expect(screen.getByLabelText("Responsible stakeholder for GV.OC-01")).toBeTruthy();
   expect(screen.queryByRole("heading", { name: /assessment profile/i })).toBeNull();
   expect(screen.queryByRole("heading", { name: /stakeholder response/i })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
   expect(screen.getByRole("button", { name: /submit scope/i })).toBeTruthy();
 
   fireEvent.click(screen.getByRole("button", { name: /submit scope/i }));
@@ -313,10 +392,12 @@ test("Auditor sees included outcomes and activity without mutation affordances",
   expect(screen.getByRole("paragraph", { name: "Active role mode" }).textContent).toContain("Audit View");
   expect(screen.getByText("Read the assigned Project, responses, evidence, and activity history.")).toBeTruthy();
   expect(screen.queryByRole("checkbox", { name: /include all outcomes in this function/i })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Activity trail" })).toBeNull();
 
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
   expect(screen.getAllByText("Read only").length).toBeGreaterThan(0);
   expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Log" }));
   expect(screen.getByRole("heading", { name: "Activity trail" })).toBeTruthy();
   expect(screen.getByText("Response approved")).toBeTruthy();
 });
@@ -330,6 +411,8 @@ test("Counselor can finalize when every included outcome is approved", async () 
   ];
   renderWorkspace(counselor, noop, profile, approvedResponses, { ...project, status: "in_review" }, noop, onFinalizeProject);
 
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+
   fireEvent.click(screen.getByRole("button", { name: /finalize project/i }));
 
   await waitFor(() => expect(onFinalizeProject).toHaveBeenCalledOnce());
@@ -340,12 +423,15 @@ test("finalized Counselor workspace is read-only and links to reports", () => {
   const onOpenAuditPackage = vi.fn();
   renderWorkspace(counselor, noop, profile, [], { ...project, status: "closed" }, noop, noop, onOpenFinalReport, onOpenAuditPackage);
 
+  fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+
   expect(screen.getByText("Project is finalized")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /open final report/i }));
   fireEvent.click(screen.getByRole("button", { name: /open audit package/i }));
   expect(onOpenFinalReport).toHaveBeenCalledOnce();
   expect(onOpenAuditPackage).toHaveBeenCalledOnce();
 
+  fireEvent.click(screen.getByRole("button", { name: /gv govern/i }));
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
   expect(screen.queryByRole("button", { name: /save assessment/i })).toBeNull();
   expect(screen.queryByText("Include in profile")).toBeNull();

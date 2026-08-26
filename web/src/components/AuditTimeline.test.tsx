@@ -35,3 +35,15 @@ test("renders an empty state when there are no audit events", () => {
 
   expect(screen.getByText("No audit activity has been recorded yet.")).toBeTruthy();
 });
+
+test("renders a non-blocking loading state for audit activity", () => {
+  render(<AuditTimeline events={[]} loading />);
+
+  expect(screen.getByText("Loading activity trail…").getAttribute("role")).toBe("status");
+});
+
+test("renders an audit activity error without hiding the workspace", () => {
+  render(<AuditTimeline events={[]} error="Activity trail unavailable" />);
+
+  expect(screen.getByRole("alert").textContent).toContain("Activity trail unavailable");
+});

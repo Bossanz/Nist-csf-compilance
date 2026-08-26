@@ -1,56 +1,49 @@
 ---
 name: CSF Compliance
-description: A branded trust workspace for reading, completing, and reviewing NIST CSF assessments.
+description: A QID v3 dark-first workspace for reading, completing, reviewing, and handing off NIST CSF assessments.
 colors:
-  magenta: "#e6007a"
-  magenta-soft: "#ff2d9a"
-  purple: "#7b2cbf"
-  purple-soft: "#9b5de5"
-  navy: "#0b1d3a"
-  navy-deep: "#060e1d"
-  gold: "#f5df4d"
-  ink: "#0b1d3a"
-  muted: "#5a6580"
-  muted-strong: "#33415e"
-  line: "rgba(11, 29, 58, 0.1)"
-  line-strong: "rgba(11, 29, 58, 0.16)"
-  accent: "#e6007a"
-  accent-dark: "#7b2cbf"
-  accent-soft: "#ffd1ec"
-  accent-faint: "#fff1f8"
-  surface: "#ffffff"
-  surface-subtle: "#fafbfd"
-  canvas: "#f1f4fa"
-  current: "#edf2ff"
-  current-ink: "#295a8a"
-  target: "#fff3dc"
-  target-ink: "#785b1a"
-  error: "#b42318"
-  error-soft: "#fff2f0"
-  success: "#147d55"
-  warning: "#9a5f00"
+  pink: "#eb147c"
+  purple: "#6a32de"
+  deep: "#160a2e"
+  dark-bg: "#0b0914"
+  dark-surface: "#13101f"
+  dark-surface-2: "#1c182d"
+  dark-surface-3: "#26213c"
+  dark-border: "#342e4f"
+  dark-text: "#f8f8fc"
+  dark-muted: "#a19db5"
+  light-bg: "#faf9fd"
+  light-surface: "#ffffff"
+  light-surface-2: "#f2f0f7"
+  light-border: "#dfdce8"
+  light-text: "#1a1725"
+  light-muted: "#625d75"
+  success: "#10b981"
+  warning: "#f59e0b"
+  error: "#ef4444"
+  info: "#3b82f6"
 typography:
   display:
-    fontFamily: "Space Grotesk, IBM Plex Sans Thai Looped, -apple-system, BlinkMacSystemFont, sans-serif"
-    fontSize: "clamp(2rem, 4vw, 3.25rem)"
-    fontWeight: 800
-    lineHeight: 1.18
-    letterSpacing: "-0.04em"
-  headline:
-    fontFamily: "Space Grotesk, IBM Plex Sans Thai Looped, -apple-system, BlinkMacSystemFont, sans-serif"
-    fontSize: "clamp(1.35rem, 2vw, 1.85rem)"
+    fontFamily: "Space Grotesk, system-ui, sans-serif"
+    fontSize: "clamp(2.2rem, 4vw, 4rem)"
     fontWeight: 700
     lineHeight: 1.18
-    letterSpacing: "-0.03em"
+    letterSpacing: "-0.065em"
+  headline:
+    fontFamily: "Space Grotesk, system-ui, sans-serif"
+    fontSize: "clamp(1.5rem, 2.3vw, 2.25rem)"
+    fontWeight: 700
+    lineHeight: 1.18
+    letterSpacing: "-0.05em"
   title:
-    fontFamily: "Space Grotesk, IBM Plex Sans Thai Looped, -apple-system, BlinkMacSystemFont, sans-serif"
+    fontFamily: "Space Grotesk, system-ui, sans-serif"
     fontSize: "1.04rem"
     fontWeight: 700
     lineHeight: 1.18
     letterSpacing: "-0.02em"
   body:
-    fontFamily: "Space Grotesk, IBM Plex Sans Thai Looped, -apple-system, BlinkMacSystemFont, sans-serif"
-    fontSize: "15px"
+    fontFamily: "Inter, system-ui, sans-serif"
+    fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.65
   label:
@@ -60,30 +53,30 @@ typography:
     lineHeight: 1.3
 rounded:
   xs: "6px"
-  sm: "10px"
-  md: "14px"
-  lg: "20px"
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
   pill: "999px"
   circle: "50%"
 spacing:
-  xs: "6px"
+  xs: "4px"
   sm: "8px"
   md: "16px"
-  lg: "22px"
-  xl: "40px"
+  lg: "24px"
+  xl: "48px"
 components:
   button-primary:
-    backgroundColor: "linear-gradient(135deg, {colors.magenta}, {colors.purple})"
+    backgroundColor: "linear-gradient(135deg, {colors.pink}, {colors.purple})"
     textColor: "#ffffff"
     rounded: "{rounded.sm}"
     padding: "10px 16px"
-    height: "42px"
+    height: "44px"
   button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.accent-dark}"
-    rounded: "{rounded.sm}"
+    backgroundColor: "{colors.dark-surface-2}"
+    textColor: "{colors.dark-text}"
+    rounded: "{rounded.md}"
     padding: "10px 16px"
-    height: "42px"
+    height: "44px"
   button-danger:
     backgroundColor: "transparent"
     textColor: "{colors.error}"
@@ -91,100 +84,99 @@ components:
     padding: "10px 8px"
     height: "44px"
   input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
+    backgroundColor: "{colors.dark-surface-2}"
+    textColor: "{colors.dark-text}"
+    rounded: "{rounded.md}"
     padding: "11px 12px"
   status-chip:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.accent-dark}"
+    backgroundColor: "{colors.dark-surface-3}"
+    textColor: "{colors.dark-text}"
     rounded: "{rounded.pill}"
     padding: "5px 9px"
   nav-item:
     backgroundColor: "transparent"
-    textColor: "{colors.muted}"
-    rounded: "{rounded.sm}"
+    textColor: "{colors.dark-muted}"
+    rounded: "{rounded.md}"
     padding: "10px 12px"
     height: "44px"
   assessment-card:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.dark-surface}"
+    textColor: "{colors.dark-text}"
     rounded: "{rounded.md}"
     padding: "0"
   response-panel:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.dark-surface}"
+    textColor: "{colors.dark-text}"
     rounded: "{rounded.md}"
     padding: "22px"
 ---
 
-# Design System: CSF Compliance
+# Design System: CSF Compliance — QID v3
 
 ## Overview
 
-**Creative North Star: "Versotis Trust Workspace"**
+**Creative North Star: "QID v3 Compliance Workspace"**
 
-The interface turns a complex assessment into a clear, accountable trust workspace. Paper-white reading surfaces hold the content in light mode; deep navy surfaces create the same calm reading hierarchy in dark mode; magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. A visible theme toggle can select light or dark mode, while the system preference remains the default when no explicit choice is stored. The result borrows Versotis' strategic energy without sacrificing long compliance-reading sessions in either ambient light.
+The interface turns a complex assessment into a clear, accountable workspace. Dark graphite surfaces are the default reading environment; a light QID surface set remains available for bright environments. Magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. The result follows the [Versotis QID v3 token reference](https://www.versotis.com/assets/design/qid/tokens/v3.html) without sacrificing long compliance-reading sessions.
 
-The system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text.
+The system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text. Existing component class contracts remain in place so the redesign does not alter API, role, or workflow behavior.
 
 The public account-recovery screens (`/forgot-password` and `/reset-password`) and authenticated password screen (`/account/password`) reuse the same two-column auth layout, explicit field labels, readable error states, and visible return links. Recovery success copy remains generic so the interface does not reveal whether an email belongs to an account.
 
 **Key Characteristics:**
 
-- Paper-white work surfaces with a cool neutral page canvas in light mode, and deep navy work surfaces with blue-black elevation in dark mode.
+- Dark-first work surfaces: `#0b0914` canvas, `#13101f` primary surface, and `#1c182d` supporting surface; light mode uses `#faf9fd` and white reading surfaces.
 - Magenta-to-purple used as orientation and action, not as decoration.
-- Space Grotesk for the product voice, IBM Plex Sans Thai Looped for Thai fallback, and JetBrains Mono for wayfinding/data labels.
-- Editorial reading measure with explicit Current / Target comparison.
-- Thin borders, modest corners, and one soft ambient shadow for raised panels.
+- Space Grotesk for headings, Inter for long-form body copy, and JetBrains Mono for wayfinding/data labels.
+- A 12-column desktop grid with a 1200px content frame, a 260px workspace rail, and explicit Current / Target comparison.
+- Thin borders, 6–16px corners, and restrained QID elevation for raised panels.
 - Role-aware surfaces that distinguish reading, reviewing, and completing input.
 - Project context metadata aligned from a shared top edge so uneven copy lengths do not make short values appear vertically suspended.
 
 ## Colors
 
-The palette follows the 60/30/10 rule: white surfaces dominate reading areas, light navy neutrals provide page structure and dividers, and the magenta-to-purple accent is reserved for orientation, action, focus, and meaningful status.
+The palette follows the 60/30/10 rule: neutral workspace surfaces take most of the page, the secondary surface/border system provides structure, and magenta-purple is reserved for orientation, action, focus, and meaningful status.
 
 ### Primary
 
-- **Versotis Magenta** (`{colors.accent}`) and **Purple** (`{colors.accent-dark}`): Primary actions, active Function navigation, focus borders, links, and assessment orientation cues.
-- **Brand Gradient** (`linear-gradient(135deg, {colors.magenta}, {colors.purple})`): Primary buttons and high-value action anchors only.
-- **Pink Wash** (`{colors.accent-soft}`) and **Faint Pink** (`{colors.accent-faint}`): Selected navigation, role/status chips, progress context, and low-intensity supporting regions.
+- **QID Pink** (`{colors.pink}`) and **QID Purple** (`{colors.purple}`): Primary actions, active Function navigation, focus borders, links, and assessment orientation cues.
+- **Brand Gradient** (`linear-gradient(135deg, {colors.pink}, {colors.purple})`): Primary buttons and high-value action anchors only.
+- **Accent washes:** Color-mixed pink/purple surfaces support selected navigation, role/status chips, progress context, and low-intensity regions.
 
 ### Neutral
 
-- **Cool Desk** (`{colors.canvas}`): The page canvas around white work surfaces.
-- **Paper White** (`{colors.surface}`): Reading columns, forms, cards, authentication panels, and response surfaces.
-- **Quiet Paper** (`{colors.surface-subtle}`): Expanded assessment bodies, read-only fields, previews, and supporting regions.
-- **Ink** (`{colors.ink}`), **Muted Graphite** (`{colors.muted}`), and **Strong Graphite** (`{colors.muted-strong}`): Headings, metadata, labels, and long-form copy.
-- **Rule Gray** (`{colors.line}`) and **Strong Rule** (`{colors.line-strong}`): Dividers, card boundaries, input strokes, and structural separation.
-- **Current Blue** (`{colors.current}` / `{colors.current-ink}`) and **Target Sand** (`{colors.target}` / `{colors.target-ink}`): Paired comparison surfaces that always include a text label.
-- **Error Red** (`{colors.error}` / `{colors.error-soft}`), **Success Green** (`{colors.success}`), and **Warning Ochre** (`{colors.warning}`): Feedback states that are paired with text and never used as the only signal.
+- **Dark canvas/surfaces** (`{colors.dark-bg}`, `{colors.dark-surface}`, `{colors.dark-surface-2}`, `{colors.dark-surface-3}`): The default reading environment.
+- **Light canvas/surfaces** (`{colors.light-bg}`, `{colors.light-surface}`, `{colors.light-surface-2}`): The alternate reading environment.
+- **Text hierarchy** (`{colors.dark-text}`, `{colors.dark-muted}`, `{colors.light-text}`, `{colors.light-muted}`): Headings, metadata, labels, and long-form copy.
+- **Borders** (`{colors.dark-border}`, `{colors.light-border}`): Dividers, card boundaries, input strokes, and structural separation.
+- **Current Blue** (`{colors.info}`) and **Target Amber** (`{colors.warning}`): Paired comparison surfaces that always include a text label.
+- **Success**, **Warning**, **Error**, and **Info** states are always paired with text and never used as the only signal.
 
 ### Named Rules
 
 **The Brand Cue Rule.** Magenta and purple should explain where the reader is or what action is available; the brand gradient belongs to actions and orientation, not whole reading sections.
 
-**The Labeled State Rule.** Current, target, submitted, reviewed, error, and permission states use color alongside a visible text label.
+**The Labeled State Rule.** Current, target, Reviewing, Approved, error, and permission states use color alongside a visible text label.
 
 ### Dark Theme
 
-Dark mode follows the system `prefers-color-scheme` setting. The dark palette uses Versotis navy (`{colors.navy-deep}`) as the canvas, Versotis navy (`{colors.navy}`) for work surfaces, a lifted blue-navy for supporting regions, and the same magenta-to-purple action gradient. Body text moves to a soft white and secondary text to a cool blue-gray so long compliance copy remains readable without turning the interface into pure black and white.
+Dark mode is the default root theme and is explicitly controlled with `data-theme="dark"`. The palette uses QID graphite surfaces and soft-white text; light mode swaps the same semantic roles to the light token set. Theme selection persists through the existing `csf-theme` local preference and is available from both the authenticated rail and auth surfaces.
 
 ## Typography
 
-**Display Font:** Space Grotesk (`Space Grotesk`, with IBM Plex Sans Thai Looped fallback)
-**Body Font:** Space Grotesk with IBM Plex Sans Thai Looped for Thai glyphs
+**Display Font:** Space Grotesk (`Space Grotesk`, system-ui fallback)
+**Body Font:** Inter (`Inter`, system-ui fallback)
 **Label/Mono Font:** JetBrains Mono for outcome codes, context markers, and compact data labels.
 
 **Character:** Strategic, technical, and crisp without becoming a marketing landing page; headings carry the brand while body copy stays comfortable for a long reading session.
 
 ### Hierarchy
 
-- **Display** (800, `clamp(2rem, 4vw, 3.25rem)`, 1.18, `-0.04em`): Organization, project, and authentication headings.
-- **Headline** (700, `clamp(1.35rem, 2vw, 1.85rem)`, 1.18, `-0.03em`): Section headings and major workspace titles.
+- **Display** (700, `clamp(2.2rem, 4vw, 4rem)`, 1.18, `-0.065em`): Organization, project, and authentication headings.
+- **Headline** (700, `clamp(1.5rem, 2.3vw, 2.25rem)`, 1.18, `-0.05em`): Section headings and major workspace titles.
 - **Title** (700, `1.04rem`, 1.18, `-0.02em`): Outcome, card, and form-group titles.
-- **Body** (400, `15px`, 1.65): Long-form descriptions, assessment copy, and field content; paragraph measure stays near 72ch.
-- **Label** (750, `0.78rem`, 1.3): Field labels and supporting metadata. Eyebrows and context lines use compact uppercase tracking for orientation.
+- **Body** (400, `14px`, 1.55): Long-form descriptions, assessment copy, and field content; paragraph measure stays near 68ch.
+- **Label** (650, `0.71rem`, 1.3): Field labels and supporting metadata. Eyebrows and context lines use compact mono uppercase tracking for orientation.
 
 ### Named Rules
 
@@ -192,20 +184,20 @@ Dark mode follows the system `prefers-color-scheme` setting. The dark palette us
 
 ## Layout
 
-The application shell uses a 220px sticky Function navigation rail and a fluid main area. Main content is capped at 1540px with a responsive horizontal gutter; organization dashboards and project workspaces share a centered 1320px content frame. Desktop organization and project indexes use two-column work lists, while the project assessment keeps its content in a full-width workspace with prose capped by the 72ch reading measure. The assessment page currently does not rely on a separate contextual rail; orientation is carried by the project header, Function navigation, assignment-progress banner, and outcome count.
+The application shell uses a 260px sticky Function navigation rail and a fluid main area. Main content is capped at 1200px with a responsive horizontal gutter and a 12-column desktop grid. Desktop organization and project indexes use adaptive work lists, while the project assessment keeps a full-width workspace with prose capped by the 68ch reading measure. Orientation is carried by the project header, Function navigation, assignment-progress banner, and outcome count.
 
-The project context panel uses a five-column metadata grid on wide screens, two columns at the rail breakpoint, and one column on small screens. Each metadata cell uses top-aligned content, a compact 3px label/value gap, and a thin rule above the row so long Scope or Compliance driver copy does not vertically center shorter dates and periods.
+The project context panel uses a five-column metadata grid on wide screens, two columns at the rail breakpoint, and one column on small screens. Each metadata cell uses top-aligned content, a compact 3px label/value gap, and a thin rule above the row so long Scope or Compliance driver copy does not vertically center shorter dates and periods. Long account, invitation, and evidence names wrap within their rows at the single-column breakpoint so metadata cannot force horizontal overflow.
 
-At 1100px the Function rail becomes a horizontal, scrollable index and multi-column creator forms begin to stack. At 760px lists, profile comparisons, supporting grids, and authentication surfaces become one column; actions stretch to the available width; assessment summaries move the coverage route below the outcome title; and response/evidence controls follow the content they act on. The spacing rhythm is based on 8px, 16px, 22px, and 40px relationships, with compact 6px and 14–18px gaps where controls need tighter grouping.
+At 1100px the Function rail becomes a horizontal, scrollable index and multi-column creator forms begin to stack. At 760px lists, profile comparisons, supporting grids, and authentication surfaces become one column; actions stretch to the available width; assessment summaries move the coverage route below the outcome title; and response/evidence controls follow the content they act on. The spacing rhythm follows 4px, 8px, 16px, 24px, and 48px QID steps.
 
 ## Elevation & Depth
 
-The system is border-led and flat by default. White surfaces sit on the light navy-gray canvas through tonal contrast and thin rules. The soft ambient shadow is reserved for forms, deletion confirmation, authentication panels, and branded primary actions that need quiet separation. Focus uses a magenta ring as an interaction state, not as ambient decoration. Expanded assessment content uses a tonal shift and a divider rather than a floating layer.
+The system is border-led and flat by default. Dark or light surfaces sit on their matching canvas through tonal contrast and thin rules. QID base and large shadows are reserved for forms, deletion confirmation, authentication panels, and branded primary actions that need quiet separation. Focus uses a magenta ring as an interaction state, not as ambient decoration. Expanded assessment content uses a tonal shift and a divider rather than a floating layer.
 
 ### Shadow Vocabulary
 
-- **Ambient panel** (`var(--shadow-soft)` / `0 24px 60px -30px rgba(11, 29, 58, 0.24)`): Organization forms, deletion confirmation, and auth panels that need a quiet lift.
-- **Focus ring** (`var(--shadow-focus)` / `0 0 0 4px rgba(230, 0, 122, 0.18)`): Keyboard and field focus; it is not a card shadow.
+- **QID base** (`var(--qid-shadow-base)` / `0 6px 20px rgba(0, 0, 0, 0.22)`): Organization forms, deletion confirmation, and auth panels that need a quiet lift.
+- **QID focus ring** (`var(--qid-focus-ring)`): Keyboard and field focus; it is not a card shadow.
 - **No rest shadow:** Assessment cards, project rows, profile columns, and navigation rely on borders and surface tone.
 
 ### Named Rules
@@ -214,44 +206,44 @@ The system is border-led and flat by default. White surfaces sit on the light na
 
 ## Shapes
 
-Surfaces use gently curved 14px corners; controls use 10px corners; compact danger actions use a 6px corner; status chips and coverage markers use pill shapes; expand controls use circular outlines. Borders are 1px by default. A 2px top rule marks primary auth context, destructive confirmation, or assignment progress. Avoid hard offset shadows, clipping, and decorative geometry.
+Surfaces use 12–16px corners; controls use 8px corners; compact danger actions use a 6px corner; status chips and coverage markers use pill shapes; expand controls use circular outlines. Borders are 1px by default. A 2px top rule marks primary auth context, destructive confirmation, or assignment progress. Avoid hard offset shadows, clipping, and decorative geometry.
 
 ## Components
 
 ### Buttons
 
-- **Shape:** 10px corners, 42px minimum height, 10px 16px padding, and medium-bold labels.
+- **Shape:** 8px corners, 44px minimum height, 10px 16px padding, and medium-bold labels.
 - **Primary:** Magenta-to-purple gradient with white text; hover brightens the magenta edge; active state shifts down by 1px.
-- **Secondary:** Paper White fill with a Strong Rule border and Purple text; hover receives a Faint Pink wash and accent border.
+- **Secondary:** QID supporting-surface fill with a strong border and readable text; hover receives a lifted surface and accent border.
 - **Danger:** Text-first red action with transparent background and a 44px minimum touch target; hover adds the soft error tint and underline.
 - **Focus:** All actionable controls use a visible magenta outline with a 3px offset.
 
 ### Chips
 
 - **Style:** Small pill with a tinted background and readable text, used for roles, project status, and response status.
-- **State:** Submitted, reviewed, needs-more-information, Current, and Target states pair color with text labels.
+- **State:** Reviewing, Approved, needs-more-information, Current, and Target states pair color with text labels.
 
 ### Cards / Containers
 
-- **Corner Style:** 14px for primary surfaces and assessment cards; 10px for compact rows and controls.
-- **Background:** Paper White for primary content; Quiet Paper for expanded or supporting regions.
+- **Corner Style:** 12–16px for primary surfaces and assessment cards; 8px for compact rows and controls.
+- **Background:** QID primary surface for content; QID supporting surface for expanded or supporting regions.
 - **Shadow Strategy:** Border-led; Ambient panel shadow only where separation is needed.
 - **Border:** Thin neutral rule with a restrained top rule for active context or destructive state.
-- **Internal Padding:** 16px for compact rows, 18–22px for primary panels, and 13–16px on mobile.
+- **Internal Padding:** 16px for compact rows, 18–24px for primary panels, and 14–18px on mobile.
 
 ### Inputs / Fields
 
-- **Style:** Explicit labels above white fields, 1px Strong Rule border, 10px corner, 11px 12px padding, and 1.65 line-height for textareas.
+- **Style:** Explicit labels above QID supporting-surface fields, 1px strong border, 8px corner, 11px 12px padding, and 1.65 line-height for textareas.
 - **Focus:** Accent border plus the soft, offset focus ring.
 - **Error / Disabled:** Error uses red text and a lightly tinted surface; disabled controls reduce opacity; read-only fields use Quiet Paper and muted text without hiding their values.
 
 ### Navigation
 
-The Function index is a labeled navigation landmark. It uses a white surface and a thin Rule Gray boundary. Active items use Pink Wash, a subtle magenta boundary, Purple text, and `aria-current="page"`. At smaller widths it becomes a horizontally scrollable row without changing the reading order.
+The Function index is a labeled navigation landmark. It uses a dark or light QID surface and a thin border boundary. Active items use a pink wash, a subtle magenta boundary, readable text, and `aria-current="page"`. At smaller widths it becomes a horizontally scrollable row without changing the reading order.
 
 ### Project Context Metadata
 
-The project context is a quiet reading surface rather than a dashboard widget. Labels use compact muted typography; values use the body face and remain top-aligned across the grid. The structure reflows from five columns to two and then one without changing the metadata order.
+The project context is a quiet reading surface rather than a dashboard widget. Labels use compact mono typography; values use the body face and remain top-aligned across the grid. The structure reflows from five columns to two and then one without changing the metadata order.
 
 ### Assessment Cards
 
@@ -259,11 +251,11 @@ Outcome cards use a quiet summary row with the outcome code, title, current-to-t
 
 ### Response & Evidence Panel
 
-The Stakeholder response panel keeps the response textarea, evidence upload, save/submit controls, review fields, and evidence list in one bordered white surface. Previewable evidence opens inline inside a Quiet Paper preview region; status and save feedback remain text-labeled.
+The Stakeholder response panel keeps the response textarea, evidence upload, save/submit controls, review fields, and evidence list in one bordered QID surface. Previewable evidence opens inline inside a supporting-surface preview region; status and save feedback remain text-labeled.
 
 ### Authentication Panels
 
-Login and invitation activation use a two-column white-panel composition on desktop: a short product introduction with a magenta top rule and a focused form panel with quiet ambient lift. At mobile widths the intro and form stack, preserving the same reading order and full-width primary action.
+Login and invitation activation use a two-column QID surface composition on desktop: a short product introduction with a magenta top rule and a focused form panel with quiet ambient lift. At mobile widths the intro and form stack, preserving the same reading order and full-width primary action.
 
 ### Coverage Summary
 
@@ -275,13 +267,13 @@ Project finalization is a deliberate reading state, not a decorative success scr
 
 The Final Report is a calm, print-first reading surface: project context and finalization metadata come first, followed by overall and per-Function coverage, then the included outcome register. Each outcome keeps Current / Target, stakeholder response, reviewer decision, and evidence metadata together so an auditor can read the assessment without jumping between screens. The browser print stylesheet removes navigation and actions, keeps table headers with their rows, and preserves the Current / Target tonal distinction in print where supported.
 
-The Audit Package uses a denser register layout appropriate for handoff. Scope and assignment appear before response/evidence records, reviewer history follows the outcome register, and the chronological audit trail closes the package. The CSV action is explicit and secondary to reading; its columns mirror the traceability chain while omitting private storage keys. Audit pages remain read-only and reuse the existing white-paper surfaces, thin rules, compact mono labels, and the same magenta/purple orientation cues as the workspace.
+The Audit Package uses a denser register layout appropriate for handoff. Scope and assignment appear before response/evidence records, reviewer history follows the outcome register, and the chronological audit trail closes the package. The CSV action is explicit and secondary to reading; its columns mirror the traceability chain while omitting private storage keys. Audit pages remain read-only and reuse the QID surfaces, thin rules, compact mono labels, and the same magenta/purple orientation cues as the workspace.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** keep compliance copy on white surfaces with a readable measure.
+- **Do** keep compliance copy on a high-contrast QID surface with a readable measure.
 - **Do** use the cool desk canvas and thin rules to group content before reaching for shadow.
 - **Do** reserve magenta/purple for active location, primary action, focus, and meaningful status.
 - **Do** distinguish Counselor interpretation from Stakeholder response/evidence input through layout and labels.

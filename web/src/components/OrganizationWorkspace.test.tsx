@@ -15,8 +15,9 @@ test("explains stakeholder invitation roles",()=>{render(<OrganizationWorkspace 
 test("keeps Auditor invitations with the organization admin",()=>{render(<OrganizationWorkspace user={counselor} organization={organization} projects={[project]} users={[orgAdmin]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={vi.fn().mockResolvedValue(undefined)} onInvite={vi.fn()}/>);expect(screen.queryByRole("option",{name:/auditor.*read-only review/i})).toBeNull()});
 
 test("labels the projects and stakeholders sections",()=>{render(<OrganizationWorkspace user={counselor} organization={organization} projects={[project]} users={[orgAdmin]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={vi.fn().mockResolvedValue(undefined)} onInvite={vi.fn()}/>);expect(screen.getByRole("region",{name:/projects/i})).toBeTruthy();expect(screen.getByRole("region",{name:/stakeholders/i})).toBeTruthy()});
+test("announces an empty project list as a status",()=>{render(<OrganizationWorkspace user={counselor} organization={organization} projects={[]} users={[orgAdmin]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={vi.fn().mockResolvedValue(undefined)} onInvite={vi.fn()}/>);expect(screen.getByRole("status").textContent).toMatch(/no projects yet/i)});
 
-test("requires confirmation before deleting a project",async()=>{const onDelete=vi.fn().mockResolvedValue(undefined);render(<OrganizationWorkspace user={counselor} organization={organization} projects={[project]} users={[orgAdmin]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={onDelete} onInvite={vi.fn()}/>);fireEvent.click(screen.getByRole("button",{name:"Delete Readiness"}));expect(screen.getByRole("dialog",{name:/delete readiness/i})).toBeTruthy();const confirm=screen.getByRole("button",{name:/delete project/i}) as HTMLButtonElement;expect(confirm.disabled).toBe(true);fireEvent.change(screen.getByLabelText("Type Readiness to confirm"),{target:{value:"Readiness"}});fireEvent.click(confirm);await waitFor(()=>expect(onDelete).toHaveBeenCalledWith(project))});
+test("requires confirmation before deleting a project",async()=>{const onDelete=vi.fn().mockResolvedValue(undefined);render(<OrganizationWorkspace user={counselor} organization={organization} projects={[project]} users={[orgAdmin]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={onDelete} onInvite={vi.fn()}/>);fireEvent.click(screen.getByRole("button",{name:"Delete Readiness"}));expect(screen.getByRole("dialog",{name:/delete readiness/i}).getAttribute("aria-modal")).toBe("true");const confirm=screen.getByRole("button",{name:/delete project/i}) as HTMLButtonElement;expect(confirm.disabled).toBe(true);fireEvent.change(screen.getByLabelText("Type Readiness to confirm"),{target:{value:"Readiness"}});fireEvent.click(confirm);await waitFor(()=>expect(onDelete).toHaveBeenCalledWith(project))});
 
 test("shows a project deletion error and keeps the confirmation open",async()=>{const onDelete=vi.fn().mockRejectedValue(new Error("Could not delete project"));render(<OrganizationWorkspace user={counselor} organization={organization} projects={[project]} users={[orgAdmin]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={onDelete} onInvite={vi.fn()}/>);fireEvent.click(screen.getByRole("button",{name:"Delete Readiness"}));fireEvent.change(screen.getByLabelText("Type Readiness to confirm"),{target:{value:"Readiness"}});fireEvent.click(screen.getByRole("button",{name:/delete project/i}));expect((await screen.findByRole("alert")).textContent).toContain("Could not delete project");expect(screen.getByRole("dialog",{name:/delete readiness/i})).toBeTruthy()});
 
@@ -27,6 +28,17 @@ test("counselor updates a stakeholder role and status", async () => {
   fireEvent.change(screen.getByLabelText(/status for a@acme.test/i), { target: { value: "disabled" } });
   fireEvent.click(screen.getByRole("button", { name: /save access for a@acme.test/i }));
   await waitFor(() => expect(onUpdateUser).toHaveBeenCalledWith("user-2", { role: "reviewer", status: "disabled" }));
+});
+
+test("uses the shared ellipsis while stakeholder access saves", () => {
+  let release!: () => void;
+  const onUpdateUser = vi.fn(() => new Promise<void>((resolve) => { release = resolve; }));
+  render(<OrganizationWorkspace user={counselor} organization={organization} projects={[project]} users={[{ ...orgAdmin, role: "assessor" }]} loading={false} error="" onBack={vi.fn()} onOpen={vi.fn()} onCreateProject={vi.fn()} onDeleteProject={vi.fn().mockResolvedValue(undefined)} onInvite={vi.fn()} onUpdateUser={onUpdateUser} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /save access for a@acme.test/i }));
+
+  expect(screen.getByRole("button", { name: /save access for a@acme.test/i }).textContent).toContain("Saving…");
+  release();
 });
 
 test("current user cannot select disabled status", () => {

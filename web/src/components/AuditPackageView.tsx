@@ -30,6 +30,8 @@ function remediationStatusLabel(status: string) {
 
 export function AuditPackageView({ auditPackage, onBack, onDownloadCSV }: Props) {
   const { project, summary } = auditPackage;
+  const assessmentVersion = project.versionNumber ?? 1;
+  const previousVersion = assessmentVersion > 1 ? assessmentVersion - 1 : null;
   return (
     <main className="report-page audit-page">
       <div className="report-toolbar no-print">
@@ -40,7 +42,7 @@ export function AuditPackageView({ auditPackage, onBack, onDownloadCSV }: Props)
         </div>
       </div>
       <header className="report-header panel">
-        <div><span className="eyebrow">{project.name}</span><h1>Audit package</h1><p>{project.organizationName} · Traceability register for NIST CSF 2.0 assessment</p></div>
+        <div><span className="eyebrow">{project.name} · Assessment v{assessmentVersion}{previousVersion ? ` · Previous v${previousVersion}` : ""}</span><h1>Audit package</h1><p>{project.organizationName} · Traceability register for NIST CSF 2.0 assessment</p></div>
         <div className="report-final-status"><span className="status-chip">{project.status === "closed" ? "Finalized" : "In progress"}</span><small>{summary.includedCount} included outcomes</small></div>
       </header>
       <section className="report-summary-grid" aria-label="Audit package summary">

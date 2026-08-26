@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import ProjectPage from "./page";
 import { api } from "../../../../../lib/api";
-import type { FunctionNode, Organization, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
+import type { AuditTrailEntry, FunctionNode, Organization, ProfileRow, Project, ResponseDocument, StakeholderResponse, Summary, User } from "../../../../../lib/types";
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router, useParams: () => ({ organizationSlug: "acme-corporation", projectSlug: "readiness" }) }));
@@ -12,9 +12,10 @@ vi.mock("../../../../../lib/api", () => ({
   },
   api: {
     me: vi.fn(), getOrganizationBySlug: vi.fn(), getOrganizationProjectBySlug: vi.fn(), getFunctions: vi.fn(),
-    getProfile: vi.fn(), getSummary: vi.fn(), getResponses: vi.fn(), getProjectAuditLogs: vi.fn(), updateProfile: vi.fn(), saveResponse: vi.fn(),
+    getProfile: vi.fn(), getSummary: vi.fn(), getResponses: vi.fn(), getProjectAuditLogs: vi.fn(), updateProfile: vi.fn(), updateFunctionScope: vi.fn(), saveResponse: vi.fn(),
     submitResponse: vi.fn(), reviewResponse: vi.fn(), uploadResponseDocument: vi.fn(), deleteResponseDocument: vi.fn(),
     downloadResponseDocument: vi.fn(), getOrganizationUsers: vi.fn(),
+    getProjectVersions: vi.fn(), createProjectVersion: vi.fn(),
     getRemediationActions: vi.fn(), createRemediationAction: vi.fn(), updateRemediationAction: vi.fn(),
     updateRemediationProgress: vi.fn(), submitRemediationAction: vi.fn(), reviewRemediationAction: vi.fn(),
     uploadRemediationEvidence: vi.fn(), downloadRemediationEvidence: vi.fn(), deleteRemediationEvidence: vi.fn(),
@@ -52,6 +53,7 @@ beforeEach(() => {
   vi.mocked(api.getResponses).mockResolvedValue([]);
   vi.mocked(api.getProjectAuditLogs).mockResolvedValue([]);
   vi.mocked(api.getOrganizationUsers).mockResolvedValue([]);
+  vi.mocked(api.getProjectVersions).mockResolvedValue([project]);
   vi.mocked(api.getRemediationActions).mockResolvedValue([]);
 });
 
@@ -67,6 +69,30 @@ test("loads assessment data after resolving the project slug", async () => {
   expect(screen.queryByRole("complementary", { name: /assessment context/i })).toBeNull();
 });
 
+test("loads version history for the current project", async () => {
+  render(<ProjectPage />);
+
+  expect(await screen.findByRole("heading", { name: /version history/i })).toBeTruthy();
+  expect(api.getProjectVersions).toHaveBeenCalledWith("project-1");
+});
+
+test("creates the next finalized version and opens its workspace", async () => {
+  const finalizedProject = { ...project, status: "closed", versionNumber: 1, isLatest: true };
+  const nextProject = { ...project, id: "project-2", slug: "readiness-v2", status: "setup", versionNumber: 2, isLatest: true };
+  vi.mocked(api.getOrganizationProjectBySlug).mockResolvedValue(finalizedProject);
+  vi.mocked(api.getProjectVersions).mockResolvedValue([finalizedProject]);
+  vi.mocked(api.createProjectVersion).mockResolvedValue(nextProject);
+
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: /start new assessment/i }));
+  fireEvent.click(screen.getByRole("button", { name: /confirm start/i }));
+
+  await waitFor(() => expect(api.createProjectVersion).toHaveBeenCalledWith("project-1"));
+  expect(api.getProjectVersions).toHaveBeenCalledWith("project-2");
+  expect(router.push).toHaveBeenCalledWith("/organizations/acme-corporation/projects/readiness-v2");
+});
+
 test("starts authentication and organization lookup together", async () => {
   const auth = deferred<User>();
   const organizationLookup = deferred<Organization>();
@@ -80,6 +106,19 @@ test("starts authentication and organization lookup together", async () => {
   auth.resolve(user);
   organizationLookup.resolve(organization);
   expect(await screen.findByRole("heading", { name: "Readiness" })).toBeTruthy();
+});
+
+test("renders the assessment while audit activity is still loading", async () => {
+  const audit = deferred<AuditTrailEntry[]>();
+  vi.mocked(api.getProjectAuditLogs).mockReturnValue(audit.promise);
+
+  render(<ProjectPage />);
+  expect(await screen.findByRole("heading", { name: "Readiness" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Log" }));
+  expect(screen.getByText("Loading activity trail…")).toBeTruthy();
+
+  audit.resolve([]);
+  await waitFor(() => expect(screen.queryByText("Loading activity trail…")).toBeNull());
 });
 
 test("loads organization users for Counselor assignment controls", async () => {
@@ -107,6 +146,7 @@ test("loads and closes a supported evidence preview", async () => {
 
   render(<ProjectPage />);
   await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: /^GV Govern/i }));
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
   fireEvent.click(screen.getByRole("button", { name: /preview evidence\.pdf/i }));
 
@@ -117,12 +157,31 @@ test("loads and closes a supported evidence preview", async () => {
   expect(revokeObjectURL).toHaveBeenCalledWith("blob:evidence-preview");
 });
 
-test("loads remediation actions and opens the Action Plan workspace", async () => {
+test("loads remediation status data while the project overview is open", async () => {
   render(<ProjectPage />);
   await screen.findByRole("heading", { name: "Readiness" });
-  expect(api.getRemediationActions).toHaveBeenCalledWith("project-1");
+  await waitFor(() => expect(api.getRemediationActions).toHaveBeenCalledWith("project-1"));
+  expect(api.getRemediationActions).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("button", { name: "Action Plan" }));
-  expect(screen.getByRole("heading", { name: "Action Plan" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Action Plan" })).toBeTruthy();
+  expect(api.getRemediationActions).toHaveBeenCalledTimes(1);
+});
+
+test("shows a retryable error when the Action Plan load fails", async () => {
+  vi.mocked(api.getRemediationActions)
+    .mockRejectedValueOnce(new Error("Action Plan unavailable"))
+    .mockResolvedValueOnce([]);
+
+  render(<ProjectPage />);
+  await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: "Action Plan" }));
+
+  expect(await screen.findByText("Action Plan unavailable")).toBeTruthy();
+  expect(api.getRemediationActions).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+  expect(await screen.findByRole("heading", { name: "Action Plan" })).toBeTruthy();
+  expect(api.getRemediationActions).toHaveBeenCalledTimes(2);
 });
 
 test("cancels a stale evidence preview request before starting another", async () => {
@@ -138,6 +197,7 @@ test("cancels a stale evidence preview request before starting another", async (
 
   render(<ProjectPage />);
   await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: /^GV Govern/i }));
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));
   fireEvent.click(screen.getByRole("button", { name: /preview evidence\.pdf/i }));
   await waitFor(() => expect(api.downloadResponseDocument).toHaveBeenCalledTimes(1));
@@ -154,18 +214,25 @@ test("cancels a stale evidence preview request before starting another", async (
   fireEvent.click(screen.getByRole("button", { name: /close preview/i }));
 });
 
-test("includes every outcome in the selected Function", async () => {
+test("updates every outcome in the selected Function with one scope request", async () => {
   vi.mocked(api.getProfile).mockResolvedValue([previewProfile, secondBulkProfile]);
   vi.mocked(api.getResponses).mockResolvedValue([]);
+  vi.mocked(api.updateFunctionScope).mockResolvedValue([
+    { ...previewProfile, included: true },
+    { ...secondBulkProfile, included: true },
+  ]);
 
   render(<ProjectPage />);
   await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: /^GV Govern/i }));
   fireEvent.click(screen.getByRole("checkbox", { name: /include all outcomes in this function/i }));
 
   await waitFor(() => {
-    expect(api.updateProfile).toHaveBeenNthCalledWith(1, "project-1", "subcategory-1", { included: true });
-    expect(api.updateProfile).toHaveBeenNthCalledWith(2, "project-1", "subcategory-2", { included: true });
+    expect(api.updateFunctionScope).toHaveBeenCalledWith("project-1", "GV", true);
   });
+  expect(api.updateFunctionScope).toHaveBeenCalledTimes(1);
+  expect(api.updateProfile).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByText("Out of scope")).toBeNull());
 });
 
 test("shows a retryable error when assessment data cannot be loaded", async () => {
@@ -181,22 +248,17 @@ test("shows a retryable error when assessment data cannot be loaded", async () =
   expect(await screen.findByRole("heading", { name: "Readiness" })).toBeTruthy();
 });
 
-test("serializes bulk outcome updates and keeps the first update before a later failure", async () => {
+test("keeps the local scope unchanged and shows a retryable error when bulk scope update fails", async () => {
   vi.mocked(api.getProfile).mockResolvedValue([previewProfile, secondBulkProfile]);
-  let resolveFirst: (value: ProfileRow) => void = () => undefined;
-  const firstUpdate = new Promise<ProfileRow>((resolve) => { resolveFirst = resolve; });
-  vi.mocked(api.updateProfile)
-    .mockReturnValueOnce(firstUpdate)
-    .mockRejectedValueOnce(new Error("Second outcome failed"));
+  vi.mocked(api.updateFunctionScope).mockRejectedValueOnce(new Error("Scope update failed"));
 
   render(<ProjectPage />);
   await screen.findByRole("heading", { name: "Readiness" });
+  fireEvent.click(screen.getByRole("button", { name: /^GV Govern/i }));
   fireEvent.click(screen.getByRole("checkbox", { name: /include all outcomes in this function/i }));
 
-  await waitFor(() => expect(api.updateProfile).toHaveBeenCalledTimes(1));
-  expect(api.updateProfile).toHaveBeenNthCalledWith(1, "project-1", "subcategory-1", { included: true });
-  resolveFirst({ ...previewProfile, included: true });
-  await waitFor(() => expect(api.updateProfile).toHaveBeenCalledTimes(2));
-  expect(api.updateProfile).toHaveBeenNthCalledWith(2, "project-1", "subcategory-2", { included: true });
-  expect(await screen.findByText("Second outcome failed")).toBeTruthy();
+  expect(await screen.findByText("Scope update failed")).toBeTruthy();
+  expect(api.updateFunctionScope).toHaveBeenCalledTimes(1);
+  expect(api.updateProfile).not.toHaveBeenCalled();
+  expect((screen.getByRole("checkbox", { name: /include all outcomes in this function/i }) as HTMLInputElement).checked).toBe(false);
 });

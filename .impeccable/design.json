@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-18T15:30:00+07:00",
-  "title": "Design System: CSF Compliance",
+  "generatedAt": "2026-08-25T00:00:00+07:00",
+  "title": "Design System: CSF Compliance — QID v3",
   "extensions": {
     "colorMeta": {
       "magenta": {
@@ -197,6 +197,21 @@
           "#f24b9f",
           "#fa9dcc",
           "#ffe0f0"
+        ]
+      },
+      "accent-text": {
+        "role": "primary",
+        "displayName": "Accessible Accent Text",
+        "canonical": "#b60061",
+        "tonalRamp": [
+          "#2a0016",
+          "#52002d",
+          "#800044",
+          "#b60061",
+          "#d33583",
+          "#ea72ad",
+          "#f6acd1",
+          "#ffe4f2"
         ]
       },
       "accent-dark": {
@@ -519,7 +534,7 @@
       "refersTo": "status-chip",
       "description": "A compact text-labeled state for project, response, role, and coverage context.",
       "html": "<span class=\"ds-status-chip\">Reviewing</span>",
-      "css": ".ds-status-chip { display: inline-flex; width: fit-content; align-items: center; padding: 5px 9px; color: var(--accent-dark); background: var(--accent-soft); border-radius: var(--radius-pill); font: 800 0.68rem/1.2 var(--font-sans); letter-spacing: 0.05em; text-transform: uppercase; }"
+      "css": ".ds-status-chip { display: inline-flex; width: fit-content; align-items: center; padding: 5px 9px; color: var(--accent-dark); background: var(--accent-soft); border-radius: 999px; font: 800 0.68rem/1.2 var(--font-sans); letter-spacing: 0.05em; text-transform: uppercase; }"
     },
     {
       "name": "Project Context Metadata",
@@ -535,7 +550,7 @@
       "refersTo": "assessment-card",
       "description": "An expandable outcome row that keeps code, title, coverage route, and detail body together.",
       "html": "<article class=\"ds-assessment-card\"><button class=\"ds-assessment-summary\" type=\"button\" aria-expanded=\"false\"><span class=\"ds-outcome-code\">GV.OC-01</span><strong>Organizational mission informs risk management</strong><span class=\"ds-coverage-route\">Current → Target</span><span class=\"ds-expand-mark\" aria-hidden=\"true\">+</span></button></article>",
-      "css": ".ds-assessment-card { min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); } .ds-assessment-summary { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto 32px; align-items: center; width: 100%; min-height: 76px; gap: 18px; padding: 16px 18px; color: var(--ink); text-align: left; background: var(--surface); border: 0; cursor: pointer; } .ds-assessment-summary:hover { background: var(--surface-subtle); } .ds-assessment-summary:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: -3px; } .ds-outcome-code { color: var(--accent); font: 850 0.8rem/1.3 var(--font-mono); } .ds-expand-mark { display: grid; width: 30px; height: 30px; place-items: center; color: var(--accent); border: 1px solid var(--line-strong); border-radius: 50%; }"
+      "css": ".ds-assessment-card { min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); } .ds-assessment-summary { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto 32px; align-items: center; width: 100%; min-height: 76px; gap: 18px; padding: 16px 18px; color: var(--ink); text-align: left; background: var(--surface); border: 0; cursor: pointer; } .ds-assessment-summary:hover { background: var(--surface-subtle); } .ds-assessment-summary:focus-visible { outline: 3px solid var(--focus-outline); outline-offset: -3px; } .ds-outcome-code { color: var(--accent-text); font: 850 0.8rem/1.3 var(--font-mono); } .ds-expand-mark { display: grid; width: 30px; height: 30px; place-items: center; color: var(--accent); border: 1px solid var(--line-strong); border-radius: 50%; }"
     },
     {
       "name": "Response & Evidence Panel",
@@ -547,14 +562,14 @@
     }
   ],
   "narrative": {
-    "northStar": "Versotis Trust Workspace",
-    "overview": "The interface turns a complex assessment into a clear, accountable trust workspace. Paper-white reading surfaces hold the content in light mode; deep navy surfaces create the same calm reading hierarchy in dark mode; magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. A visible theme toggle can select light or dark mode, while the system preference remains the default when no explicit choice is stored. The result borrows Versotis' strategic energy without sacrificing long compliance-reading sessions in either ambient light.\n\nThe system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text.",
+    "northStar": "QID v3 Compliance Workspace",
+    "overview": "The interface turns a complex assessment into a clear, accountable workspace. Dark graphite surfaces are the default reading environment; a light QID surface set remains available for bright environments. Magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. The result follows the Versotis QID v3 token reference without sacrificing long compliance-reading sessions.\n\nThe system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text. Existing component class contracts remain in place so the redesign does not alter API, role, or workflow behavior.",
     "keyCharacteristics": [
-      "Paper-white work surfaces with a cool neutral page canvas in light mode, and deep navy work surfaces with blue-black elevation in dark mode.",
+      "Dark-first work surfaces use #0b0914, #13101f, and #1c182d; light mode uses #faf9fd and white reading surfaces.",
       "Magenta-to-purple used as orientation and action, not as decoration.",
-      "Space Grotesk for the product voice, IBM Plex Sans Thai Looped for Thai fallback, and JetBrains Mono for wayfinding/data labels.",
-      "Editorial reading measure with explicit Current / Target comparison.",
-      "Thin borders, modest corners, and one soft ambient shadow for raised panels.",
+      "Space Grotesk for headings, Inter for long-form body copy, and JetBrains Mono for wayfinding/data labels.",
+      "A 12-column desktop grid with a 1200px content frame, a 260px workspace rail, and explicit Current / Target comparison.",
+      "Thin borders, 6–16px corners, and restrained QID elevation for raised panels.",
       "Role-aware surfaces that distinguish reading, reviewing, and completing input.",
       "Project context metadata aligned from a shared top edge so uneven copy lengths do not make short values appear vertically suspended."
     ],
@@ -566,7 +581,7 @@
       },
       {
         "name": "The Labeled State Rule",
-        "body": "Current, target, submitted, reviewed, error, and permission states use color alongside a visible text label.",
+        "body": "Current, target, Reviewing, Approved, error, and permission states use color alongside a visible text label.",
         "section": "colors"
       },
       {
@@ -581,8 +596,8 @@
       }
     ],
     "dos": [
-      "Do keep compliance copy on white surfaces with a readable measure.",
-      "Do use the cool desk canvas and thin rules to group content before reaching for shadow.",
+      "Do keep compliance copy on a high-contrast QID surface with a readable measure.",
+      "Do use the QID canvas and thin rules to group content before reaching for shadow.",
       "Do reserve magenta/purple for active location, primary action, focus, and meaningful status.",
       "Do distinguish Counselor interpretation from Stakeholder response/evidence input through layout and labels.",
       "Do make Current and Target profiles visually distinct and textually labeled.",
@@ -596,5 +611,47 @@
       "Don't make Stakeholder input controls look like Counselor-owned profile editing controls.",
       "Don't stretch assessment copy across the full viewport when a readable measure is available."
     ]
+  },
+  "qidV3Implementation": {
+    "source": "https://www.versotis.com/assets/design/qid/tokens/v3.html",
+    "theme": "dark-first with explicit data-theme light override",
+    "fonts": {
+      "heading": "Space Grotesk, system-ui, sans-serif",
+      "body": "Inter, system-ui, sans-serif",
+      "mono": "JetBrains Mono, ui-monospace, monospace"
+    },
+    "brand": {
+      "pink": "#eb147c",
+      "purple": "#6a32de",
+      "gradient": "linear-gradient(135deg, var(--qid-pink) 0%, var(--qid-purple) 100%)"
+    },
+    "dark": {
+      "background": "#0b0914",
+      "surface": "#13101f",
+      "surface2": "#1c182d",
+      "surface3": "#26213c",
+      "border": "#342e4f",
+      "text": "#f8f8fc",
+      "muted": "#a19db5"
+    },
+    "light": {
+      "background": "#faf9fd",
+      "surface": "#ffffff",
+      "surface2": "#f2f0f7",
+      "border": "#dfdce8",
+      "text": "#1a1725",
+      "muted": "#625d75"
+    },
+    "layout": {
+      "contentMax": "1200px",
+      "grid": "12 columns / 24px gap",
+      "rail": "260px",
+      "breakpoints": ["1100px", "760px"]
+    },
+    "behavior": {
+      "preserveApiAndWorkflow": true,
+      "preservePrintRules": true,
+      "statusLabels": { "submitted": "Reviewing", "reviewed": "Approved" }
+    }
   }
 }

@@ -17,12 +17,20 @@ export default function ProjectPage() {
   const [user, setUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [projectVersions, setProjectVersions] = useState<Project[]>([]);
+  const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
+  const [versionHistoryError, setVersionHistoryError] = useState("");
   const [functions, setFunctions] = useState<FunctionNode[]>([]);
   const [organizationUsers, setOrganizationUsers] = useState<User[]>([]);
   const [profile, setProfile] = useState<ProfileRow[]>([]);
   const [responses, setResponses] = useState<StakeholderResponse[]>([]);
   const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState("");
   const [remediationActions, setRemediationActions] = useState<RemediationAction[]>([]);
+  const [remediationLoaded, setRemediationLoaded] = useState(false);
+  const [remediationLoading, setRemediationLoading] = useState(false);
+  const [remediationError, setRemediationError] = useState("");
   const [summary, setSummary] = useState<Summary>(emptySummary);
   const [selectedCode, setSelectedCode] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
@@ -52,6 +60,16 @@ export default function ProjectPage() {
     setLoading(true);
     setError("");
     setNotFound(false);
+    setProjectVersions([]);
+    setVersionHistoryLoading(false);
+    setVersionHistoryError("");
+    setAuditTrail([]);
+    setAuditLoading(false);
+    setAuditError("");
+    setRemediationActions([]);
+    setRemediationLoaded(false);
+    setRemediationLoading(false);
+    setRemediationError("");
     try {
       const [currentUser, nextOrganization] = await Promise.all([
         api.me(),
@@ -59,13 +77,11 @@ export default function ProjectPage() {
       ]);
       const nextProject = await api.getOrganizationProjectBySlug(nextOrganization.id, projectSlug);
       const usersPromise = currentUser.userType === "counselor" ? api.getOrganizationUsers(nextOrganization.id) : Promise.resolve<User[]>([]);
-      const [functionRows, nextProfile, nextSummary, nextResponses, nextRemediationActions, nextAuditTrail] = await Promise.all([
+      const [functionRows, nextProfile, nextSummary, nextResponses] = await Promise.all([
         api.getFunctions(),
         api.getProfile(nextProject.id),
         api.getSummary(nextProject.id),
         api.getResponses(nextProject.id),
-        api.getRemediationActions(nextProject.id),
-        api.getProjectAuditLogs(nextProject.id),
       ]);
       const nextOrganizationUsers = await usersPromise;
       if (!active) return;
@@ -78,8 +94,28 @@ export default function ProjectPage() {
       setProfile(nextProfile);
       setSummary(nextSummary);
       setResponses(nextResponses);
-      setRemediationActions(nextRemediationActions);
-      setAuditTrail(nextAuditTrail);
+      setVersionHistoryLoading(true);
+      void api.getProjectVersions(nextProject.id)
+        .then((nextVersions) => {
+          if (active) setProjectVersions(nextVersions);
+        })
+        .catch((cause) => {
+          if (active) setVersionHistoryError(messageOf(cause));
+        })
+        .finally(() => {
+          if (active) setVersionHistoryLoading(false);
+        });
+      setAuditLoading(true);
+      void api.getProjectAuditLogs(nextProject.id)
+        .then((nextAuditTrail) => {
+          if (active) setAuditTrail(nextAuditTrail);
+        })
+        .catch((cause) => {
+          if (active) setAuditError(messageOf(cause));
+        })
+        .finally(() => {
+          if (active) setAuditLoading(false);
+        });
     } catch (cause) {
       if (cause instanceof APIError && cause.status === 401) {
         router.replace("/login");
@@ -104,13 +140,24 @@ export default function ProjectPage() {
 
   async function setFunctionIncluded(functionCode: string, included: boolean) {
     if (!project) return;
-    const functionRows = profile.filter((row) => row.functionCode === functionCode);
-    for (const row of functionRows) {
-      const updated = await api.updateProfile(project.id, row.subcategoryID, { included });
-      const next = updated ?? { ...row, included };
-      setProfile((rows) => rows.map((current) => current.subcategoryID === row.subcategoryID ? next : current));
-    }
+    const updatedRows = await api.updateFunctionScope(project.id, functionCode, included);
+    const updatedByID = new Map(updatedRows.map((row) => [row.subcategoryID, row]));
+    setProfile((rows) => rows.map((row) => updatedByID.get(row.subcategoryID) ?? row));
     setSummary(await api.getSummary(project.id));
+  }
+
+  async function loadRemediationActions() {
+    if (!project || remediationLoaded || remediationLoading) return;
+    setRemediationLoading(true);
+    setRemediationError("");
+    try {
+      setRemediationActions(await api.getRemediationActions(project.id));
+      setRemediationLoaded(true);
+    } catch (cause) {
+      setRemediationError(messageOf(cause));
+    } finally {
+      setRemediationLoading(false);
+    }
   }
   async function submitScope() {
     if (!project) return;
@@ -120,6 +167,26 @@ export default function ProjectPage() {
   async function finalizeProject() {
     if (!project) return;
     setProject(await api.finalizeProject(project.id));
+  }
+
+  async function createProjectVersion() {
+    if (!project || !organization) return;
+    const nextProject = await api.createProjectVersion(project.id);
+    setVersionHistoryLoading(true);
+    setVersionHistoryError("");
+    try {
+      setProjectVersions(await api.getProjectVersions(nextProject.id));
+    } catch (cause) {
+      setVersionHistoryError(messageOf(cause));
+    } finally {
+      setVersionHistoryLoading(false);
+    }
+    router.push(projectPath(organization, nextProject));
+  }
+
+  function openProjectVersion(nextProject: Project) {
+    if (!organization) return;
+    router.push(projectPath(organization, nextProject));
   }
 
   function replaceRemediationAction(next: RemediationAction) {
@@ -274,6 +341,15 @@ export default function ProjectPage() {
     setProfile([]);
     setResponses([]);
     setRemediationActions([]);
+    setProjectVersions([]);
+    setAuditTrail([]);
+    setAuditLoading(false);
+    setAuditError("");
+    setRemediationLoaded(false);
+    setRemediationLoading(false);
+    setRemediationError("");
+    setVersionHistoryLoading(false);
+    setVersionHistoryError("");
     setAuditTrail([]);
     setSummary(emptySummary);
     setError("");
@@ -316,6 +392,9 @@ export default function ProjectPage() {
       profile={profile}
       responses={responses}
       summary={summary}
+      versions={projectVersions}
+      versionHistoryLoading={versionHistoryLoading}
+      versionHistoryError={versionHistoryError}
       selectedCode={selectedCode}
       error={error}
       onBack={() => router.push(organizationPath(organization))}
@@ -336,10 +415,18 @@ export default function ProjectPage() {
       previewError={previewError}
       onCloseEvidencePreview={closeEvidencePreview}
       onFinalizeProject={finalizeProject}
+      onCreateProjectVersion={createProjectVersion}
+      onOpenProjectVersion={openProjectVersion}
       onOpenFinalReport={() => router.push(`${projectPath(organization, project)}/report`)}
       onOpenAuditPackage={() => router.push(`${projectPath(organization, project)}/audit`)}
       auditTrail={auditTrail}
+      auditLoading={auditLoading}
+      auditError={auditError}
       remediationActions={remediationActions}
+      remediationLoaded={remediationLoaded}
+      remediationLoading={remediationLoading}
+      remediationError={remediationError}
+      onLoadRemediationActions={loadRemediationActions}
       onCreateRemediation={createRemediation}
       onUpdateRemediation={updateRemediation}
       onSaveRemediationProgress={saveRemediationProgress}

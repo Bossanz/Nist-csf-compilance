@@ -6,9 +6,9 @@ type Theme = "light" | "dark";
 
 const STORAGE_KEY = "csf-theme";
 
-function systemTheme(): Theme {
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
+type Props = {
+  compact?: boolean;
+};
 
 function storedTheme(): Theme | null {
   try {
@@ -24,11 +24,11 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
+export function ThemeToggle({ compact = false }: Props) {
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const initialTheme = storedTheme() ?? systemTheme();
+    const initialTheme = storedTheme() ?? "dark";
     setTheme(initialTheme);
     applyTheme(initialTheme);
   }, []);
@@ -54,8 +54,18 @@ export function ThemeToggle() {
       title={isDark ? "Switch to light theme" : "Switch to dark theme"}
       onClick={toggleTheme}
     >
-      <span className="theme-toggle-label">{isDark ? "Light" : "Dark"}</span>
-      <span className="theme-toggle-status">Theme</span>
+      {compact ? (
+        <span className="theme-toggle-icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20">
+            {isDark ? <path d="M14.8 13.8A6.8 6.8 0 0 1 6.2 5.2 6.8 6.8 0 1 0 14.8 13.8Z" /> : <><circle cx="10" cy="10" r="3.2" /><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4" /></>}
+          </svg>
+        </span>
+      ) : (
+        <>
+          <span className="theme-toggle-label">{isDark ? "Light" : "Dark"}</span>
+          <span className="theme-toggle-status">Theme</span>
+        </>
+      )}
     </button>
   );
 }

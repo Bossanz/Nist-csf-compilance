@@ -86,6 +86,31 @@ test("resolves a project by organization and project slugs", async () => {
   expect(fetchMock).toHaveBeenCalledWith("/api/organizations/org-1/projects/by-slug/readiness", expect.any(Object));
 });
 
+test("loads project version history and starts a new version", async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [{ id: "project-2", versionNumber: 2 }] })
+    .mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ id: "project-2", versionNumber: 2 }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.getProjectVersions("project-1");
+  await api.createProjectVersion("project-1");
+
+  expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/projects/project-1/versions", expect.any(Object));
+  expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/projects/project-1/versions", expect.objectContaining({ method: "POST", body: "{}" }));
+});
+
+test("updates a whole Function scope in one request", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.updateFunctionScope("project-1", "GV", true);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/projects/project-1/functions/GV/scope",
+    expect.objectContaining({ method: "PUT", body: JSON.stringify({ included: true }) }),
+  );
+});
+
 test("forwards an abort signal when downloading evidence", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, blob: async () => new Blob(["evidence"]) });
   vi.stubGlobal("fetch", fetchMock);

@@ -297,3 +297,26 @@ func TestListProjectVersionsReturnsNewestFirst(t *testing.T) {
 		t.Fatalf("versions do not share a group: %#v", versions)
 	}
 }
+
+func TestCreateNextProjectVersionKeepsTheVersionSlugRoot(t *testing.T) {
+	fixture := newProjectVersionFixture(t, true)
+	sourceProject, err := fixture.data.GetProject(fixture.ctx, fixture.sourceProjectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	versionTwo, err := fixture.data.CreateNextProjectVersion(fixture.ctx, fixture.sourceProjectID, fixture.counselorID)
+	if err != nil {
+		t.Fatalf("create version 2: %v", err)
+	}
+	if _, err := fixture.data.DB.Exec(fixture.ctx, `UPDATE projects SET status='closed' WHERE id=$1`, versionTwo.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	versionThree, err := fixture.data.CreateNextProjectVersion(fixture.ctx, versionTwo.ID, fixture.counselorID)
+	if err != nil {
+		t.Fatalf("create version 3: %v", err)
+	}
+	if versionThree.Slug != sourceProject.Slug+"-v3" {
+		t.Fatalf("version 3 slug should use the original root: got %q, want %q", versionThree.Slug, sourceProject.Slug+"-v3")
+	}
+}

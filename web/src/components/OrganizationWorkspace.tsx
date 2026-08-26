@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Invitation, Organization, Project, ProjectCreateInput, Role, User } from "../lib/types";
 import { InvitationList } from "./InvitationList";
+import { useDialogFocus } from "../lib/useDialogFocus";
 
 type Props = {
   user: User;
@@ -38,6 +39,10 @@ function roleName(role: Role) {
   return role === "org_admin" ? "Organization admin" : role.replaceAll("_", " ");
 }
 
+function projectVersionLabel(project: Project) {
+  return `Assessment v${project.versionNumber ?? 1}`;
+}
+
 export function OrganizationWorkspace({ user, organization, projects, users, invitations = [], loading, error, invitationURL, onBack, onOpen, onCreateProject, onDeleteProject, onInvite, onResendInvitation = async () => {}, onCancelInvitation = async () => {}, onUpdateUser }: Props) {
   const [projectName, setProjectName] = useState("");
   const [projectObjective, setProjectObjective] = useState("");
@@ -70,6 +75,8 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
     setConfirmation("");
     setDeleteError("");
   }
+
+  const deleteDialogFocus = useDialogFocus(Boolean(pendingDelete), closeDeleteConfirmation);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -199,19 +206,19 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
           <p className="muted">Assessment workspaces inside {organization.name}.</p>
         </div>
         {loading ? <div className="panel muted" role="status" aria-live="polite" aria-busy="true">Loading workspace…</div> : projects.length === 0 ? (
-          <div className="empty-state">No projects yet. Create one below to start an assessment.</div>
+          <div className="empty-state" role="status">No projects yet. Create one below to start an assessment.</div>
         ) : (
           <div className="project-grid">
             {projects.map((project) => (
               <article className="project-card" key={project.id}>
                 <div className="project-card-top">
-                  <span className="status-chip">{project.status.replaceAll("_", " ")}</span>
+                  <div className="project-card-labels"><span className="status-chip">{project.status.replaceAll("_", " ")}</span><span className="project-version-label">{projectVersionLabel(project)}</span></div>
                   <time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time>
                 </div>
                 <div><h3>{project.name}</h3><p className="muted">{organization.name}</p></div>
                 <div className="project-actions">
                   <button className="secondary" type="button" aria-label={`Open ${project.name}`} onClick={() => onOpen(project)}>Open project</button>
-                  {counselor && <button className="danger" type="button" aria-label={`Delete ${project.name}`} onClick={() => { setPendingDelete(project); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
+                  {counselor && <button className="danger" type="button" aria-label={`Delete ${project.name}`} onClick={(event) => { deleteDialogFocus.triggerRef.current = event.currentTarget; setPendingDelete(project); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
                 </div>
               </article>
             ))}
@@ -233,7 +240,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
       </section>
 
       {pendingDelete && (
-        <section className="delete-confirmation" role="dialog" aria-labelledby="delete-project-title">
+        <section ref={deleteDialogFocus.dialogRef} className="delete-confirmation" role="dialog" aria-modal="true" aria-labelledby="delete-project-title">
           <div>
             <h2 id="delete-project-title">Delete {pendingDelete.name}?</h2>
             <p>This removes the project and its assessment responses. It cannot be undone.</p>
@@ -265,7 +272,7 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
                   <div className="account-controls">
                     <label className="field account-control"><span>Role for {member.email}</span><select aria-label={`Role for ${member.email}`} value={access.role} onChange={(event) => setMemberField(member, "role", event.target.value)}>{stakeholderRoles.map((item) => <option value={item} key={item}>{stakeholderRoleLabels[item]}</option>)}</select></label>
                     <label className="field account-control"><span>Status for {member.email}</span><select aria-label={`Status for ${member.email}`} value={access.status} onChange={(event) => setMemberField(member, "status", event.target.value)}><option value="active">active</option><option value="disabled" disabled={member.id === user.id}>disabled</option></select></label>
-                    <button className="secondary account-save" type="button" aria-label={`Save access for ${member.email}`} disabled={memberSaving === member.id} onClick={() => void saveMember(member)}>{memberSaving === member.id ? "Saving..." : "Save stakeholder access"}</button>
+                    <button className="secondary account-save" type="button" aria-label={`Save access for ${member.email}`} disabled={memberSaving === member.id} onClick={() => void saveMember(member)}>{memberSaving === member.id ? "Saving…" : "Save stakeholder access"}</button>
                   </div>
                 ) : (
                   <span className="role-chip">{roleName(member.role)}</span>

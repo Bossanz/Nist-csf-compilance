@@ -151,19 +151,19 @@ func (s *Store) CreateNextProjectVersion(ctx context.Context, sourceProjectID, a
 	}
 
 	var (
-		organizationID, counselorID, name, sourceSlug, status                              string
+		organizationID, counselorID, name, status                                           string
 		objective, assessmentPeriod, targetCompletionDate, scopeBoundary, complianceDriver string
 		versionNumber                                                                      int
 	)
 	var sourceCounselorID *string
 	if err := tx.QueryRow(ctx, `
-		SELECT organization_id,counselor_id,name,COALESCE(slug,''),status,
+		SELECT organization_id,counselor_id,name,status,
 			objective,assessment_period,COALESCE(target_completion_date::text,''),scope_boundary,
 			compliance_driver,version_group_id,version_number
 		FROM projects
 		WHERE id=$1
 		FOR UPDATE`, sourceProjectID).Scan(
-		&organizationID, &sourceCounselorID, &name, &sourceSlug, &status,
+		&organizationID, &sourceCounselorID, &name, &status,
 		&objective, &assessmentPeriod, &targetCompletionDate, &scopeBoundary,
 		&complianceDriver, &versionGroupID, &versionNumber,
 	); err != nil {
@@ -188,8 +188,12 @@ func (s *Store) CreateNextProjectVersion(ctx context.Context, sourceProjectID, a
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(version_number),0)+1 FROM projects WHERE version_group_id=$1`, versionGroupID).Scan(&nextVersionNumber); err != nil {
 		return Project{}, err
 	}
-	rootSlug := Slugify(sourceSlug)
-	if sourceSlug == "" {
+	var rootSlugSource string
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(NULLIF(slug,''),name) FROM projects WHERE version_group_id=$1 ORDER BY version_number ASC,id ASC LIMIT 1`, versionGroupID).Scan(&rootSlugSource); err != nil {
+		return Project{}, err
+	}
+	rootSlug := Slugify(rootSlugSource)
+	if rootSlug == "" {
 		rootSlug = Slugify(name)
 	}
 	versionSlug, err := nextProjectSlug(ctx, tx, organizationID, fmt.Sprintf("%s-v%s", rootSlug, strconv.Itoa(nextVersionNumber)))

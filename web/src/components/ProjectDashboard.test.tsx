@@ -16,7 +16,7 @@ const project: Project = {
 describe("ProjectDashboard", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  test("renders persisted projects and opens the selected project", () => {
+test("renders persisted projects and opens the selected project", () => {
     const onOpen = vi.fn();
     render(<ProjectDashboard projects={[project]} loading={false} openingID="" error="" onOpen={onOpen} onCreate={vi.fn()} onDelete={vi.fn()} />);
 
@@ -32,7 +32,13 @@ describe("ProjectDashboard", () => {
     render(<ProjectDashboard projects={[]} loading={false} openingID="" error="" onOpen={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: /create project/i })).toBeTruthy();
-    expect(screen.getByText(/no projects yet/i)).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toMatch(/no projects yet/i);
+  });
+
+  test("announces project loading state", () => {
+    render(<ProjectDashboard projects={[]} loading openingID="" error="" onOpen={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByRole("status").textContent).toContain("Loading projects…");
   });
 
   test("submits trimmed project details", () => {
@@ -73,4 +79,10 @@ describe("ProjectDashboard", () => {
     expect((screen.getByRole("button", { name: /open readiness review/i }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: /delete readiness review/i }) as HTMLButtonElement).disabled).toBe(true);
   });
+});
+
+test("labels the assessment version on a project card", () => {
+  render(<ProjectDashboard projects={[{ ...project, versionNumber: 2 }]} loading={false} openingID="" error="" onOpen={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn()} />);
+
+  expect(screen.getByText("Assessment v2")).toBeTruthy();
 });

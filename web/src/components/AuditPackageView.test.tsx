@@ -8,7 +8,7 @@ const profile: ProfileRow = {
 };
 
 const auditPackage: AuditPackageData = {
-  project: { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness Review", slug: "readiness-review", status: "closed", createdAt: "2026-08-18T00:00:00Z" },
+  project: { id: "project-1", organizationID: "org-1", organizationName: "Acme", name: "Readiness Review", slug: "readiness-review", status: "closed", createdAt: "2026-08-18T00:00:00Z", versionNumber: 2, previousVersionID: "project-previous", isLatest: true },
   summary: { coveragePct: 50, includedCount: 1, approvedCount: 1, reviewingCount: 0, returnedCount: 0, pendingCount: 0, evidenceCount: 1, functions: [] },
   scope: [{ profile }],
   outcomes: [{ profile, response: { id: "response-1", responseText: "Reviewed quarterly.", status: "reviewed", respondedBy: "assessor-1", submittedAt: "2026-08-17T00:00:00Z", reviewComment: "Approved.", reviewedBy: "reviewer-1", reviewedAt: "2026-08-18T00:00:00Z" }, evidence: [{ id: "evidence-1", originalName: "risk-review.pdf", mimeType: "application/pdf", sizeBytes: 1024, uploadedBy: "assessor-1", createdAt: "2026-08-17T00:00:00Z" }] }],
@@ -21,6 +21,8 @@ test("renders audit scope, evidence, and activity trail", () => {
   render(<AuditPackageView auditPackage={auditPackage} onBack={vi.fn()} onDownloadCSV={vi.fn()} />);
 
   expect(screen.getByRole("heading", { name: /audit package/i })).toBeTruthy();
+  expect(screen.getByText(/Assessment v2/i)).toBeTruthy();
+  expect(screen.getByText(/Previous v1/i)).toBeTruthy();
   expect(screen.getByText("Scope & assignment")).toBeTruthy();
   expect(screen.getByText("risk-review.pdf")).toBeTruthy();
   expect(screen.getByText("response.reviewed")).toBeTruthy();

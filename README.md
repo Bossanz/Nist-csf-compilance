@@ -221,6 +221,30 @@ Finalization is a server-enforced final gate. A Counselor or Counselor Admin can
 
 Finalization changes the stored project status from `in_review` to `closed`, shown in the UI as **Finalized**. The API records `finalized_at` and `finalized_by`, writes a `project.finalized` audit event, and makes scope, profile, response, review, upload, and evidence-delete mutations read-only. Authorized readers can still view reports and preview/download evidence.
 
+### Project versioning and re-assessment
+
+A finalized assessment can be used as the starting point for the next assessment cycle. Only a Counselor or Counselor Admin can start a new version, and only from the latest Project version. The new version keeps the same Organization, project context, Function scope, included outcomes, scope rationale, and Stakeholder assignments. It starts in `setup`, so the Counselor must submit Scope again before Stakeholders can work.
+
+Responses, evidence, Reviewer decisions, and Action Plan items are intentionally not copied. Each version has its own Project ID, slug, assessment data, reports, remediation records, and audit history. The previous version remains finalized and read-only, while the version history control keeps both versions easy to open. Existing links remain stable; the API never silently redirects an old version to the latest one.
+
+The version lifecycle is:
+
+```text
+Finalized v1
+  -> Counselor starts next assessment
+  -> Setup v2 (scope and assignments copied; assessment data empty)
+  -> Scope submitted
+  -> Stakeholder assessment
+  -> Reviewer approval
+  -> Finalized v2
+```
+
+The local implementation uses an idempotent migration. For an existing Docker database, apply pending migrations with:
+
+```powershell
+docker compose run --rm migrate
+```
+
 The traceability chain is:
 
 ```text
@@ -247,6 +271,8 @@ Open -> In progress -> Awaiting review -> Closed
 
 Open Actions past their due date are shown as overdue. Remediation remains editable after Project finalization; scope, assessment responses, reviewer decisions, and assessment evidence remain locked. Reviewers and Viewers have read-only access to the Action Plan.
 
+The Project Overview keeps the two decisions separate: **Assessment status** tells whether the Reviewer-approved assessment is still in review or finalized, while **Remediation status** summarizes follow-up work. Remediation is `Not required` when there is no Current-to-Target gap, `Not started` when a gap has no Action yet, `In progress` while an Action remains open, and `Complete` when all recorded Actions are closed. A `Finalized` assessment is not a claim that the organization is compliant; it means the assessment result was approved and locked while remediation can continue.
+
 ### Final Report and Audit Package
 
 The Final Report is the human-readable, print-friendly result for a finalized assessment. It contains project context, finalization metadata, overall and per-Function coverage, every included outcome, Current/Target profiles, stakeholder responses, reviewer decisions, evidence metadata, and the live remediation summary and register. Use the browser's **Print / Save as PDF** action to produce a PDF without adding a server-side PDF service.
@@ -265,6 +291,8 @@ The corresponding project API endpoints are:
 
 ```text
 POST /api/projects/{project-id}/finalize
+POST /api/projects/{project-id}/versions
+GET  /api/projects/{project-id}/versions
 GET  /api/projects/{project-id}/final-report
 GET  /api/projects/{project-id}/audit-package
 GET  /api/projects/{project-id}/audit-package.csv
@@ -362,6 +390,7 @@ The workspace shows the overall percentage in the assessment summary and a separ
   - Needs more information
 - Project finalization gate after all included outcomes are Approved
 - Read-only lock after finalization
+- Project versioning and isolated re-assessment from the latest finalized version
 - Remediation Action Plan with multiple Actions per approved gap
 - Action owner, priority, due date, overdue indicator, progress, evidence, submit, return, and close workflow
 - Continued remediation updates after assessment finalization

@@ -65,6 +65,33 @@ func TestAuditPackageCSVIncludesRemediationRegister(t *testing.T) {
 	}
 }
 
+func TestAuditPackageCSVIncludesAssessmentVersion(t *testing.T) {
+	organizationID := "org-1"
+	packageData := store.AuditPackage{
+		Project:  store.Project{ID: "project-1", OrganizationID: organizationID, Status: "closed", VersionNumber: 2},
+		Outcomes: []store.ReportOutcome{{Profile: store.ProfileRow{FunctionCode: "GV", CategoryCode: "GV.OC", SubcategoryCode: "GV.OC-01"}}},
+	}
+	handler := authenticatedHandler(store.User{ID: "viewer-1", OrganizationID: &organizationID, UserType: "stakeholder", Role: "viewer", Status: "active"}, fakeStore{project: packageData.Project, auditPackage: packageData})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, authenticatedRequest(http.MethodGet, "/api/projects/project-1/audit-package.csv", ""))
+
+	records, err := csv.NewReader(strings.NewReader(response.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	versionColumn := -1
+	for index, column := range records[0] {
+		if column == "assessment_version" {
+			versionColumn = index
+			break
+		}
+	}
+	if versionColumn < 0 || len(records) < 2 || records[1][versionColumn] != "2" {
+		t.Fatalf("expected assessment version 2 in CSV, got %v", records)
+	}
+}
+
 func TestAuditPackageRejectsReaderFromAnotherOrganization(t *testing.T) {
 	organizationID := "org-1"
 	otherOrganizationID := "org-2"

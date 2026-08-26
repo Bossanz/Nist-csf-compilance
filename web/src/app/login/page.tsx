@@ -39,7 +39,7 @@ export default function LoginPage() {
     }
   }
 
-  if (!authChecked) return <main className="screen-center">Loading...</main>;
+  if (!authChecked) return <main className="screen-center" role="status" aria-live="polite" aria-busy="true">Loading…</main>;
   return <LoginForm loading={loading} error={error} onSubmit={login} />;
 }
 

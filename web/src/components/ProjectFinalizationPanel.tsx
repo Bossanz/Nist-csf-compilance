@@ -36,7 +36,7 @@ export function ProjectFinalizationPanel({ status, includedCount, approvedCount,
   if (status === "closed") {
     return (
       <section className="project-finalization-panel panel finalized-panel" aria-label="Project finalization">
-        <div><span className="eyebrow">Final state</span><h2>Project is finalized</h2><p>Assessment data is read-only. Use the reports for the audit handoff.</p></div>
+        <div><span className="eyebrow">Final state</span><h2>Project is finalized</h2><p>Assessment data is read-only. Action Plan work remains available for remediation; use the reports for the audit handoff.</p></div>
         <div className="finalization-actions"><button className="secondary" type="button" onClick={onOpenReport}>Open Final Report</button><button className="primary" type="button" onClick={onOpenAudit}>Open Audit Package</button></div>
       </section>
     );
@@ -46,7 +46,7 @@ export function ProjectFinalizationPanel({ status, includedCount, approvedCount,
   const outstanding = includedCount - approvedCount;
   return (
     <section className="project-finalization-panel panel" aria-label="Project finalization">
-      <div className="finalization-copy"><span className="eyebrow">Final gate</span><h2>Finalize project</h2><p>Reviewer approval must be complete before the assessment can be locked and handed to Audit.</p></div>
+      <div className="finalization-copy"><span className="eyebrow">Final gate</span><h2>Finalize project</h2><p>Reviewer approval must be complete before the assessment can be locked and handed to Audit. Action Plan work is separate and can continue after finalization.</p></div>
       <div className="finalization-readiness"><strong>{approvedCount} / {includedCount}</strong><span>included outcomes approved</span></div>
       {!ready && <div className="finalization-blocker" role="status"><strong>{outstanding === 1 ? "1 outcome remains" : `${Math.max(outstanding, remaining.length)} outcomes remain`}</strong><ul>{remaining.slice(0, 5).map((outcome) => <li key={outcome.code}><span>{outcome.code}</span> — {outcome.reason}</li>)}</ul></div>}
       {error && <p className="error" role="alert">{error}</p>}

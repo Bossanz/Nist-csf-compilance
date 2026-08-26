@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CoverageLevel, EvidencePreview, ProfilePatch, ProfileRow, ResponseDocument, Role, StakeholderResponse, User } from "../lib/types";
 import { StakeholderResponsePanel } from "./StakeholderResponsePanel";
 
@@ -174,6 +174,13 @@ export function AssessmentCard({
   const [draft, setDraft] = useState<Draft>(() => createDraft(row));
   const [state, setState] = useState<SaveState>("saved");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setDraft(createDraft(row));
+    setState("saved");
+    setError("");
+  }, [row]);
+
   const eligibleAssignees = assigneeOptions.filter((user) => user.status === "active" && (user.role === "org_admin" || user.role === "assessor"));
   const detailID = `assessment-body-${row.id}`;
   const headingID = `assessment-heading-${row.id}`;
@@ -189,6 +196,7 @@ export function AssessmentCard({
   const currentCoverageLabel = coverageLabel(draft.currentCoverageLevel);
   const targetCoverageLabel = coverageLabel(draft.targetCoverageLevel);
   const evidenceCount = response?.documents.length ?? 0;
+  const evidenceLabel = `${evidenceCount} evidence ${evidenceCount === 1 ? "file" : "files"}`;
 
   function update<K extends keyof Draft>(field: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -255,8 +263,8 @@ export function AssessmentCard({
           </span>
         </span>
         {response && (
-          <span className="evidence-count">
-            {evidenceCount} evidence {evidenceCount === 1 ? "file" : "files"}
+          <span className="evidence-count" aria-label={evidenceLabel} title={evidenceLabel}>
+            {evidenceLabel}
           </span>
         )}
         <span className="expand-mark" aria-hidden="true"><svg viewBox="0 0 16 16"><path d={expanded ? "M4 8h8" : "M8 4v8M4 8h8"} /></svg></span>

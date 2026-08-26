@@ -37,6 +37,10 @@ type fakeStore struct {
 	updatedPatch                 *store.ProfilePatch
 	profileUpdateResult          store.ProfileRow
 	profileUpdateErr             error
+	bulkScopeFunctionCode        *string
+	bulkScopeIncluded            *bool
+	bulkScopeRows                []store.ProfileRow
+	bulkScopeErr                 error
 	submittedScopeProjectID      *string
 	submitScopeResult            store.Project
 	submitScopeErr               error
@@ -90,6 +94,15 @@ func (f fakeStore) UpdateProfile(_ context.Context, _, _ string, patch store.Pro
 		*f.updatedPatch = patch
 	}
 	return f.profileUpdateResult, f.profileUpdateErr
+}
+func (f fakeStore) UpdateFunctionScope(_ context.Context, _, functionCode string, included bool) ([]store.ProfileRow, error) {
+	if f.bulkScopeFunctionCode != nil {
+		*f.bulkScopeFunctionCode = functionCode
+	}
+	if f.bulkScopeIncluded != nil {
+		*f.bulkScopeIncluded = included
+	}
+	return f.bulkScopeRows, f.bulkScopeErr
 }
 func (f fakeStore) SubmitProjectScope(_ context.Context, id string) (store.Project, error) {
 	if f.submittedScopeProjectID != nil {
@@ -505,6 +518,45 @@ func TestCounselorCanSubmitProjectScope(t *testing.T) {
 
 	if response.Code != http.StatusOK || submittedID != "project-1" || !strings.Contains(response.Body.String(), "in_review") {
 		t.Fatalf("unexpected scope submission: %d %s id=%s", response.Code, response.Body.String(), submittedID)
+	}
+}
+
+func TestCounselorCanUpdateFunctionScopeInOneRequest(t *testing.T) {
+	organizationID := "org-1"
+	var functionCode string
+	var included bool
+	var auditAction string
+	handler := authenticatedHandler(store.User{UserType: "counselor", Role: "counselor", Status: "active"}, fakeStore{
+		project:               store.Project{ID: "project-1", OrganizationID: organizationID},
+		bulkScopeFunctionCode: &functionCode,
+		bulkScopeIncluded:     &included,
+		bulkScopeRows:         []store.ProfileRow{{SubcategoryID: "subcategory-1", FunctionCode: "GV", Included: true}},
+		auditAction:           &auditAction,
+	})
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/functions/GV/scope", `{"included":true}`)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || functionCode != "GV" || !included || auditAction != "profile.function_scope_updated" || !strings.Contains(response.Body.String(), "subcategory-1") {
+		t.Fatalf("unexpected bulk scope response: %d function=%s included=%v audit=%s body=%s", response.Code, functionCode, included, auditAction, response.Body.String())
+	}
+}
+
+func TestStakeholderCannotUpdateFunctionScope(t *testing.T) {
+	organizationID := "org-1"
+	handler := authenticatedHandler(store.User{OrganizationID: &organizationID, UserType: "stakeholder", Role: "assessor", Status: "active"}, fakeStore{
+		project: store.Project{ID: "project-1", OrganizationID: organizationID},
+	})
+	request := authenticatedRequest(http.MethodPut, "/api/projects/project-1/functions/GV/scope", `{"included":true}`)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", response.Code, response.Body.String())
 	}
 }
 

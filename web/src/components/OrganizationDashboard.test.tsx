@@ -13,7 +13,25 @@ test("links the signed-in user to password settings",()=>{render(<OrganizationDa
 test("explains how to start when no client organizations exist",()=>{render(<OrganizationDashboard user={admin} organizations={[]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);expect(screen.getByText("No client organizations yet. Create one below to begin.")).toBeTruthy()});
 test("counselor admin creates a trimmed organization",()=>{const onCreate=vi.fn();render(<OrganizationDashboard user={admin} organizations={[]} loading={false} error="" onSelect={vi.fn()} onCreate={onCreate} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);fireEvent.change(screen.getByLabelText(/organization name/i),{target:{value:"  Acme  "}});fireEvent.click(screen.getByRole("button",{name:/create organization/i}));expect(onCreate).toHaveBeenCalledWith({name:"Acme"})});
 
-test("counselor admin confirms permanent deletion with the exact organization name",()=>{const onDelete=vi.fn().mockResolvedValue(undefined);render(<OrganizationDashboard user={admin} organizations={[organization]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={onDelete} onLogout={vi.fn()}/>);fireEvent.click(screen.getByRole("button",{name:"Delete Acme"}));const finalButton=screen.getByRole("button",{name:/delete permanently/i}) as HTMLButtonElement;expect(finalButton.disabled).toBe(true);fireEvent.change(screen.getByLabelText(/type acme to confirm/i),{target:{value:"acme"}});expect(finalButton.disabled).toBe(true);fireEvent.change(screen.getByLabelText(/type acme to confirm/i),{target:{value:"Acme"}});fireEvent.click(finalButton);expect(onDelete).toHaveBeenCalledWith(organization)});
+test("counselor admin confirms permanent deletion with the exact organization name",()=>{const onDelete=vi.fn().mockResolvedValue(undefined);render(<OrganizationDashboard user={admin} organizations={[organization]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={onDelete} onLogout={vi.fn()}/>);fireEvent.click(screen.getByRole("button",{name:"Delete Acme"}));expect(screen.getByRole("dialog",{name:/delete acme/i}).getAttribute("aria-modal")).toBe("true");const finalButton=screen.getByRole("button",{name:/delete permanently/i}) as HTMLButtonElement;expect(finalButton.disabled).toBe(true);fireEvent.change(screen.getByLabelText(/type acme to confirm/i),{target:{value:"acme"}});expect(finalButton.disabled).toBe(true);fireEvent.change(screen.getByLabelText(/type acme to confirm/i),{target:{value:"Acme"}});fireEvent.click(finalButton);expect(onDelete).toHaveBeenCalledWith(organization)});
+
+test("keeps keyboard focus inside the organization deletion dialog", () => {
+  render(<OrganizationDashboard user={admin} organizations={[organization]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Delete Acme" }));
+
+  const dialog = screen.getByRole("dialog", { name: /delete acme/i });
+  const confirmation = screen.getByLabelText(/type acme to confirm/i);
+  const cancel = screen.getByRole("button", { name: "Cancel" });
+  expect(document.activeElement).toBe(confirmation);
+
+  (cancel as HTMLButtonElement).focus();
+  fireEvent.keyDown(dialog, { key: "Tab" });
+  expect(document.activeElement).toBe(confirmation);
+
+  (confirmation as HTMLInputElement).focus();
+  fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+  expect(document.activeElement).toBe(cancel);
+});
 
 test("regular counselor cannot see organization deletion",()=>{render(<OrganizationDashboard user={counselor} organizations={[organization]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);expect(screen.queryByRole("button",{name:"Delete Acme"})).toBeNull()});
 
@@ -26,6 +44,17 @@ test("counselor admin updates a counselor role and status", async () => {
   fireEvent.change(screen.getByLabelText(/status for counselor@example.com/i), { target: { value: "disabled" } });
   fireEvent.click(screen.getByRole("button", { name: /save access for counselor@example.com/i }));
   await waitFor(() => expect(onUpdateCounselor).toHaveBeenCalledWith("user-2", { role: "counselor_admin", status: "disabled" }));
+});
+
+test("uses the shared ellipsis while counselor access saves", () => {
+  let release!: () => void;
+  const onUpdateCounselor = vi.fn(() => new Promise<void>((resolve) => { release = resolve; }));
+  render(<OrganizationDashboard user={admin} organizations={[]} counselors={[managedCounselor]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()} onUpdateCounselor={onUpdateCounselor} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /save access for counselor@example.com/i }));
+
+  expect(screen.getByRole("button", { name: /save access for counselor@example.com/i }).textContent).toContain("Saving…");
+  release();
 });
 
 test("counselor admin creates a counselor invitation", () => {

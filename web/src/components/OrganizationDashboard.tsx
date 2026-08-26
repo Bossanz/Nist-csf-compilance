@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Organization, Role, User } from "../lib/types";
+import { useDialogFocus } from "../lib/useDialogFocus";
 
 type Props = {
   user: User;
@@ -40,6 +41,8 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
     setConfirmation("");
     setDeleteError("");
   }
+
+  const deleteDialogFocus = useDialogFocus(Boolean(pendingDelete), closeDeleteConfirmation);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -124,7 +127,7 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
                 <div><h3>{organization.name}</h3><p className="muted">Client workspace</p></div>
                 <div className="organization-actions">
                   <button className="secondary" aria-label={`Open ${organization.name}`} onClick={() => onSelect(organization)}>Open client workspace</button>
-                  {isAdmin && <button className="danger" aria-label={`Delete ${organization.name}`} onClick={() => { setPendingDelete(organization); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
+                  {isAdmin && <button className="danger" aria-label={`Delete ${organization.name}`} onClick={(event) => { deleteDialogFocus.triggerRef.current = event.currentTarget; setPendingDelete(organization); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
                 </div>
               </article>
             ))}
@@ -133,7 +136,7 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
       </section>
 
       {pendingDelete && (
-        <section className="delete-confirmation" role="dialog" aria-labelledby="delete-organization-title">
+        <section ref={deleteDialogFocus.dialogRef} className="delete-confirmation" role="dialog" aria-modal="true" aria-labelledby="delete-organization-title">
           <div>
             <h2 id="delete-organization-title">Delete {pendingDelete.name}?</h2>
             <p>The organization, its projects, assessment data, stakeholder access, and invitations will be permanently deleted.</p>
@@ -174,7 +177,7 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
                     <div className="account-controls">
                       <label className="field account-control"><span>Role for {item.email}</span><select aria-label={`Role for ${item.email}`} value={access.role} onChange={(event) => setCounselorField(item, "role", event.target.value)}><option value="counselor">counselor</option><option value="counselor_admin">counselor admin</option></select></label>
                       <label className="field account-control"><span>Status for {item.email}</span><select aria-label={`Status for ${item.email}`} value={access.status} onChange={(event) => setCounselorField(item, "status", event.target.value)}><option value="active">active</option><option value="disabled" disabled={item.id === user.id}>disabled</option></select></label>
-                      <button className="secondary account-save" type="button" aria-label={`Save access for ${item.email}`} disabled={counselorSaving === item.id} onClick={() => void saveCounselor(item)}>{counselorSaving === item.id ? "Saving..." : "Save counselor access"}</button>
+                      <button className="secondary account-save" type="button" aria-label={`Save access for ${item.email}`} disabled={counselorSaving === item.id} onClick={() => void saveCounselor(item)}>{counselorSaving === item.id ? "Saving…" : "Save counselor access"}</button>
                     </div>
                   </div>
                 );

@@ -56,7 +56,7 @@ export function ProfileEditor({
       : role === "reviewer" || role === "viewer" || role === "auditor"
         ? "No included outcomes are available in this Function."
         : "No included outcomes are assigned to you in this Function.";
-    return <div className="empty-state">{emptyMessage}</div>;
+    return <div className="empty-state" role="status">{emptyMessage}</div>;
   }
 
   return (

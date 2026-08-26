@@ -127,6 +127,22 @@ test("makes Current and Target coverage plus evidence count scannable in the col
   expect(summary.getAttribute("aria-expanded")).toBe("false");
 });
 
+test("keeps the full evidence count available when the summary must condense", () => {
+  render(
+    <AssessmentCard
+      row={row}
+      onSave={vi.fn()}
+      canEditScope={false}
+      canEditProfile={false}
+      assigneeOptions={[]}
+      response={{ ...submittedResponse, documents: [evidenceDocument] }}
+    />
+  );
+
+  const evidenceCount = screen.getByText("1 evidence file");
+  expect(evidenceCount.getAttribute("aria-label")).toBe("1 evidence file");
+});
+
 test("names the outcome article and its grouped form sections for assistive technology", () => {
   render(<AssessmentCard row={row} onSave={vi.fn()} canEditScope={true} canEditProfile={false} assigneeOptions={[]} />);
 

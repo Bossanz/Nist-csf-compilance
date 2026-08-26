@@ -20,6 +20,10 @@ export type Project = {
   organizationName: string;
   name: string;
   slug: string;
+  versionGroupID?: string;
+  versionNumber?: number;
+  previousVersionID?: string | null;
+  isLatest?: boolean;
   status: string;
   createdAt: string;
   objective?: string;

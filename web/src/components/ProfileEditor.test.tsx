@@ -82,7 +82,7 @@ describe("ProfileEditor", () => {
   test("explains when an Assessor has no assigned outcomes", () => {
     render(<ProfileEditor rows={[]} onSave={vi.fn()} role="assessor" canEditScope={false} canEditProfile assigneeOptions={[]} />);
 
-    expect(screen.getByText("No included outcomes are assigned to you in this Function.")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("No included outcomes are assigned to you in this Function.");
   });
 
   test("saves the editable profile fields instead of mutating the source row", async () => {

@@ -26,12 +26,17 @@ type dataStore interface {
 	GetProject(context.Context, string) (store.Project, error)
 	ListProfile(context.Context, string) ([]store.ProfileRow, error)
 	UpdateProfile(context.Context, string, string, store.ProfilePatch) (store.ProfileRow, error)
+	UpdateFunctionScope(context.Context, string, string, bool) ([]store.ProfileRow, error)
 }
 type scopeStore interface {
 	SubmitProjectScope(context.Context, string) (store.Project, error)
 }
 type finalizationStore interface {
 	FinalizeProject(context.Context, string, string) (store.Project, int, int, error)
+}
+type projectVersionStore interface {
+	CreateNextProjectVersion(context.Context, string, string) (store.Project, error)
+	ListProjectVersions(context.Context, string) ([]store.Project, error)
 }
 type reportingStore interface {
 	GetFinalReport(context.Context, string) (store.FinalReport, error)
@@ -261,6 +266,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) >= 3 && parts[0] == "api" && parts[1] == "projects" {
 		id := parts[2]
+		if len(parts) == 4 && parts[3] == "versions" {
+			if r.Method == http.MethodGet {
+				if !h.authorizeProject(w, r, id, nil) {
+					return
+				}
+				h.listProjectVersions(w, r, id)
+				return
+			}
+			if r.Method == http.MethodPost {
+				action := actionCreateProjectVersion
+				if !h.authorizeProject(w, r, id, &action) {
+					return
+				}
+				h.createProjectVersion(w, r, id)
+				return
+			}
+		}
 		if len(parts) == 4 && parts[3] == "remediation-actions" {
 			if r.Method == http.MethodGet {
 				if !h.authorizeProject(w, r, id, nil) {
@@ -406,6 +428,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			h.profile(w, r, id)
+			return
+		}
+		if len(parts) == 6 && parts[3] == "functions" && parts[5] == "scope" && r.Method == http.MethodPut {
+			action := actionUpdateScope
+			if !h.authorizeProject(w, r, id, &action) {
+				return
+			}
+			h.updateFunctionScope(w, r, id, parts[4])
 			return
 		}
 		if len(parts) == 4 && parts[3] == "summary" && r.Method == http.MethodGet {
@@ -733,6 +763,41 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request, projectI
 	project, _ := h.Store.GetProject(r.Context(), projectID)
 	h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{OrganizationID: &project.OrganizationID, ProjectID: &projectID, Action: "profile.updated", EntityType: "profile", EntityID: &subcategoryID})
 	writeJSON(w, 200, p)
+}
+
+func (h *Handler) updateFunctionScope(w http.ResponseWriter, r *http.Request, projectID, functionCode string) {
+	var input struct {
+		Included *bool `json:"included"`
+	}
+	if err := decodeJSON(r, &input); err != nil || input.Included == nil {
+		writeError(w, http.StatusBadRequest, "validation_error", "included is required")
+		return
+	}
+	rows, err := h.Store.UpdateFunctionScope(r.Context(), projectID, functionCode, *input.Included)
+	switch {
+	case errors.Is(err, store.ErrInvalidFunctionScope), errors.Is(err, pgx.ErrNoRows):
+		writeError(w, http.StatusNotFound, "not_found", "Function scope not found")
+		return
+	case errors.Is(err, store.ErrProjectFinalized):
+		writeError(w, http.StatusConflict, "project_finalized", "Project is finalized and read-only")
+		return
+	case err != nil:
+		log.Printf("function scope update failed: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal_error", "could not update Function scope")
+		return
+	}
+	project, projectErr := h.Store.GetProject(r.Context(), projectID)
+	if projectErr == nil {
+		h.writeAudit(currentUser(r), r.Context(), store.AuditEvent{
+			OrganizationID: &project.OrganizationID,
+			ProjectID:      &projectID,
+			Action:         "profile.function_scope_updated",
+			EntityType:     "function_scope",
+			EntityID:       &functionCode,
+			Metadata:       map[string]any{"functionCode": functionCode, "included": *input.Included, "updatedCount": len(rows)},
+		})
+	}
+	writeJSON(w, http.StatusOK, rows)
 }
 
 type FunctionSummary struct {

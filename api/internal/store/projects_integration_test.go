@@ -98,6 +98,70 @@ func TestSubmitProjectScopeRejectsProjectWithoutAssignedIncludedOutcomes(t *test
 	}
 }
 
+func TestUpdateFunctionScopeChangesOnlyTheSelectedFunction(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+	ctx := context.Background()
+	data, err := New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectID, _, _, _, _ := setupScopeSubmissionFixture(t, data)
+
+	var functionCode, otherFunctionCode string
+	if err := data.DB.QueryRow(ctx, "SELECT code FROM functions ORDER BY code LIMIT 1").Scan(&functionCode); err != nil {
+		t.Fatal(err)
+	}
+	if err := data.DB.QueryRow(ctx, "SELECT code FROM functions ORDER BY code OFFSET 1 LIMIT 1").Scan(&otherFunctionCode); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := data.UpdateFunctionScope(ctx, projectID, functionCode, true)
+	if err != nil {
+		t.Fatalf("update Function scope: %v", err)
+	}
+	if len(rows) == 0 {
+		t.Fatal("expected updated profile rows")
+	}
+
+	var selectedIncluded, otherIncluded int
+	if err := data.DB.QueryRow(ctx, `SELECT count(*) FROM project_subcategory_profiles p JOIN subcategories sc ON sc.id=p.subcategory_id JOIN categories c ON c.id=sc.category_id JOIN functions f ON f.id=c.function_id WHERE p.project_id=$1 AND f.code=$2 AND p.included`, projectID, functionCode).Scan(&selectedIncluded); err != nil {
+		t.Fatal(err)
+	}
+	if err := data.DB.QueryRow(ctx, `SELECT count(*) FROM project_subcategory_profiles p JOIN subcategories sc ON sc.id=p.subcategory_id JOIN categories c ON c.id=sc.category_id JOIN functions f ON f.id=c.function_id WHERE p.project_id=$1 AND f.code=$2 AND p.included`, projectID, otherFunctionCode).Scan(&otherIncluded); err != nil {
+		t.Fatal(err)
+	}
+	if selectedIncluded != len(rows) || otherIncluded != 0 {
+		t.Fatalf("unexpected scope counts: selected=%d rows=%d other=%d", selectedIncluded, len(rows), otherIncluded)
+	}
+}
+
+func TestUpdateFunctionScopeRejectsUnknownFunctionWithoutChangingProfiles(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+	ctx := context.Background()
+	data, err := New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectID, _, _, _, _ := setupScopeSubmissionFixture(t, data)
+
+	if _, err := data.UpdateFunctionScope(ctx, projectID, "UNKNOWN", true); err != ErrInvalidFunctionScope {
+		t.Fatalf("expected ErrInvalidFunctionScope, got %v", err)
+	}
+	var includedCount int
+	if err := data.DB.QueryRow(ctx, "SELECT count(*) FROM project_subcategory_profiles WHERE project_id=$1 AND included", projectID).Scan(&includedCount); err != nil {
+		t.Fatal(err)
+	}
+	if includedCount != 0 {
+		t.Fatalf("unknown Function changed %d profile rows", includedCount)
+	}
+}
+
 func setupScopeSubmissionFixture(t *testing.T, data *Store) (projectID, organizationID, counselorID, assessorID, subcategoryID string) {
 	t.Helper()
 	ctx := context.Background()

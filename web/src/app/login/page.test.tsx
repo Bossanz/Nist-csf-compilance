@@ -28,3 +28,11 @@ test("redirects to organizations after a successful login", async () => {
 
   await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/organizations"));
 });
+
+test("uses the shared ellipsis while checking authentication", () => {
+  vi.mocked(api.me).mockReturnValue(new Promise<never>(() => {}));
+
+  render(<LoginPage />);
+
+  expect(screen.getByRole("status").textContent).toContain("Loading…");
+});

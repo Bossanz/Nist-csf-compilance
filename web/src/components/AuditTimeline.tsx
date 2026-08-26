@@ -1,6 +1,6 @@
 import type { AuditTrailEntry } from "../lib/types";
 
-type Props = { events: AuditTrailEntry[] };
+type Props = { events: AuditTrailEntry[]; loading?: boolean; error?: string };
 
 const actionLabels: Record<string, string> = {
   "audit_logs.viewed": "Audit activity viewed",
@@ -24,14 +24,14 @@ const actionLabels: Record<string, string> = {
   "user.role_changed": "User access changed",
 };
 
-export function AuditTimeline({ events }: Props) {
+export function AuditTimeline({ events, loading = false, error = "" }: Props) {
   return (
     <section className="panel audit-activity" aria-labelledby="activity-trail-heading">
       <div className="section-heading">
         <div><span className="eyebrow">Transparency</span><h2 id="activity-trail-heading">Activity trail</h2></div>
         <span className="muted">{events.length} {events.length === 1 ? "event" : "events"}</span>
       </div>
-      {events.length === 0 ? <p className="muted">No audit activity has been recorded yet.</p> : (
+      {loading ? <p className="muted" role="status" aria-busy="true">Loading activity trail…</p> : error ? <p className="error" role="alert">{error}</p> : events.length === 0 ? <p className="muted">No audit activity has been recorded yet.</p> : (
         <ol className="audit-timeline workspace-audit-timeline">
           {events.map((event) => (
             <li key={event.id}>

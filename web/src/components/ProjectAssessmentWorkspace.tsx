@@ -1,14 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
 import type { AuditTrailEntry, EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
-import { FunctionSidebar, type FunctionProgress, type WorkspaceMode } from "./FunctionSidebar";
+import { FunctionSidebar, type FunctionProgress, type WorkspaceMode, type WorkspaceSurface } from "./FunctionSidebar";
 import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
 import { ProjectFinalizationPanel } from "./ProjectFinalizationPanel";
-import { ActionPlan } from "./ActionPlan";
 import { AuditTimeline } from "./AuditTimeline";
+import { RemediationStatusPanel } from "./RemediationStatusPanel";
+import { VersionHistory } from "./VersionHistory";
+import { getRemediationStatusSummary } from "../lib/remediationStatus";
+
+const ActionPlan = dynamic(() => import("./ActionPlan").then((module) => module.ActionPlan), {
+  loading: () => <div className="empty-state" role="status" aria-busy="true">Loading Action Plan…</div>,
+});
 
 type Props = {
   user: User;
@@ -19,6 +26,9 @@ type Props = {
   profile: ProfileRow[];
   responses: StakeholderResponse[];
   summary: Summary;
+  versions?: Project[];
+  versionHistoryLoading?: boolean;
+  versionHistoryError?: string;
   selectedCode: string;
   error: string;
   onBack: () => void;
@@ -39,10 +49,18 @@ type Props = {
   onSetFunctionIncluded?: (functionCode: string, included: boolean) => Promise<void>;
   onSubmitScope: () => Promise<void>;
   onFinalizeProject?: () => Promise<void>;
+  onCreateProjectVersion?: () => Promise<void>;
+  onOpenProjectVersion?: (project: Project) => void;
   onOpenFinalReport?: () => void;
   onOpenAuditPackage?: () => void;
   auditTrail?: AuditTrailEntry[];
+  auditLoading?: boolean;
+  auditError?: string;
   remediationActions?: RemediationAction[];
+  remediationLoaded?: boolean;
+  remediationLoading?: boolean;
+  remediationError?: string;
+  onLoadRemediationActions?: () => Promise<void>;
   onCreateRemediation?: (input: RemediationCreateInput) => Promise<void>;
   onUpdateRemediation?: (actionID: string, patch: RemediationPatchInput) => Promise<void>;
   onSaveRemediationProgress?: (actionID: string, progressNote: string) => Promise<void>;
@@ -69,6 +87,9 @@ export function ProjectAssessmentWorkspace({
   profile,
   responses,
   summary,
+  versions = [],
+  versionHistoryLoading = false,
+  versionHistoryError = "",
   selectedCode,
   error,
   onBack,
@@ -89,10 +110,18 @@ export function ProjectAssessmentWorkspace({
   onSetFunctionIncluded,
   onSubmitScope,
   onFinalizeProject,
+  onCreateProjectVersion,
+  onOpenProjectVersion,
   onOpenFinalReport,
   onOpenAuditPackage,
   auditTrail = [],
+  auditLoading = false,
+  auditError = "",
   remediationActions = [],
+  remediationLoaded = true,
+  remediationLoading = false,
+  remediationError = "",
+  onLoadRemediationActions,
   onCreateRemediation,
   onUpdateRemediation,
   onSaveRemediationProgress,
@@ -136,7 +165,14 @@ export function ProjectAssessmentWorkspace({
   const [bulkError, setBulkError] = useState("");
   const [scopeSubmitState, setScopeSubmitState] = useState<"idle" | "submitting" | "error">("idle");
   const [scopeSubmitError, setScopeSubmitError] = useState("");
-  const [surface, setSurface] = useState<"assessment" | "actions">("assessment");
+  const [surface, setSurface] = useState<WorkspaceSurface>("overview");
+
+  useEffect(() => {
+    if (surface !== "actions" && surface !== "overview") return;
+    if (remediationLoaded || remediationLoading || remediationError || !onLoadRemediationActions) return;
+    void onLoadRemediationActions();
+  }, [onLoadRemediationActions, remediationError, remediationLoaded, remediationLoading, surface]);
+
   const functionRows = useMemo(() => profile.filter((row) => row.functionCode === selectedCode), [profile, selectedCode]);
   const responseBySubcategoryID = useMemo(
     () => new Map(responses.map((response) => [response.subcategoryID, response] as const)),
@@ -171,6 +207,57 @@ export function ProjectAssessmentWorkspace({
     const assigned = includedRows.filter((row) => row.assignedUserID !== null).length;
     return { included: includedRows.length, assigned, unassigned: includedRows.length - assigned };
   }, [profile]);
+  const stakeholderOverview = useMemo(() => {
+    const includedRows = profile.filter((row) => row.included && scopeSubmitted);
+    const responseByID = new Map(responses.map((response) => [response.subcategoryID, response] as const));
+    const readOnly = user.role === "viewer" || user.role === "auditor";
+    const relevantRows = user.role === "reviewer" || readOnly
+      ? includedRows
+      : includedRows.filter((row) => row.assignedUserID === user.id);
+    const countStatus = (status: StakeholderResponse["status"]) => relevantRows.filter((row) => responseByID.get(row.subcategoryID)?.status === status).length;
+    const reviewing = countStatus("submitted");
+    const approved = countStatus("reviewed");
+    const returned = countStatus("needs_more_info");
+
+    if (user.role === "reviewer") {
+      return {
+        title: "Review queue",
+        description: "Review submitted outcomes and record the final decision for each response.",
+        stats: [
+          { label: "Included outcomes", value: relevantRows.length },
+          { label: "Awaiting review", value: reviewing },
+          { label: "Approved", value: approved },
+          { label: "Returned", value: returned },
+        ],
+      };
+    }
+    if (readOnly) {
+      return {
+        title: "Project progress",
+        description: "Read the included outcomes, supporting evidence, and review status.",
+        stats: [
+          { label: "Included outcomes", value: relevantRows.length },
+          { label: "Reviewing", value: reviewing },
+          { label: "Approved", value: approved },
+          { label: "Returned", value: returned },
+        ],
+      };
+    }
+    const needsAction = relevantRows.filter((row) => {
+      const status = responseByID.get(row.subcategoryID)?.status;
+      return !status || status === "draft" || status === "needs_more_info";
+    }).length;
+    return {
+      title: "Your assigned outcomes",
+      description: "Complete the outcomes assigned to you, then send them for review.",
+      stats: [
+        { label: "Assigned to you", value: relevantRows.length },
+        { label: "Needs action", value: needsAction },
+        { label: "Reviewing", value: reviewing },
+        { label: "Approved", value: approved },
+      ],
+    };
+  }, [profile, responses, scopeSubmitted, user.id, user.role]);
   const finalizationReadiness = useMemo(() => {
     const includedRows = profile.filter((row) => row.included);
     const approvedCount = includedRows.filter((row) => responseBySubcategoryID.get(row.subcategoryID)?.status === "reviewed").length;
@@ -181,6 +268,22 @@ export function ProjectAssessmentWorkspace({
     });
     return { includedCount: includedRows.length, approvedCount, remaining };
   }, [profile, responseBySubcategoryID]);
+  const remediationProfile = useMemo(
+    () => user.role === "org_admin" || user.role === "assessor"
+      ? profile.filter((row) => row.assignedUserID === user.id)
+      : profile,
+    [profile, user.id, user.role],
+  );
+  const visibleRemediationActions = useMemo(
+    () => user.role === "org_admin" || user.role === "assessor"
+      ? remediationActions.filter((action) => action.ownerUserID === user.id)
+      : remediationActions,
+    [remediationActions, user.id, user.role],
+  );
+  const remediationSummary = useMemo(
+    () => getRemediationStatusSummary(remediationProfile, visibleRemediationActions),
+    [remediationProfile, visibleRemediationActions],
+  );
   const visibleProfile = useMemo(
     () => profile.filter((row) => {
       if (row.functionCode !== selectedCode) return false;
@@ -192,8 +295,6 @@ export function ProjectAssessmentWorkspace({
     }),
     [canEditProfile, isCounselor, profile, scopeSubmitted, selectedCode, user.id, user.role],
   );
-  const activeFunctionIncludedCount = isCounselor ? functionRows.filter((row) => row.included).length : visibleProfile.filter((row) => row.included).length;
-  const activeFunctionLabel = selectedFunction ? `${selectedCode} — ${selectedFunction.name}` : selectedCode;
   const projectMetadata = [
     { label: "Objective", value: project.objective },
     { label: "Assessment period", value: project.assessmentPeriod },
@@ -201,7 +302,6 @@ export function ProjectAssessmentWorkspace({
     { label: "Scope boundary", value: project.scopeBoundary },
     { label: "Compliance driver", value: project.complianceDriver },
   ].filter((item): item is { label: string; value: string } => Boolean(item.value?.trim()));
-  const includedOutcomeLabel = `${activeFunctionIncludedCount} included ${activeFunctionIncludedCount === 1 ? "outcome" : "outcomes"}`;
   const emptyQueueMessage = visibleProfile.length > 0
     ? ""
     : isCounselor
@@ -242,10 +342,18 @@ export function ProjectAssessmentWorkspace({
 
   return (
     <div className="shell">
-      <FunctionSidebar functions={functions} selectedCode={selectedCode} onSelect={onSelectFunction} progressByFunction={functionProgress} mode={workspaceMode} />
+      <FunctionSidebar
+        functions={functions}
+        selectedCode={selectedCode}
+        onSelect={onSelectFunction}
+        progressByFunction={functionProgress}
+        mode={workspaceMode}
+        activeSurface={surface}
+        onSelectSurface={setSurface}
+        onBack={onBack}
+      />
       <main className="main project-main">
         <header className="project-header">
-          <button className="text-button back-button" onClick={onBack}>Back to organization</button>
           <div className="project-context">
             <span>{organization.name}</span>
             <span aria-hidden="true">/</span>
@@ -253,86 +361,111 @@ export function ProjectAssessmentWorkspace({
           </div>
           <h1>{project.name}</h1>
           <p className="project-subtitle">{taskHint}</p>
-          <section className="project-context-panel" aria-label="Project context">
-            <div className="project-context-overview">
-              <div>
-                <span className="context-label">Project status</span>
-            <strong>{displayProjectStatus(project.status)}</strong>
-              </div>
-              <div>
-                <span className="context-label">Workspace mode</span>
-                <strong>{workspaceMode}</strong>
-              </div>
-              <div>
-                <span className="context-label">Active Function</span>
-                <strong>{activeFunctionLabel}</strong>
-              </div>
-              <div>
-                <span className="context-label">Included outcomes</span>
-                <strong>{includedOutcomeLabel}</strong>
-              </div>
-            </div>
-            {projectMetadata.length > 0 && (
-              <dl className="project-metadata">
-                {projectMetadata.map((item) => (
-                  <div key={item.label}>
-                    <dt>{item.label}</dt>
-                    <dd>{item.value}</dd>
+          {surface === "overview" && (
+            <>
+              {projectMetadata.length > 0 && (
+                <section className="project-context-panel" aria-label="Project context">
+                  <dl className="project-metadata">
+                    {projectMetadata.map((item) => (
+                      <div key={item.label}>
+                        <dt>{item.label}</dt>
+                        <dd>{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+              )}
+              {isCounselor && !scopeSubmitted && (
+                <section className="scope-submit-panel" aria-label="Scope submission">
+                  <div className="scope-submit-copy">
+                    <strong>Scope draft</strong>
+                    <p>Stakeholder response fields stay hidden until you submit the selected scope.</p>
                   </div>
-                ))}
-              </dl>
-            )}
-          </section>
-          {isCounselor && !scopeSubmitted && (
-            <section className="scope-submit-panel" aria-label="Scope submission">
-              <div className="scope-submit-copy">
-                <strong>Scope draft</strong>
-                <p>Stakeholder response fields stay hidden until you submit the selected scope.</p>
-              </div>
-              <button className="primary" type="button" disabled={scopeSubmitState === "submitting"} onClick={() => void submitScope()}>
-                {scopeSubmitState === "submitting" ? "Submitting…" : "Submit scope"}
-              </button>
-              {scopeSubmitError && <p className="error scope-submit-error" role="alert">{scopeSubmitError}</p>}
-            </section>
-          )}
-          {isCounselor && (project.status === "in_review" || isFinalized) && onFinalizeProject && onOpenFinalReport && onOpenAuditPackage && (
-            <ProjectFinalizationPanel
-              status={project.status}
-              includedCount={finalizationReadiness.includedCount}
-              approvedCount={finalizationReadiness.approvedCount}
-              remaining={finalizationReadiness.remaining}
-              onFinalize={onFinalizeProject}
-              onOpenReport={onOpenFinalReport}
-              onOpenAudit={onOpenAuditPackage}
-            />
+                  <button className="primary" type="button" disabled={scopeSubmitState === "submitting"} onClick={() => void submitScope()}>
+                    {scopeSubmitState === "submitting" ? "Submitting…" : "Submit scope"}
+                  </button>
+                  {scopeSubmitError && <p className="error scope-submit-error" role="alert">{scopeSubmitError}</p>}
+                </section>
+              )}
+            </>
           )}
         </header>
-        <nav className="project-surface-switch" aria-label="Project workspace">
-          <button type="button" className={surface === "assessment" ? "active" : ""} aria-pressed={surface === "assessment"} onClick={() => setSurface("assessment")}>Assessment</button>
-          <button type="button" className={surface === "actions" ? "active" : ""} aria-pressed={surface === "actions"} onClick={() => setSurface("actions")}>Action Plan</button>
-        </nav>
         {error && <div className="error" role="alert">{error}</div>}
         <div className="project-layout">
           <div className="reading-column">
-            {surface === "actions" ? (
-              <ActionPlan
-                user={user}
-                profile={profile}
-                responses={responses}
-                actions={remediationActions}
-                assigneeOptions={organizationUsers}
-                onCreate={onCreateRemediation ?? (async () => undefined)}
-                onUpdate={onUpdateRemediation ?? (async () => undefined)}
-                onSaveProgress={onSaveRemediationProgress ?? (async () => undefined)}
-                onSubmit={onSubmitRemediation ?? (async () => undefined)}
-                onReview={onReviewRemediation ?? (async () => undefined)}
-                onUploadEvidence={onUploadRemediationEvidence ?? (async () => undefined)}
-                onDeleteEvidence={onDeleteRemediationEvidence ?? (async () => undefined)}
-                onDownloadEvidence={onDownloadRemediationEvidence ?? (async () => undefined)}
-              />
+            {surface === "log" ? (
+              <AuditTimeline events={auditTrail} loading={auditLoading} error={auditError} />
+            ) : surface === "actions" ? (
+              !remediationLoaded ? (
+                <section className="empty-state action-plan-loading" role={remediationError ? "alert" : "status"} aria-busy={remediationLoading}>
+                  {remediationError ? <>
+                    <p>{remediationError}</p>
+                    {onLoadRemediationActions && <button className="primary" type="button" onClick={() => void onLoadRemediationActions()}>Try again</button>}
+                  </> : <p>Loading Action Plan…</p>}
+                </section>
+              ) : <ActionPlan
+                  user={user}
+                  profile={profile}
+                  responses={responses}
+                  actions={remediationActions}
+                  assigneeOptions={organizationUsers}
+                  onCreate={onCreateRemediation ?? (async () => undefined)}
+                  onUpdate={onUpdateRemediation ?? (async () => undefined)}
+                  onSaveProgress={onSaveRemediationProgress ?? (async () => undefined)}
+                  onSubmit={onSubmitRemediation ?? (async () => undefined)}
+                  onReview={onReviewRemediation ?? (async () => undefined)}
+                  onUploadEvidence={onUploadRemediationEvidence ?? (async () => undefined)}
+                  onDeleteEvidence={onDeleteRemediationEvidence ?? (async () => undefined)}
+                  onDownloadEvidence={onDownloadRemediationEvidence ?? (async () => undefined)}
+                />
+            ) : surface === "overview" ? (
+              <section className="workspace-overview" aria-labelledby="project-overview-heading">
+                <div className="workspace-heading">
+                  <div>
+                    <p className="section-context">Workspace overview</p>
+                    <h2 id="project-overview-heading">Project overview</h2>
+                  </div>
+                  <p className="workspace-overview-hint">Use Assignment to open an individual Function and continue the assessment.</p>
+                </div>
+                <SummaryCards summary={summary} />
+                <VersionHistory
+                  currentProject={project}
+                  versions={versions.length > 0 ? versions : [project]}
+                  loading={versionHistoryLoading}
+                  error={versionHistoryError}
+                  canCreate={isCounselor && isFinalized && project.isLatest !== false && Boolean(onCreateProjectVersion)}
+                  onCreateVersion={onCreateProjectVersion ?? (async () => undefined)}
+                  onOpenVersion={onOpenProjectVersion ?? (() => undefined)}
+                />
+                <RemediationStatusPanel
+                  assessmentStatus={project.status}
+                  summary={remediationSummary}
+                  loading={!remediationLoaded || remediationLoading}
+                  error={remediationError}
+                  onOpenActionPlan={() => setSurface("actions")}
+                />
+                {!isCounselor && (
+                  <StakeholderOverview
+                    title={stakeholderOverview.title}
+                    description={stakeholderOverview.description}
+                    stats={stakeholderOverview.stats}
+                    onOpenAssignment={() => setSurface("assignment")}
+                  />
+                )}
+                {isCounselor && <AssignmentProgress {...assignmentProgress} />}
+                {isCounselor && (project.status === "in_review" || isFinalized) && onFinalizeProject && onOpenFinalReport && onOpenAuditPackage && (
+                  <ProjectFinalizationPanel
+                    status={project.status}
+                    includedCount={finalizationReadiness.includedCount}
+                    approvedCount={finalizationReadiness.approvedCount}
+                    remaining={finalizationReadiness.remaining}
+                    onFinalize={onFinalizeProject}
+                    onOpenReport={onOpenFinalReport}
+                    onOpenAudit={onOpenAuditPackage}
+                  />
+                )}
+              </section>
             ) : <>
-            <SummaryCards summary={summary} />
-            {isCounselor && <AssignmentProgress {...assignmentProgress} />}
             <section className="assessment-region" aria-labelledby="outcome-assessments-heading">
               <div className="workspace-heading">
                 <div>
@@ -378,11 +511,37 @@ export function ProjectAssessmentWorkspace({
               )}
             </section>
             </>}
-            <AuditTimeline events={auditTrail} />
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+type StakeholderOverviewProps = {
+  title: string;
+  description: string;
+  stats: { label: string; value: number }[];
+  onOpenAssignment: () => void;
+};
+
+function StakeholderOverview({ title, description, stats, onOpenAssignment }: StakeholderOverviewProps) {
+  return (
+    <section className="stakeholder-overview-panel" aria-labelledby="stakeholder-overview-heading">
+      <div className="stakeholder-overview-copy">
+        <h2 id="stakeholder-overview-heading">{title}</h2>
+        <p>{description}</p>
+      </div>
+      <dl className="stakeholder-overview-stats">
+        {stats.map((stat) => (
+          <div key={stat.label}>
+            <dt>{stat.label}</dt>
+            <dd>{stat.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <button className="secondary stakeholder-overview-action" type="button" onClick={onOpenAssignment}>Open Assignment</button>
+    </section>
   );
 }
 
