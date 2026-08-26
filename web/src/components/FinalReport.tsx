@@ -118,22 +118,23 @@ export function FinalReport({ report, onBack, onOpenAudit }: Props) {
         <div className="report-metric"><span>Approved</span><strong>{summary.approvedCount}</strong></div>
         <div className="report-metric"><span>Evidence files</span><strong>{summary.evidenceCount}</strong></div>
       </section>
-      <section className="report-section">
-        <div className="report-section-heading"><div><span className="eyebrow">01</span><h2>Coverage by Function</h2></div><span className="muted">Current profile coverage</span></div>
-        <div className="report-table-wrap">
+      <section className="report-section" aria-labelledby="coverage-by-function-title">
+        <div className="report-section-heading"><div><span className="eyebrow">01</span><h2 id="coverage-by-function-title">Coverage by Function</h2></div><span className="muted">Current profile coverage</span></div>
+        <div className="report-table-wrap" role="region" tabIndex={0} aria-label="Coverage by Function report table">
           <table className="report-table"><thead><tr><th>Function</th><th>Coverage</th><th>Included</th><th>Approved</th><th>Reviewing</th><th>Returned</th></tr></thead><tbody>
             {summary.functions.map((item) => <tr key={item.code}><th scope="row">{item.code}</th><td><strong>{percent(item.coveragePct)}</strong></td><td>{item.includedCount}</td><td>{item.approvedCount}</td><td>{item.reviewingCount}</td><td>{item.returnedCount}</td></tr>)}
           </tbody></table>
+          <span className="report-table-hint" aria-hidden="true">Scroll horizontally to view all columns</span>
         </div>
       </section>
-      <section className="report-section">
-        <div className="report-section-heading"><div><span className="eyebrow">02</span><h2>Included outcomes</h2></div><span className="muted">{report.outcomes.length} outcome{report.outcomes.length === 1 ? "" : "s"}</span></div>
+      <section className="report-section" aria-labelledby="included-outcomes-title">
+        <div className="report-section-heading"><div><span className="eyebrow">02</span><h2 id="included-outcomes-title">Included outcomes</h2></div><span className="muted">{report.outcomes.length} outcome{report.outcomes.length === 1 ? "" : "s"}</span></div>
         <div className="report-outcome-list">
           {report.outcomes.length > 0 ? report.outcomes.map((outcome) => <OutcomeResult key={outcome.profile.subcategoryID} outcome={outcome} />) : <div className="empty-state">No included outcomes are available in this report.</div>}
         </div>
       </section>
-      <section className="report-section">
-        <div className="report-section-heading"><div><h2>Remediation progress</h2></div><span className="muted">Live action status; finalized assessment results remain unchanged</span></div>
+      <section className="report-section" aria-labelledby="remediation-progress-title">
+        <div className="report-section-heading"><div><h2 id="remediation-progress-title">Remediation progress</h2></div><span className="muted">Live action status; finalized assessment results remain unchanged</span></div>
         <div className="report-summary-grid remediation-report-summary" aria-label="Remediation summary">
           <div className="report-metric"><span>Open</span><strong>{report.remediationSummary.openCount}</strong></div>
           <div className="report-metric"><span>In progress</span><strong>{report.remediationSummary.inProgressCount}</strong></div>
@@ -141,10 +142,10 @@ export function FinalReport({ report, onBack, onOpenAudit }: Props) {
           <div className="report-metric"><span>Overdue</span><strong>{report.remediationSummary.overdueCount}</strong></div>
           <div className="report-metric"><span>Closed</span><strong>{report.remediationSummary.closedCount}</strong></div>
         </div>
-        <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Outcome / action</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Closed</th></tr></thead><tbody>
+        <div className="report-table-wrap" role="region" tabIndex={0} aria-label="Remediation progress report table"><table className="report-table"><thead><tr><th>Outcome / action</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Closed</th></tr></thead><tbody>
           {report.remediationActions.map((action) => <tr key={action.id}><th scope="row">{action.outcomeCode}<small>{action.title}</small></th><td>{action.ownerName}</td><td>{action.priority}</td><td>{formatDate(action.dueDate)}</td><td>{remediationStatusLabel(action.status)}</td><td>{formatDate(action.closedAt)}</td></tr>)}
           {report.remediationActions.length === 0 && <tr><td colSpan={6}>No remediation actions recorded.</td></tr>}
-        </tbody></table></div>
+        </tbody></table><span className="report-table-hint" aria-hidden="true">Scroll horizontally to view all columns</span></div>
       </section>
       <footer className="report-footer"><span>Generated from the finalized assessment workspace.</span><span>{formatDate(new Date().toISOString())}</span></footer>
     </main>

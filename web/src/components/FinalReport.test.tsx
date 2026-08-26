@@ -30,6 +30,8 @@ test("renders finalized project results and evidence", () => {
   expect(screen.getAllByText("50%", { exact: false }).length).toBeGreaterThan(0);
   expect(screen.getByRole("heading", { name: "Remediation progress" })).toBeTruthy();
   expect(screen.getByText("Centralize security logs")).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Coverage by Function report table" }).getAttribute("tabindex")).toBe("0");
+  expect(screen.getByRole("region", { name: "Coverage by Function" })).toBeTruthy();
 });
 
 test("prints the final report and opens the audit package", () => {

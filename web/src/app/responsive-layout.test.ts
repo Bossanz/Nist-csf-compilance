@@ -57,17 +57,22 @@ test("shares a readable content measure and page gutter", () => {
 
 test("uses semantic tokens for contextual colors and focus", () => {
   expect(css).toContain("--qid-focus-ring: 0 0 0 3px color-mix(in srgb, var(--qid-pink) 24%, transparent);");
+  expect(css).toContain("--qid-current-text: #a9c7ff;");
+  expect(css).toContain("--qid-target-text: #ffd58a;");
   expect(css).toContain("--qid-border-accent: #eb147c;");
   expect(css).toContain("--qid-border-soft: #f3b1d2;");
   expect(css).toContain("--qid-border-faint: #f8d8e9;");
-  expect(css).toContain("--qid-current-wash: color-mix(in srgb, #3b82f6 10%, var(--qid-surface));");
-  expect(css).toContain("--qid-target-wash: color-mix(in srgb, #f59e0b 13%, var(--qid-surface));");
+  expect(css).toContain("--qid-current-wash: color-mix(in srgb, var(--qid-current) 10%, var(--qid-surface));");
+  expect(css).toContain("--qid-target-wash: color-mix(in srgb, var(--qid-target) 13%, var(--qid-surface));");
   expect(css).toContain("outline: 3px solid var(--focus-outline);");
   expect(css).toContain("border-color: var(--accent-line);");
   expect(css).toContain("border-color: var(--input-hover);");
   expect(css).toContain("border: 1px solid var(--error-line);");
   expect(css).toContain("background: var(--current-wash);");
   expect(css).toContain("background: var(--target-wash);");
+  expect(css).toContain(".current-coverage strong { color: var(--qid-current-text); }");
+  expect(css).toContain(".target-coverage strong { color: var(--qid-target-text); }");
+  expect(css).toContain(".status-submitted { color: var(--qid-current-text);");
 });
 
 test("stacks project context and evidence actions at narrow widths", () => {
@@ -100,6 +105,13 @@ test("keeps invitation and workspace navigation controls at the shared touch hei
   expect(css).toContain(".invitation-actions button { min-height: 44px;");
   expect(css).toMatch(/\.sidebar-link \{[\s\S]*min-height: 44px;/);
   expect(css).toMatch(/\.sidebar-icon-button \{[\s\S]*min-height: 44px;/);
+});
+
+test("makes dense report tables discoverable and keyboard-scrollable on small screens", () => {
+  expect(css).toContain(".report-table-wrap { position: relative;");
+  expect(css).toContain(".report-table-wrap:focus-visible");
+  expect(css).toContain(".report-table-hint");
+  expect(css).toContain(".report-table-wrap::after");
 });
 
 test("uses restrained accent rules instead of thick side tabs", () => {

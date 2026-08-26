@@ -3,11 +3,24 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "CSF Compliance", description: "NIST CSF 2.0 compliance workspace" };
 
 const designContract = "QID v3 Compliance Workspace | dark-first workspace system | magenta-purple action gradient";
+const themeBootstrapScript = `
+(() => {
+  try {
+    const theme = window.localStorage.getItem("csf-theme");
+    document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
+    document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
+  } catch {
+    document.documentElement.dataset.theme = "dark";
+    document.documentElement.style.colorScheme = "dark";
+  }
+})();
+`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

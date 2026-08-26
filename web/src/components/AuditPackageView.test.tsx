@@ -28,6 +28,8 @@ test("renders audit scope, evidence, and activity trail", () => {
   expect(screen.getByText("response.reviewed")).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Remediation register" })).toBeTruthy();
   expect(screen.getByText("deployment.pdf")).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Scope and assignment report table" }).getAttribute("tabindex")).toBe("0");
+  expect(screen.getByRole("region", { name: "Scope & assignment" })).toBeTruthy();
 });
 
 test("downloads the CSV register", () => {

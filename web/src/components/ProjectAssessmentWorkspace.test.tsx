@@ -328,6 +328,43 @@ test("stakeholder roles do not see the bulk include control", () => {
   expect(screen.queryByRole("region", { name: /assignment progress/i })).toBeNull();
 });
 
+test("refreshes assessor queue when the active account changes", () => {
+  const rendered = renderWorkspace(assessor);
+  expect(screen.getByRole("button", { name: /GV Govern.*1 open/i })).toBeTruthy();
+
+  rendered.rerender(
+    <ProjectAssessmentWorkspace
+      user={otherAssessor}
+      organization={organization}
+      project={project}
+      functions={functions}
+      organizationUsers={[assessor, otherAssessor]}
+      profile={profile}
+      responses={[]}
+      summary={summary}
+      selectedCode="GV"
+      error=""
+      onBack={noop}
+      onSelectFunction={noop}
+      onSaveProfile={noop}
+      onSaveResponse={noop}
+      onSubmitResponse={noop}
+      onReviewResponse={noop}
+      onUploadEvidence={noop}
+      onDeleteEvidence={noop}
+      onDownloadEvidence={noop}
+      onSetFunctionIncluded={noop}
+      onSubmitScope={noop}
+      onFinalizeProject={noop}
+      onOpenFinalReport={noop}
+      onOpenAuditPackage={noop}
+      auditTrail={[]}
+    />,
+  );
+
+  expect(screen.getByRole("button", { name: /^GV Govern 0% 2 included$/i })).toBeTruthy();
+});
+
 test("names the scope assignee control for its outcome", () => {
   renderWorkspace(counselor);
   fireEvent.click(screen.getByRole("button", { name: /GV\.OC-01/i }));

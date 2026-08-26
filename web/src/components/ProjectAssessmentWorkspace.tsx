@@ -199,7 +199,7 @@ export function ProjectAssessmentWorkspace({
         attentionLabel,
       }];
     })),
-    [functions, isCounselor, profile, responseBySubcategoryID, scopeSubmitted, summary.functions, user.role],
+    [functions, isCounselor, profile, responseBySubcategoryID, scopeSubmitted, summary.functions, user.id, user.role],
   );
   const allIncluded = functionRows.length > 0 && functionRows.every((row) => row.included);
   const assignmentProgress = useMemo(() => {

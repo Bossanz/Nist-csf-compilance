@@ -22,19 +22,25 @@ colors:
   warning: "#f59e0b"
   error: "#ef4444"
   info: "#3b82f6"
+  current: "#3b82f6"
+  target: "#f59e0b"
+  current-text: "#a9c7ff"
+  target-text: "#ffd58a"
+  approved: "#6ee7b7"
+  link: "#d3b8ff"
 typography:
   display:
     fontFamily: "Space Grotesk, system-ui, sans-serif"
     fontSize: "clamp(2.2rem, 4vw, 4rem)"
     fontWeight: 700
     lineHeight: 1.18
-    letterSpacing: "-0.065em"
+    letterSpacing: "-0.04em"
   headline:
     fontFamily: "Space Grotesk, system-ui, sans-serif"
     fontSize: "clamp(1.5rem, 2.3vw, 2.25rem)"
     fontWeight: 700
     lineHeight: 1.18
-    letterSpacing: "-0.05em"
+    letterSpacing: "-0.03em"
   title:
     fontFamily: "Space Grotesk, system-ui, sans-serif"
     fontSize: "1.04rem"
@@ -45,7 +51,7 @@ typography:
     fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
-    lineHeight: 1.65
+    lineHeight: 1.55
   label:
     fontFamily: "JetBrains Mono, ui-monospace, monospace"
     fontSize: "0.78rem"
@@ -132,6 +138,8 @@ The public account-recovery screens (`/forgot-password` and `/reset-password`) a
 - Thin borders, 6–16px corners, and restrained QID elevation for raised panels.
 - Role-aware surfaces that distinguish reading, reviewing, and completing input.
 - Project context metadata aligned from a shared top edge so uneven copy lengths do not make short values appear vertically suspended.
+- Contrast-safe muted text and semantic state tokens remain consistent across dark and light themes.
+- Dense report tables stay keyboard-scrollable on small screens, pin the first column, and expose an explicit scroll hint.
 
 ## Colors
 
@@ -149,8 +157,9 @@ The palette follows the 60/30/10 rule: neutral workspace surfaces take most of t
 - **Light canvas/surfaces** (`{colors.light-bg}`, `{colors.light-surface}`, `{colors.light-surface-2}`): The alternate reading environment.
 - **Text hierarchy** (`{colors.dark-text}`, `{colors.dark-muted}`, `{colors.light-text}`, `{colors.light-muted}`): Headings, metadata, labels, and long-form copy.
 - **Borders** (`{colors.dark-border}`, `{colors.light-border}`): Dividers, card boundaries, input strokes, and structural separation.
-- **Current Blue** (`{colors.info}`) and **Target Amber** (`{colors.warning}`): Paired comparison surfaces that always include a text label.
+- **Current Blue** (`{colors.current}` / `{colors.current-text}`) and **Target Amber** (`{colors.target}` / `{colors.target-text}`): Paired comparison surfaces that always include a text label.
 - **Success**, **Warning**, **Error**, and **Info** states are always paired with text and never used as the only signal.
+- **Approved** (`{colors.approved}`) and **Link** (`{colors.link}`) are semantic roles; their text and border treatments are theme-aware rather than hard-coded per component.
 
 ### Named Rules
 
@@ -172,8 +181,8 @@ Dark mode is the default root theme and is explicitly controlled with `data-them
 
 ### Hierarchy
 
-- **Display** (700, `clamp(2.2rem, 4vw, 4rem)`, 1.18, `-0.065em`): Organization, project, and authentication headings.
-- **Headline** (700, `clamp(1.5rem, 2.3vw, 2.25rem)`, 1.18, `-0.05em`): Section headings and major workspace titles.
+- **Display** (700, `clamp(2.2rem, 4vw, 4rem)`, 1.18, `-0.04em`): Organization, project, and authentication headings.
+- **Headline** (700, `clamp(1.5rem, 2.3vw, 2.25rem)`, 1.18, `-0.03em`): Section headings and major workspace titles.
 - **Title** (700, `1.04rem`, 1.18, `-0.02em`): Outcome, card, and form-group titles.
 - **Body** (400, `14px`, 1.55): Long-form descriptions, assessment copy, and field content; paragraph measure stays near 68ch.
 - **Label** (650, `0.71rem`, 1.3): Field labels and supporting metadata. Eyebrows and context lines use compact mono uppercase tracking for orientation.
@@ -188,7 +197,7 @@ The application shell uses a 260px sticky Function navigation rail and a fluid m
 
 The project context panel uses a five-column metadata grid on wide screens, two columns at the rail breakpoint, and one column on small screens. Each metadata cell uses top-aligned content, a compact 3px label/value gap, and a thin rule above the row so long Scope or Compliance driver copy does not vertically center shorter dates and periods. Long account, invitation, and evidence names wrap within their rows at the single-column breakpoint so metadata cannot force horizontal overflow.
 
-At 1100px the Function rail becomes a horizontal, scrollable index and multi-column creator forms begin to stack. At 760px lists, profile comparisons, supporting grids, and authentication surfaces become one column; actions stretch to the available width; assessment summaries move the coverage route below the outcome title; and response/evidence controls follow the content they act on. The spacing rhythm follows 4px, 8px, 16px, 24px, and 48px QID steps.
+At 1100px the Function rail becomes a horizontal, scrollable index and multi-column creator forms begin to stack. At 760px lists, profile comparisons, supporting grids, and authentication surfaces become one column; actions stretch to the available width; assessment summaries move the coverage route below the outcome title; and response/evidence controls follow the content they act on. Report tables remain intact as workpaper tables inside focusable horizontal-scroll regions; the first column stays pinned on small screens and an explicit hint tells keyboard and touch users how to view the remaining columns. The spacing rhythm follows 4px, 8px, 16px, 24px, and 48px QID steps.
 
 ## Elevation & Depth
 
@@ -241,6 +250,10 @@ Surfaces use 12–16px corners; controls use 8px corners; compact danger actions
 
 The Function index is a labeled navigation landmark. It uses a dark or light QID surface and a thin border boundary. Active items use a pink wash, a subtle magenta boundary, readable text, and `aria-current="page"`. At smaller widths it becomes a horizontally scrollable row without changing the reading order.
 
+### Report Tables
+
+Report tables use a labeled `role="region"` wrapper with `tabIndex="0"` so keyboard users can reach and scroll dense registers without losing context. The wrapper exposes a small-screen scroll hint, preserves table semantics, and pins the first identifying column below the single-column breakpoint. Tables stay read-only and keep status labels in text alongside their semantic colors.
+
 ### Project Context Metadata
 
 The project context is a quiet reading surface rather than a dashboard widget. Labels use compact mono typography; values use the body face and remain top-aligned across the grid. The structure reflows from five columns to two and then one without changing the metadata order.
@@ -279,6 +292,7 @@ The Audit Package uses a denser register layout appropriate for handoff. Scope a
 - **Do** distinguish Counselor interpretation from Stakeholder response/evidence input through layout and labels.
 - **Do** make Current and Target profiles visually distinct and textually labeled.
 - **Do** preserve visible keyboard focus, role/status text, and responsive reading order at every breakpoint.
+- **Do** use semantic theme tokens for muted text, Current / Target, Approved, Error, and links so both themes keep readable contrast.
 
 ### Don't:
 
@@ -288,3 +302,4 @@ The Audit Package uses a denser register layout appropriate for handoff. Scope a
 - **Don't** use JetBrains Mono as a display face; reserve it for codes, labels, and measurement.
 - **Don't** make Stakeholder input controls look like Counselor-owned profile editing controls.
 - **Don't** stretch assessment copy across the full viewport when a readable measure is available.
+- **Don't** hide dense report columns on small screens without a focusable scroll region and a visible usage hint.

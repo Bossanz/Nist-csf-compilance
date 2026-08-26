@@ -45,6 +45,13 @@ test("provides a Versotis dark theme for the reading workspace", () => {
   expect(css).toContain("--qid-focus-ring:");
 });
 
+test("keeps faint text readable and primes the saved theme before hydration", () => {
+  expect(css).toMatch(/:root,\s*:root\[data-theme="dark"\] \{[\s\S]*--qid-faint: #a19db5;/);
+  expect(css).toMatch(/:root\[data-theme="light"\] \{[\s\S]*--qid-faint: #625d75;/);
+  expect(layout).toContain('const theme = window.localStorage.getItem("csf-theme");');
+  expect(layout).toContain('document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";');
+});
+
 test("keeps report print tokens readable when dark theme is active", () => {
   const printBlock = css.slice(css.lastIndexOf("@media print"));
   expect(printBlock).toContain(':root[data-theme="dark"]');
