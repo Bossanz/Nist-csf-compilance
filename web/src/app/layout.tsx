@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 export const metadata: Metadata = { title: "CSF Compliance", description: "NIST CSF 2.0 compliance workspace" };
 
-const designContract = "QID v3 Compliance Workspace | dark-first workspace system | magenta-purple action gradient";
+const designContract = "Evidence Workbench | QID v3 Compliance Workspace | dark-first workspace system | status-first registers | magenta-purple action gradient";
 const themeBootstrapScript = `
 (() => {
   try {
@@ -28,13 +28,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           rel="stylesheet"
         />
       </head>
-      <body data-design-contract={designContract}>
+      <body data-design-contract={designContract} data-design-direction="evidence-workbench-250b41bb">
         {/*
-        THESIS: Turn a complex compliance assessment into a clear, accountable workspace without losing the brand's energy.
-        OWN-WORLD: QID v3 Compliance Workspace — dark graphite surfaces, magenta-to-purple action cues, and mono wayfinding labels.
+        THESIS: Turn a complex compliance assessment into a clear, accountable evidence workbench without losing the brand's energy or the reader's focus.
+        OWN-WORLD: Evidence Workbench — quiet paper/graphite surfaces, status-first registers, magenta-to-purple action cues, and mono wayfinding labels.
         STORY: Counselor reads and reviews; Stakeholder fills and supports with evidence.
-        FIRST VIEWPORT: Project context, Function index, current/target status, and one clear next action remain visible before the outcome list.
-        FORM: Versotis Trust Workspace; user-pinned brand reference. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+        FIRST VIEWPORT: Project status, posture metrics, next action, owner/attention context, and the Function register are visible before detailed outcomes.
+        FORM: Evidence Workbench, candidate 3 of the grounded direction set, seed 250b41bb; Versotis Trust Workspace remains the user-pinned brand reference. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
         */}
         {children}
       </body>

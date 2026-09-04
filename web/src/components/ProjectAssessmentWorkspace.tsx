@@ -4,13 +4,13 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import type { AuditTrailEntry, EvidencePreview, FunctionNode, Organization, ProfilePatch, ProfileRow, Project, RemediationAction, RemediationCreateInput, RemediationPatchInput, ResponseDocument, StakeholderResponse, Summary, User } from "../lib/types";
 import { FunctionSidebar, type FunctionProgress, type WorkspaceMode, type WorkspaceSurface } from "./FunctionSidebar";
-import { SummaryCards } from "./SummaryCards";
 import { AssignmentProgress } from "./AssignmentProgress";
 import { ProfileEditor } from "./ProfileEditor";
 import { ProjectFinalizationPanel } from "./ProjectFinalizationPanel";
 import { AuditTimeline } from "./AuditTimeline";
 import { RemediationStatusPanel } from "./RemediationStatusPanel";
 import { VersionHistory } from "./VersionHistory";
+import { ProjectOverviewWorkbench } from "./ProjectOverviewWorkbench";
 import { getRemediationStatusSummary } from "../lib/remediationStatus";
 
 const ActionPlan = dynamic(() => import("./ActionPlan").then((module) => module.ActionPlan), {
@@ -427,7 +427,16 @@ export function ProjectAssessmentWorkspace({
                   </div>
                   <p className="workspace-overview-hint">Use Assignment to open an individual Function and continue the assessment.</p>
                 </div>
-                <SummaryCards summary={summary} />
+                <ProjectOverviewWorkbench
+                  user={user}
+                  project={project}
+                  summary={summary}
+                  functions={functions}
+                  functionProgress={functionProgress}
+                  scopeSubmitted={scopeSubmitted}
+                  isCounselor={isCounselor}
+                  onOpenAssignment={() => setSurface("assignment")}
+                />
                 <VersionHistory
                   currentProject={project}
                   versions={versions.length > 0 ? versions : [project]}

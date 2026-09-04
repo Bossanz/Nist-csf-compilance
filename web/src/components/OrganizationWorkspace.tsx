@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Invitation, Organization, Project, ProjectCreateInput, Role, User } from "../lib/types";
 import { InvitationList } from "./InvitationList";
 import { useDialogFocus } from "../lib/useDialogFocus";
+import { getProjectStatusLabel } from "../lib/workspaceMetrics";
 
 type Props = {
   user: User;
@@ -205,25 +206,36 @@ export function OrganizationWorkspace({ user, organization, projects, users, inv
           <h2 id="projects-heading">Projects</h2>
           <p className="muted">Assessment workspaces inside {organization.name}.</p>
         </div>
-        {loading ? <div className="panel muted" role="status" aria-live="polite" aria-busy="true">Loading workspace…</div> : projects.length === 0 ? (
-          <div className="empty-state" role="status">No projects yet. Create one below to start an assessment.</div>
-        ) : (
-          <div className="project-grid">
-            {projects.map((project) => (
-              <article className="project-card" key={project.id}>
-                <div className="project-card-top">
-                  <div className="project-card-labels"><span className="status-chip">{project.status.replaceAll("_", " ")}</span><span className="project-version-label">{projectVersionLabel(project)}</span></div>
-                  <time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time>
-                </div>
-                <div><h3>{project.name}</h3><p className="muted">{organization.name}</p></div>
-                <div className="project-actions">
-                  <button className="secondary" type="button" aria-label={`Open ${project.name}`} onClick={() => onOpen(project)}>Open project</button>
-                  {counselor && <button className="danger" type="button" aria-label={`Delete ${project.name}`} onClick={(event) => { deleteDialogFocus.triggerRef.current = event.currentTarget; setPendingDelete(project); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
-                </div>
-              </article>
-            ))}
+        <section className="workspace-register" aria-labelledby="project-workspace-register-heading">
+          <div className="register-heading">
+            <div>
+              <h3 id="project-workspace-register-heading">Project workspace register</h3>
+              <p className="muted">Open a project to review its assessment, evidence, and next action.</p>
+            </div>
+            <span className="register-count">{projects.length} project{projects.length === 1 ? "" : "s"}</span>
           </div>
-        )}
+          {loading ? <div className="panel muted" role="status" aria-live="polite" aria-busy="true">Loading workspace…</div> : projects.length === 0 ? (
+            <div className="empty-state" role="status">No projects yet. Create one below to start an assessment.</div>
+          ) : (
+            <div className="workspace-register-list">
+              {projects.map((project, index) => (
+                <article className="workspace-register-row" key={project.id}>
+                  <div className="register-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</div>
+                  <div className="register-primary">
+                    <div className="register-title-line"><h4>{project.name}</h4><span className="status-chip">{getProjectStatusLabel(project.status)}</span></div>
+                    <p>{organization.name}</p>
+                    <small>{projectVersionLabel(project)} · Open to review assessment progress</small>
+                  </div>
+                  <div className="register-meta"><span>Created</span><time dateTime={project.createdAt}>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(project.createdAt))}</time></div>
+                  <div className="project-actions register-actions">
+                    <button className="secondary" type="button" aria-label={`Open ${project.name}`} onClick={() => onOpen(project)}>Open project</button>
+                    {counselor && <button className="danger" type="button" aria-label={`Delete ${project.name}`} onClick={(event) => { deleteDialogFocus.triggerRef.current = event.currentTarget; setPendingDelete(project); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         {counselor && (
           <form className="panel inline-creator project-create-form" onSubmit={(event) => { event.preventDefault(); void createProject(); }}>

@@ -117,15 +117,15 @@ components:
     padding: "22px"
 ---
 
-# Design System: CSF Compliance — QID v3
+# Design System: CSF Compliance — QID v3 Evidence Workbench
 
 ## Overview
 
-**Creative North Star: "QID v3 Compliance Workspace"**
+**Creative North Star: "Evidence Workbench"**
 
-The interface turns a complex assessment into a clear, accountable workspace. Dark graphite surfaces are the default reading environment; a light QID surface set remains available for bright environments. Magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. The result follows the [Versotis QID v3 token reference](https://www.versotis.com/assets/design/qid/tokens/v3.html) without sacrificing long compliance-reading sessions.
+The interface turns a complex assessment into a clear, accountable workspace. Its product pattern is similar to mature compliance tools such as Vanta—status-first registers, evidence ownership, and review queues—without copying another product's brand or assets. Dark graphite surfaces are the default reading environment; a light QID surface set remains available for bright environments. Magenta-to-purple brand cues mark the active Function, the next action, and the few statuses that need attention. The result follows the [Versotis QID v3 token reference](https://www.versotis.com/assets/design/qid/tokens/v3.html) without sacrificing long compliance-reading sessions.
 
-The system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use structured lists and compact forms; assessment pages use an editorial reading column with expandable outcome cards. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text. Existing component class contracts remain in place so the redesign does not alter API, role, or workflow behavior.
+The system keeps Counselor interpretation, Stakeholder response/evidence input, and Reviewer feedback visually legible as different kinds of work. Organization and project pages use status-first registers and compact forms; assessment pages use an editorial reading column with expandable outcome cards. Project Overview answers three questions before the reader opens an outcome: what is the posture, what needs attention next, and who owns the next action. The visual language uses the brand gradient only for actions and orientation, avoiding decorative chrome and heavy shadows that compete with compliance text. Existing component class contracts remain in place so the redesign does not alter API, role, or workflow behavior.
 
 The public account-recovery screens (`/forgot-password` and `/reset-password`) and authenticated password screen (`/account/password`) reuse the same two-column auth layout, explicit field labels, readable error states, and visible return links. Recovery success copy remains generic so the interface does not reveal whether an email belongs to an account.
 
@@ -137,6 +137,8 @@ The public account-recovery screens (`/forgot-password` and `/reset-password`) a
 - A 12-column desktop grid with a 1200px content frame, a 260px workspace rail, and explicit Current / Target comparison.
 - Thin borders, 6–16px corners, and restrained QID elevation for raised panels.
 - Role-aware surfaces that distinguish reading, reviewing, and completing input.
+- Status-first client and project registers that expose ownership, version, status, and the next route into work.
+- An Overview workbench with posture metrics, a role-aware `Next up` block, and progress by Function.
 - Project context metadata aligned from a shared top edge so uneven copy lengths do not make short values appear vertically suspended.
 - Contrast-safe muted text and semantic state tokens remain consistent across dark and light themes.
 - Dense report tables stay keyboard-scrollable on small screens, pin the first column, and expose an explicit scroll hint.
@@ -193,7 +195,7 @@ Dark mode is the default root theme and is explicitly controlled with `data-them
 
 ## Layout
 
-The application shell uses a 260px sticky Function navigation rail and a fluid main area. Main content is capped at 1200px with a responsive horizontal gutter and a 12-column desktop grid. Desktop organization and project indexes use adaptive work lists, while the project assessment keeps a full-width workspace with prose capped by the 68ch reading measure. Orientation is carried by the project header, Function navigation, assignment-progress banner, and outcome count.
+The application shell uses a 260px sticky Function navigation rail and a fluid main area. Main content is capped at 1200px with a responsive horizontal gutter and a 12-column desktop grid. Desktop organization and project indexes use status-first work registers rather than equal-sized card grids, while the project assessment keeps a full-width workspace with prose capped by the 68ch reading measure. Orientation is carried by the project header, Function navigation, Overview workbench, assignment-progress banner, and outcome count.
 
 The project context panel uses a five-column metadata grid on wide screens, two columns at the rail breakpoint, and one column on small screens. Each metadata cell uses top-aligned content, a compact 3px label/value gap, and a thin rule above the row so long Scope or Compliance driver copy does not vertically center shorter dates and periods. Long account, invitation, and evidence names wrap within their rows at the single-column breakpoint so metadata cannot force horizontal overflow.
 
@@ -272,7 +274,13 @@ Login and invitation activation use a two-column QID surface composition on desk
 
 ### Coverage Summary
 
-Coverage summaries use restrained metric blocks for Overall, Included, Pending, and Returned counts. The Function navigation carries the per-Function percentage, included count, and role-specific attention count so progress is visible without repeating a large dashboard banner.
+Coverage summaries use restrained metric blocks for Overall, Included, Pending, and Returned counts. The Project Overview workbench repeats these high-value posture signals in a role-aware context, while the Function navigation and Overview register carry the per-Function percentage, included count, and attention count. This keeps progress visible without turning every detailed outcome page into a dashboard.
+
+### Evidence Workbench Registers
+
+Organization and project indexes use a register anatomy: a numbered wayfinding marker, primary identity, human-readable state, supporting context, and the smallest useful action set. Rows use thin rules and tonal surfaces instead of a wall of floating cards. On mobile, metadata and actions stack below the identity so the action remains reachable without horizontal scrolling.
+
+The Project Overview workbench uses a posture panel, one `Next up` panel, and a Function register. The next-up copy is role-aware: Counselors see scope or review readiness, Assessors and Organization Admins see their input, Reviewers see responses awaiting a decision, and read-only roles see project posture. It is a presentation layer over existing derived data; it does not create permissions or a second workflow.
 
 ### Finalization & Audit Handoff
 

@@ -192,6 +192,17 @@ test("opens the project overview by default", () => {
   expect(screen.queryByRole("heading", { name: "Outcomes in this Function" })).toBeNull();
 });
 
+test("puts posture, next action, and Function progress on Overview", () => {
+  renderWorkspace(assessor, noop, profile, [], project, noop, noop, noop, noop, [], "overview");
+
+  expect(screen.getByRole("region", { name: "Project posture" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Next up" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: /function register/i })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: /^GV Govern/i }));
+  expect(screen.queryByRole("region", { name: "Next up" })).toBeNull();
+});
+
 test("separates finalized assessment status from remediation status", () => {
   const gapProfile = profile.map((item, index) => index === 0
     ? { ...item, currentCoverageLevel: "partial" as const, targetCoverageLevel: "full" as const }

@@ -107,6 +107,19 @@ test("keeps invitation and workspace navigation controls at the shared touch hei
   expect(css).toMatch(/\.sidebar-icon-button \{[\s\S]*min-height: 44px;/);
 });
 
+test("stacks the Evidence Workbench registers at narrow widths", () => {
+  expect(css).toContain(".organization-register-row, .workspace-register-row { grid-template-columns: 1fr;");
+  expect(css).toContain(".function-register-row { grid-template-columns: 1fr;");
+  expect(css).toContain(".next-action-panel { grid-template-columns: 1fr;");
+});
+
+test("keeps workbench surfaces on the QID token system", () => {
+  expect(css).toContain(".overview-workbench {");
+  expect(css).toContain("background: var(--qid-surface);");
+  expect(css).toContain("border-top: 2px solid var(--qid-pink);");
+  expect(css).toContain(".function-register-progress-track span { display: block; height: 100%; background: var(--qid-action-gradient);");
+});
+
 test("makes dense report tables discoverable and keyboard-scrollable on small screens", () => {
   expect(css).toContain(".report-table-wrap { position: relative;");
   expect(css).toContain(".report-table-wrap:focus-visible");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Organization, Role, User } from "../lib/types";
 import { useDialogFocus } from "../lib/useDialogFocus";
+import { getOrganizationPortfolioMetrics } from "../lib/workspaceMetrics";
 
 type Props = {
   user: User;
@@ -43,6 +44,7 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
   }
 
   const deleteDialogFocus = useDialogFocus(Boolean(pendingDelete), closeDeleteConfirmation);
+  const portfolioMetrics = getOrganizationPortfolioMetrics(organizations);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -112,27 +114,73 @@ export function OrganizationDashboard({ user, organizations, loading, error, onS
 
       {error && <div className="error" role="alert">{error}</div>}
 
+      <section className="portfolio-summary" aria-label="Portfolio posture">
+        <div className="portfolio-summary-heading">
+          <div>
+            <p className="section-context">Portfolio posture</p>
+            <h2 id="portfolio-posture-heading">Client workspaces</h2>
+          </div>
+          <p className="portfolio-summary-hint">A focused starting point for every client assessment. Open a workspace to see its projects, owners, evidence, and review state.</p>
+        </div>
+        <dl className="portfolio-metrics">
+          <div>
+            <dt>Client workspaces</dt>
+            <dd>{portfolioMetrics.total}</dd>
+            <small>Available in this portfolio</small>
+          </div>
+          <div>
+            <dt>Ready to open</dt>
+            <dd>{portfolioMetrics.active}</dd>
+            <small>Open a workspace to continue</small>
+          </div>
+          <div>
+            <dt>Project status</dt>
+            <dd className="portfolio-metric-text">Inside workspace</dd>
+            <small>Review status lives with the client</small>
+          </div>
+          <div>
+            <dt>Next action</dt>
+            <dd className="portfolio-metric-text">Open a workspace</dd>
+            <small>Start with the client register below</small>
+          </div>
+        </dl>
+      </section>
+
       <section aria-labelledby="organizations-heading">
         <div className="section-heading">
           <h2 id="organizations-heading">Organizations</h2>
           <p className="muted">Client workspaces available to your account.</p>
         </div>
-        {loading ? <div className="panel muted" role="status" aria-live="polite" aria-busy="true">Loading organizations…</div> : organizations.length === 0 ? (
-          <div className="empty-state">No client organizations yet. Create one below to begin.</div>
-        ) : (
-          <div className="organization-grid">
-            {organizations.map((organization, index) => (
-              <article className="organization-card" key={organization.id}>
-                <div className="organization-number">{String(index + 1).padStart(2, "0")}</div>
-                <div><h3>{organization.name}</h3><p className="muted">Client workspace</p></div>
-                <div className="organization-actions">
-                  <button className="secondary" aria-label={`Open ${organization.name}`} onClick={() => onSelect(organization)}>Open client workspace</button>
-                  {isAdmin && <button className="danger" aria-label={`Delete ${organization.name}`} onClick={(event) => { deleteDialogFocus.triggerRef.current = event.currentTarget; setPendingDelete(organization); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
-                </div>
-              </article>
-            ))}
+        <section className="organization-register" aria-labelledby="client-workspace-register-heading">
+          <div className="register-heading">
+            <div>
+              <h3 id="client-workspace-register-heading">Client workspace register</h3>
+              <p className="muted">Choose a workspace to continue the assessment.</p>
+            </div>
+            <span className="register-count">{organizations.length} workspace{organizations.length === 1 ? "" : "s"}</span>
           </div>
-        )}
+          {loading ? <div className="panel muted" role="status" aria-live="polite" aria-busy="true">Loading organizations…</div> : organizations.length === 0 ? (
+            <div className="empty-state">No client organizations yet. Create one below to begin.</div>
+          ) : (
+            <div className="organization-register-list">
+              {organizations.map((organization, index) => (
+                <article className="organization-register-row" key={organization.id}>
+                  <div className="register-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</div>
+                  <div className="register-primary">
+                    <div className="register-title-line"><h4>{organization.name}</h4><span className="status-chip">Available</span></div>
+                    <p>{organization.type === "client" ? "Client workspace" : "Counselor workspace"}</p>
+                    <small>Open to review projects and workspace activity</small>
+                  </div>
+                  <div className="register-meta"><span>Access</span><strong>Available to you</strong></div>
+                  <div className="organization-actions register-actions">
+                    <button className="secondary" aria-label={`Open ${organization.name}`} onClick={() => onSelect(organization)}>Open client workspace</button>
+                    {isAdmin && <button className="danger" aria-label={`Delete ${organization.name}`} onClick={(event) => { deleteDialogFocus.triggerRef.current = event.currentTarget; setPendingDelete(organization); setConfirmation(""); setDeleteError(""); }}>Delete</button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </section>
 
       {pendingDelete && (

@@ -33,6 +33,12 @@ test("loads the brand fonts and records the new visual direction", () => {
   expect(layout).not.toContain("Clean Editorial Casefile");
 });
 
+test("records the Evidence Workbench direction in the root contract", () => {
+  expect(layout).toContain("Evidence Workbench");
+  expect(layout).toContain("250b41bb");
+  expect(layout).toContain('data-design-direction="evidence-workbench-250b41bb"');
+});
+
 test("provides a Versotis dark theme for the reading workspace", () => {
   expect(css).toContain("color-scheme: dark;");
   expect(css).toContain("color-scheme: light;");
@@ -43,6 +49,14 @@ test("provides a Versotis dark theme for the reading workspace", () => {
   expect(css).toContain("--qid-text: #f8f8fc;");
   expect(css).toContain("--qid-muted: #a19db5;");
   expect(css).toContain("--qid-focus-ring:");
+});
+
+test("keeps the Evidence Workbench theme-neutral", () => {
+  expect(css).toContain(".portfolio-summary");
+  expect(css).toContain(".overview-workbench");
+  expect(css).toContain("background: var(--qid-surface-2);");
+  expect(css).toContain("color: var(--qid-muted);");
+  expect(css).toContain("border-color: var(--qid-purple);");
 });
 
 test("keeps faint text readable and primes the saved theme before hydration", () => {

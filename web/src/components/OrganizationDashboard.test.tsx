@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { OrganizationDashboard } from "./OrganizationDashboard";
 import type { Organization, User } from "../lib/types";
@@ -9,6 +9,21 @@ const organization:Organization={id:"org-1",name:"Acme",slug:"acme",type:"client
 const managedCounselor:User={...admin,id:"user-2",name:"Consultant",email:"counselor@example.com",role:"counselor",status:"active"};
 
 test("selects an existing organization",()=>{const onSelect=vi.fn();render(<OrganizationDashboard user={admin} organizations={[organization]} loading={false} error="" onSelect={onSelect} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);expect(screen.getByRole("heading",{name:"Organizations"})).toBeTruthy();fireEvent.click(screen.getByRole("button",{name:/open acme/i}));expect(onSelect).toHaveBeenCalledWith(organization)});
+test("shows a status-first client portfolio summary", () => {
+  render(<OrganizationDashboard user={admin} organizations={[organization]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()} />);
+
+  expect(screen.getByRole("region", { name: /portfolio posture/i })).toBeTruthy();
+  const portfolio = screen.getByRole("region", { name: /portfolio posture/i });
+  expect(within(portfolio).getByRole("heading", { name: "Client workspaces" })).toBeTruthy();
+  expect(within(portfolio).getByText("Ready to open")).toBeTruthy();
+});
+
+test("presents the client workspace as a register row", () => {
+  render(<OrganizationDashboard user={admin} organizations={[organization]} loading={false} error="" onSelect={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onCreate={vi.fn()} onLogout={vi.fn()} />);
+
+  expect(screen.getByRole("region", { name: /client workspace register/i })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /open acme/i })).toBeTruthy();
+});
 test("links the signed-in user to password settings",()=>{render(<OrganizationDashboard user={admin} organizations={[]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);expect(screen.getByRole("link",{name:/change password/i}).getAttribute("href")).toBe("/account/password")});
 test("explains how to start when no client organizations exist",()=>{render(<OrganizationDashboard user={admin} organizations={[]} loading={false} error="" onSelect={vi.fn()} onCreate={vi.fn()} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);expect(screen.getByText("No client organizations yet. Create one below to begin.")).toBeTruthy()});
 test("counselor admin creates a trimmed organization",()=>{const onCreate=vi.fn();render(<OrganizationDashboard user={admin} organizations={[]} loading={false} error="" onSelect={vi.fn()} onCreate={onCreate} onDelete={vi.fn().mockResolvedValue(undefined)} onLogout={vi.fn()}/>);fireEvent.change(screen.getByLabelText(/organization name/i),{target:{value:"  Acme  "}});fireEvent.click(screen.getByRole("button",{name:/create organization/i}));expect(onCreate).toHaveBeenCalledWith({name:"Acme"})});
